@@ -10,7 +10,9 @@
       "en": "Native ImGui 2D scene editor with node tree, real Dora viewport, asset import, and script entry."
     },
     "categories": [
-      "2D Editor"
+      "tool",
+      "editor",
+      "2d"
     ],
     "exe": true
   }

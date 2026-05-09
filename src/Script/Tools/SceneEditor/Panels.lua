@@ -398,7 +398,7 @@ local function openScriptInWebIDE(state, node) -- 271
 		folder = false, -- 290
 		position = {lineNumber = 1, column = 1} -- 291
 	}) -- 291
-	local editingInfo = {index = 0, files = {{key = scriptPath, title = title, folder = false, position = {lineNumber = 1, column = 1}}}} -- 293
+	local editingInfo = {index = 0, files = {{key = fullScriptPath, title = title, folder = false, position = {lineNumber = 1, column = 1}}}} -- 293
 	local editingText = json.encode(editingInfo) -- 302
 	if editingText ~= nil then -- 288
 		Content:mkdir(Path(Content.writablePath, ".dora")) -- 290
@@ -406,8 +406,15 @@ local function openScriptInWebIDE(state, node) -- 271
 			Path(Content.writablePath, ".dora", "open-script.editing.json"), -- 291
 			editingText -- 291
 		) -- 291
+		pcall(function()
+			local Entry = require("Script.Dev.Entry")
+			local config = Entry.getConfig()
+			if config ~= nil then
+				config.editingInfo = editingText
+			end
+		end)
 	end -- 291
-	App:openURL("http://127.0.0.1:8866/?file=" .. scriptPath) -- 293
+	App:openURL("http://127.0.0.1:8866/") -- 293
 	state.status = (zh and "已打开 Web IDE：" or "Opened Web IDE: ") .. scriptPath -- 294
 	pushConsole(state, state.status) -- 295
 end -- 271

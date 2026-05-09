@@ -8,6 +8,7 @@ import { updatePreviewRuntime } from 'Script/Tools/SceneEditor/Runtime';
 import { drawGamePreviewWindow, startPlay, stopPlay } from 'Script/Tools/SceneEditor/Player';
 
 declare function pcall(fn: () => void): LuaMultiReturn<[boolean, unknown]>;
+declare function require(path: string): any;
 
 const sceneSaveFile = Path(Content.writablePath, '.dora', 'imgui-editor.scene.json');
 
@@ -305,7 +306,7 @@ function openScriptInWebIDE(state: EditorState, node?: SceneNodeData) {
 	const editingInfo = {
 		index: 0,
 		files: [{
-			key: scriptPath,
+			key: fullScriptPath,
 			title,
 			folder: false,
 			position: { lineNumber: 1, column: 1 },
@@ -315,8 +316,13 @@ function openScriptInWebIDE(state: EditorState, node?: SceneNodeData) {
 	if (editingText !== undefined) {
 		Content.mkdir(Path(Content.writablePath, '.dora'));
 		Content.save(Path(Content.writablePath, '.dora', 'open-script.editing.json'), editingText);
+		pcall(() => {
+			const Entry = require('Script.Dev.Entry');
+			const config = Entry.getConfig();
+			if (config !== undefined) config.editingInfo = editingText;
+		});
 	}
-	App.openURL('http://127.0.0.1:8866/?file=' + scriptPath);
+	App.openURL('http://127.0.0.1:8866/');
 	state.status = (zh ? '已打开 Web IDE：' : 'Opened Web IDE: ') + scriptPath;
 	pushConsole(state, state.status);
 }
