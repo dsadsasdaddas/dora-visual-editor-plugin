@@ -7,10 +7,10 @@
         "file": "dora-visual-editor-0.1.0.zip",
         "size": 42631,
         "tag": "v0.1.0",
-        "commit": "",
+        "commit": "b53bf81c43f56406463c491a5d8322cec51a22b7",
         "download": "https://github.com/dsadsasdaddas/dora-visual-editor-plugin/releases/download/v0.1.0/dora-visual-editor-0.1.0.zip",
-        "updatedAt": 1778328789,
-        "sha256": "e983d7646931217ece7cdbad5d3c4567559be6f04ff710087f57509e4e1c87ab"
+        "updatedAt": 1778328841,
+        "sha256": "cb5f8b035293c4e496a61575e464a49c498bff0e662a2dc5b869a67bb65e42ee"
       }
     ]
   }
