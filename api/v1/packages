@@ -4,13 +4,13 @@
     "url": "https://github.com/dsadsasdaddas/dora-visual-editor-plugin",
     "versions": [
       {
-        "file": "dora-visual-editor-0.1.1.zip",
+        "file": "dora-visual-editor-0.1.2.zip",
         "size": 42750,
-        "tag": "v0.1.1",
-        "commit": "7179bc4a6f4015fb65a8808f382186746cd7bf46",
-        "download": "https://github.com/dsadsasdaddas/dora-visual-editor-plugin/releases/download/v0.1.1/dora-visual-editor-0.1.1.zip",
-        "updatedAt": 1778337603,
-        "sha256": "446764f0f5c8efd213d2ee8f56b8b763a1b05e5e536370080a7e368150659fac"
+        "tag": "v0.1.2",
+        "commit": "a8b647355522d49bb6d9a9f47c0eb6b195503f22",
+        "download": "https://github.com/dsadsasdaddas/dora-visual-editor-plugin/releases/download/v0.1.2/dora-visual-editor-0.1.2.zip",
+        "updatedAt": 1778383915,
+        "sha256": "b49979ec4f5762f35b9e3283c5f16ab99ccb0ff6e96e9cac8ee812e441a609b0"
       }
     ]
   }

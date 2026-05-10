@@ -10,7 +10,7 @@ import time
 import zipfile
 from pathlib import Path
 
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 PACKAGE = "dora-visual-editor"
 OWNER = "dsadsasdaddas"
 REPO = "dora-visual-editor-plugin"
@@ -20,6 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def copy_tree(dora_root: Path) -> None:
     src_root = dora_root / "Assets" / "Script" / "Tools"
     dst_root = ROOT / "src" / "Script" / "Tools"
+    if not (src_root / "SceneEditor").exists():
+        return
     (dst_root / "SceneEditor").mkdir(parents=True, exist_ok=True)
     for name in ["SceneImGuiEditor.lua", "SceneImGuiEditor.ts"]:
         shutil.copy2(src_root / name, dst_root / name)
@@ -82,6 +84,9 @@ def write_manifests(zip_path: Path, size: int, sha256: str) -> None:
                 "zh": "原生 ImGui 2D 场景编辑器：节点树、真实 Dora Viewport、资源导入、脚本入口。",
                 "en": "Native ImGui 2D scene editor with node tree, real Dora viewport, asset import, and script entry.",
             },
+            "kind": "tool",
+            "entry": "init",
+            "openLog": False,
             "categories": ["tool", "editor", "2d"],
             "exe": True,
         }
