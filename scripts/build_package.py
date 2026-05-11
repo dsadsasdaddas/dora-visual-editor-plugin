@@ -10,7 +10,7 @@ import time
 import zipfile
 from pathlib import Path
 
-VERSION = "0.1.6"
+VERSION = "0.1.7"
 PACKAGE = "dora-visual-editor"
 OWNER = "dsadsasdaddas"
 REPO = "dora-visual-editor-plugin"
@@ -33,10 +33,33 @@ def copy_tree(dora_root: Path) -> None:
 def write_init(package_root: Path) -> None:
     (package_root / "init.lua").write_text(
         "-- Dora Visual Editor package entry.\n"
-        "-- ResourceDownloader runs this file after extracting the package.\n"
+        "-- Runtime implementation lives under hidden .tools/ so Web IDE Agent treats this as a clean project.\n"
+        "local Dora = require(\"Dora\")\n"
+        "local Content = Dora.Content\n"
+        "local Path = Dora.Path\n"
+        "local root = Content.searchPaths[1]\n"
+        "if root ~= nil and root ~= \"\" then\n"
+        "\tContent:insertSearchPath(1, Path(root, \".tools\"))\n"
+        "end\n"
         "return require(\"Script.Tools.SceneImGuiEditor\")\n",
         encoding="utf-8",
     )
+
+
+def hide_runtime_tools(package_root: Path) -> None:
+    visible_tools = package_root / "Script" / "Tools"
+    hidden_tools = package_root / ".tools" / "Script" / "Tools"
+    if not visible_tools.exists():
+        return
+    hidden_tools.parent.mkdir(parents=True, exist_ok=True)
+    if hidden_tools.exists():
+        shutil.rmtree(hidden_tools)
+    shutil.move(str(visible_tools), str(hidden_tools))
+    script_dir = package_root / "Script"
+    try:
+        script_dir.rmdir()
+    except OSError:
+        pass
 
 
 def build_zip() -> tuple[Path, int, str]:
@@ -44,6 +67,7 @@ def build_zip() -> tuple[Path, int, str]:
     if package_root.exists():
         shutil.rmtree(package_root)
     shutil.copytree(ROOT / "src", package_root)
+    hide_runtime_tools(package_root)
     write_init(package_root)
     zip_path = ROOT / "dist" / f"{PACKAGE}-{VERSION}.zip"
     if zip_path.exists():
