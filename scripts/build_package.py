@@ -10,7 +10,7 @@ import time
 import zipfile
 from pathlib import Path
 
-VERSION = "0.1.4"
+VERSION = "0.1.5"
 PACKAGE = "dora-visual-editor"
 OWNER = "dsadsasdaddas"
 REPO = "dora-visual-editor-plugin"

@@ -10,6 +10,8 @@ local Path = ____Dora.Path -- 1
 local Vec2 = ____Dora.Vec2 -- 1
 local emit = ____Dora.emit -- 1
 local json = ____Dora.json -- 1
+local sleep = ____Dora.sleep -- 1
+local thread = ____Dora.thread -- 1
 local ImGui = require("ImGui") -- 2
 local ____Theme = require("Script.Tools.SceneEditor.Theme") -- 5
 local inputTextFlags = ____Theme.inputTextFlags -- 5
@@ -392,26 +394,31 @@ local function openScriptInWebIDE(state, node) -- 271
 	local root = workspaceRoot()
 	local rootTitle = Path:getFilename(root) or "Workspace"
 	local fullScriptPath = workspacePath(scriptPath) -- 279
-	sendWebIDEMessage({
+	local openWorkspaceMessage = {
 		name = "OpenFile",
 		file = root,
 		title = rootTitle,
 		folder = true,
 		workspaceView = "agent"
-	})
-	sendWebIDEMessage({ -- 280
+	}
+	local updateScriptMessage = { -- 280
 		name = "UpdateFile", -- 281
 		file = fullScriptPath, -- 282
 		exists = true, -- 283
 		content = state.scriptContentBuffer.text -- 284
-	}) -- 284
-	sendWebIDEMessage({ -- 286
+	} -- 284
+	local openScriptMessage = { -- 286
 		name = "OpenFile", -- 287
 		file = fullScriptPath, -- 288
 		title = title, -- 289
 		folder = false, -- 290
 		position = {lineNumber = 1, column = 1} -- 291
-	}) -- 291
+	} -- 291
+	local function sendOpenMessages()
+		sendWebIDEMessage(openWorkspaceMessage)
+		sendWebIDEMessage(updateScriptMessage)
+		sendWebIDEMessage(openScriptMessage)
+	end
 	local editingInfo = {
 		index = 1,
 		files = {
@@ -445,6 +452,13 @@ local function openScriptInWebIDE(state, node) -- 271
 		end)
 	end -- 291
 	App:openURL("http://127.0.0.1:8866/") -- 293
+	sendOpenMessages()
+	thread(function()
+		for i = 0, 3 do
+			sleep(0.5)
+			sendOpenMessages()
+		end
+	end)
 	state.status = (zh and "已打开 Web IDE：" or "Opened Web IDE: ") .. scriptPath -- 294
 	pushConsole(state, state.status) -- 295
 end -- 271

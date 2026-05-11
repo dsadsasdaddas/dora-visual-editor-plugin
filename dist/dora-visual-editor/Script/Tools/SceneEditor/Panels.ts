@@ -1,4 +1,4 @@
-import { App, Color, Content, Keyboard, KeyName, Mouse, Path, Vec2, emit, json } from 'Dora';
+import { App, Color, Content, Keyboard, KeyName, Mouse, Path, Vec2, emit, json, sleep, thread } from 'Dora';
 import * as ImGui from 'ImGui';
 import { SetCond, StyleColor } from 'ImGui';
 import { EditorState, SceneNodeData, ViewportTool } from 'Script/Tools/SceneEditor/Types';
@@ -295,26 +295,31 @@ function openScriptInWebIDE(state: EditorState, node?: SceneNodeData) {
 	const root = workspaceRoot();
 	const rootTitle = Path.getFilename(root) || 'Workspace';
 	const fullScriptPath = workspacePath(scriptPath);
-	sendWebIDEMessage({
+	const openWorkspaceMessage = {
 		name: 'OpenFile',
 		file: root,
 		title: rootTitle,
 		folder: true,
 		workspaceView: 'agent',
-	});
-	sendWebIDEMessage({
+	};
+	const updateScriptMessage = {
 		name: 'UpdateFile',
 		file: fullScriptPath,
 		exists: true,
 		content: state.scriptContentBuffer.text,
-	});
-	sendWebIDEMessage({
+	};
+	const openScriptMessage = {
 		name: 'OpenFile',
 		file: fullScriptPath,
 		title,
 		folder: false,
 		position: { lineNumber: 1, column: 1 },
-	});
+	};
+	const sendOpenMessages = function(this: void) {
+		sendWebIDEMessage(openWorkspaceMessage);
+		sendWebIDEMessage(updateScriptMessage);
+		sendWebIDEMessage(openScriptMessage);
+	};
 	const editingInfo = {
 		index: 1,
 		files: [
@@ -343,6 +348,13 @@ function openScriptInWebIDE(state: EditorState, node?: SceneNodeData) {
 		});
 	}
 	App.openURL('http://127.0.0.1:8866/');
+	sendOpenMessages();
+	thread(function(this: void) {
+		for (let i = 0; i < 4; i++) {
+			sleep(0.5);
+			sendOpenMessages();
+		}
+	});
 	state.status = (zh ? '已打开 Web IDE：' : 'Opened Web IDE: ') + scriptPath;
 	pushConsole(state, state.status);
 }
