@@ -3,12 +3,16 @@ import * as ImGui from 'ImGui';
 import { SetCond, StyleColor } from 'ImGui';
 import { EditorState, SceneNodeData, ViewportTool } from 'Script/Tools/SceneEditor/Types';
 import { inputTextFlags, mainWindowFlags, noScrollFlags, okColor, panelBg, scriptPanelBg, themeColor, transparent, warnColor } from 'Script/Tools/SceneEditor/Theme';
-import { addAssetPath, addChildNode, deleteNode, iconFor, importFileDialog, importFolderDialog, isFolderAsset, isScriptAsset, isTextureAsset, lowerExt, pushConsole, workspacePath, workspaceRoot, zh } from 'Script/Tools/SceneEditor/Model';
+import { addAssetPath, addChildNode, deleteNode, iconFor, importFileDialog, importFolderDialog, isFolderAsset, isScriptAsset, isTextureAsset, lowerExt, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 import { updatePreviewRuntime } from 'Script/Tools/SceneEditor/Runtime';
 import { drawGamePreviewWindow, startPlay, stopPlay } from 'Script/Tools/SceneEditor/Player';
 
 declare function pcall(fn: () => void): LuaMultiReturn<[boolean, unknown]>;
 declare function require(path: string): any;
+
+const SceneModel = require('Script.Tools.SceneEditor.Model');
+function workspacePath(path: string) { return SceneModel.workspacePath(path) as string; }
+function workspaceRoot() { return SceneModel.workspaceRoot() as string; }
 
 function sceneSaveFile() {
 	return workspacePath(Path('.dora', 'imgui-editor.scene.json'));
@@ -689,7 +693,7 @@ function drawVerticalSplitter(id: string, height: number, onDrag: (deltaX: numbe
 	ImGui.PushStyleColor(StyleColor.Button, Color(0xff343a44), () => {
 		ImGui.PushStyleColor(StyleColor.ButtonHovered, Color(0xff4d5968), () => {
 			ImGui.PushStyleColor(StyleColor.ButtonActive, Color(0xffffcc33), () => {
-				ImGui.Button('##' + id, Vec2(12, height));
+				ImGui.Button('##' + id, Vec2(8, height));
 			});
 		});
 	});
@@ -727,32 +731,58 @@ export function drawEditor(state: EditorState) {
 			return;
 		}
 		const mainHeight = math.max(160, avail.y - bottomHeight - 10);
-		const availableWidth = math.max(520, avail.x - 4);
-		state.leftWidth = math.max(190, math.min(state.leftWidth, availableWidth - state.rightWidth - 320));
-		state.rightWidth = math.max(250, math.min(state.rightWidth, availableWidth - state.leftWidth - 320));
-		const centerWidth = math.max(220, availableWidth - state.leftWidth - state.rightWidth - 24);
+		const availableWidth = math.max(320, avail.x);
+		const splitterWidth = 8;
+		const compactLayout = availableWidth < 760;
+		const minLeftWidth = compactLayout ? 110 : 170;
+		const minRightWidth = compactLayout ? 130 : 220;
+		const minCenterWidth = compactLayout ? 80 : 180;
+		const sideBudget = math.max(0, availableWidth - splitterWidth * 2 - minCenterWidth);
+		if (sideBudget <= minLeftWidth + minRightWidth) {
+			state.leftWidth = math.max(1, math.floor(sideBudget * 0.45));
+			state.rightWidth = math.max(1, sideBudget - state.leftWidth);
+		} else {
+			state.leftWidth = math.max(minLeftWidth, state.leftWidth);
+			state.rightWidth = math.max(minRightWidth, state.rightWidth);
+			if (state.leftWidth + state.rightWidth > sideBudget) {
+				const ratio = state.leftWidth / math.max(1, state.leftWidth + state.rightWidth);
+				state.leftWidth = math.max(minLeftWidth, math.floor(sideBudget * ratio));
+				state.rightWidth = math.max(minRightWidth, sideBudget - state.leftWidth);
+			}
+			state.leftWidth = math.min(state.leftWidth, sideBudget - minRightWidth);
+			state.rightWidth = math.min(state.rightWidth, sideBudget - state.leftWidth);
+		}
+		const centerWidth = math.max(1, availableWidth - state.leftWidth - state.rightWidth - splitterWidth * 2);
 		const leftTopHeight = math.floor(mainHeight * 0.58);
 		const leftBottomHeight = mainHeight - leftTopHeight - 8;
+		const clampPanelWidth = function(this: void, value: number, minValue: number, maxValue: number) {
+			const safeMax = math.max(1, maxValue);
+			const safeMin = math.min(minValue, safeMax);
+			return math.max(safeMin, math.min(value, safeMax));
+		};
+		const resizeSidePanels = function(this: void, deltaX: number, side: 'left' | 'right') {
+			if (side === 'left') {
+				state.leftWidth = clampPanelWidth(state.leftWidth + deltaX, minLeftWidth, availableWidth - state.rightWidth - splitterWidth * 2 - minCenterWidth);
+			} else {
+				state.rightWidth = clampPanelWidth(state.rightWidth - deltaX, minRightWidth, availableWidth - state.leftWidth - splitterWidth * 2 - minCenterWidth);
+			}
+		};
 
 		ImGui.BeginChild('LeftDock', Vec2(state.leftWidth, mainHeight), [], noScrollFlags, () => {
 			ImGui.BeginChild('SceneDock', Vec2(0, leftTopHeight), [], noScrollFlags, () => drawScenePanel(state));
 			ImGui.BeginChild('AssetDock', Vec2(0, leftBottomHeight), [], noScrollFlags, () => drawAssetsPanel(state));
 		});
-		ImGui.SameLine();
-		drawVerticalSplitter('LeftSplitter', mainHeight, (deltaX) => {
-			state.leftWidth = math.max(190, math.min(state.leftWidth + deltaX, availableWidth - state.rightWidth - 320));
-		});
-		ImGui.SameLine();
+		ImGui.SameLine(0, 0);
+		drawVerticalSplitter('LeftSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'left'));
+		ImGui.SameLine(0, 0);
 		ImGui.PushStyleColor(StyleColor.ChildBg, transparent, () => {
 			ImGui.BeginChild('CenterDock', Vec2(centerWidth, mainHeight), [], noScrollFlags, () => {
 				if (state.mode === 'Script') drawScriptPanel(state); else drawViewport(state);
 			});
 		});
-		ImGui.SameLine();
-		drawVerticalSplitter('RightSplitter', mainHeight, (deltaX) => {
-			state.rightWidth = math.max(250, math.min(state.rightWidth - deltaX, availableWidth - state.leftWidth - 320));
-		});
-		ImGui.SameLine();
+		ImGui.SameLine(0, 0);
+		drawVerticalSplitter('RightSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'right'));
+		ImGui.SameLine(0, 0);
 		ImGui.BeginChild('RightDock', Vec2(state.rightWidth, mainHeight), [], noScrollFlags, () => drawInspector(state));
 		ImGui.BeginChild('BottomConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsole(state));
 	});
