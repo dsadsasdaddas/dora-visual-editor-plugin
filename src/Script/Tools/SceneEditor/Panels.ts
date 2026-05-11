@@ -98,36 +98,36 @@ function attachScriptToNode(state: EditorState, node: SceneNodeData, scriptPath:
 function drawHeader(state: EditorState) {
 	ImGui.TextColored(themeColor, '✦ Dora Visual Editor');
 	ImGui.SameLine();
-	if (ImGui.Button('2D')) state.mode = '2D';
+	if (ImGui.Button(zh ? '场景' : 'Scene')) state.mode = '2D';
 	ImGui.SameLine();
-	if (ImGui.Button('Script')) state.mode = 'Script';
+	if (ImGui.Button(zh ? '脚本' : 'Scripts')) state.mode = 'Script';
 	ImGui.SameLine();
-	ImGui.TextDisabled(zh ? 'Native ImGui / Godot-like' : 'Native ImGui / Godot-like');
+	ImGui.TextDisabled(zh ? 'Dora 原生 2D 场景编辑器' : 'Dora Native 2D Scene Editor');
 	ImGui.Separator();
 	if (state.isPlaying) {
-		if (ImGui.Button('■ Stop')) stopPlay(state);
-	} else if (ImGui.Button('▶ Run')) {
+		if (ImGui.Button(zh ? '■ 停止' : '■ Stop')) stopPlay(state);
+	} else if (ImGui.Button(zh ? '▶ 运行' : '▶ Run')) {
 		startPlay(state);
 	}
 	ImGui.SameLine();
-	if (ImGui.Button('▣ Save')) saveScene(state);
+	if (ImGui.Button(zh ? '▣ 保存' : '▣ Save')) saveScene(state);
 	ImGui.SameLine();
-	if (ImGui.Button('◇ Build')) {
+	if (ImGui.Button(zh ? '◇ 构建' : '◇ Build')) {
 		state.status = zh ? 'Build 会在代码生成稳定后接入' : 'Build will be wired after codegen is stable';
 		pushConsole(state, state.status);
 	}
 	ImGui.SameLine();
 	ImGui.TextDisabled('|');
 	ImGui.SameLine();
-	if (ImGui.Button('＋ Add')) ImGui.OpenPopup('AddNodePopup');
+	if (ImGui.Button(zh ? '＋ 添加' : '＋ Add')) ImGui.OpenPopup('AddNodePopup');
 	drawAddNodePopup(state);
 	ImGui.SameLine();
-	if (ImGui.Button('Delete')) deleteNode(state, state.selectedId);
+	if (ImGui.Button(zh ? '删除' : 'Delete')) deleteNode(state, state.selectedId);
 	ImGui.Separator();
 }
 
 function drawScenePanel(state: EditorState) {
-	ImGui.TextColored(themeColor, 'Scene Tree');
+	ImGui.TextColored(themeColor, zh ? '场景层级' : 'Scene Hierarchy');
 	ImGui.SameLine();
 	if (ImGui.SmallButton('＋##scene_add')) ImGui.OpenPopup('AddNodePopup');
 	drawAddNodePopup(state);
@@ -198,11 +198,11 @@ function drawAssetRow(state: EditorState, asset: string) {
 }
 
 function drawAssetsPanel(state: EditorState) {
-	ImGui.TextColored(themeColor, 'FileSystem');
+	ImGui.TextColored(themeColor, zh ? '资源' : 'Assets');
 	ImGui.SameLine();
-	if (ImGui.SmallButton('＋ File')) importFileDialog(state);
+	if (ImGui.SmallButton(zh ? '＋ 文件' : '＋ File')) importFileDialog(state);
 	ImGui.SameLine();
-	if (ImGui.SmallButton('＋ Folder')) importFolderDialog(state);
+	if (ImGui.SmallButton(zh ? '＋ 文件夹' : '＋ Folder')) importFolderDialog(state);
 	ImGui.Separator();
 	ImGui.TextDisabled(zh ? '支持 png/jpg/webp/lua/ts/json/音频/字体/模型等；文件夹会递归导入。' : 'Supports images, scripts, json, audio, fonts, models; folders import recursively.');
 	ImGui.Separator();
@@ -224,7 +224,7 @@ function drawAssetsPanel(state: EditorState) {
 	}
 	if (state.selectedAsset !== '' && isTextureAsset(state.selectedAsset)) {
 		ImGui.Separator();
-		ImGui.TextColored(themeColor, 'Texture Preview');
+		ImGui.TextColored(themeColor, zh ? '贴图预览' : 'Texture Preview');
 		const [ok] = pcall(() => ImGui.Image(state.selectedAsset, Vec2(160, 120)));
 		if (!ok) ImGui.TextDisabled(zh ? '无法预览该贴图；但仍可尝试绑定到 Sprite。' : 'Unable to preview; still can bind to Sprite.');
 		const selectedNode = state.nodes[state.selectedId];
@@ -396,7 +396,7 @@ function drawScriptAssetList(state: EditorState, node?: SceneNodeData) {
 function drawScriptPanel(state: EditorState) {
 	const activeId = state.activeScriptNodeId || state.selectedId;
 	const node = state.nodes[activeId];
-	ImGui.TextColored(themeColor, 'Script Workspace');
+	ImGui.TextColored(themeColor, zh ? '脚本编辑器' : 'Script Editor');
 	ImGui.SameLine();
 	ImGui.TextDisabled(node !== undefined ? node.name : (zh ? '独立文件模式' : 'File mode'));
 	ImGui.Separator();
@@ -573,7 +573,7 @@ function drawViewportToolButton(state: EditorState, tool: ViewportTool, label: s
 }
 
 function drawViewport(state: EditorState) {
-	ImGui.TextColored(themeColor, '2D');
+	ImGui.TextColored(themeColor, zh ? '场景' : 'Scene');
 	ImGui.SameLine();
 	drawViewportToolButton(state, 'Select', 'Select');
 	ImGui.SameLine();
@@ -585,20 +585,20 @@ function drawViewport(state: EditorState) {
 	ImGui.SameLine();
 	ImGui.TextDisabled('|');
 	ImGui.SameLine();
-	const [snapChanged, snap] = ImGui.Checkbox('Snap', state.snapEnabled);
+	const [snapChanged, snap] = ImGui.Checkbox(zh ? '吸附' : 'Snap', state.snapEnabled);
 	if (snapChanged) state.snapEnabled = snap;
 	ImGui.SameLine();
-	const [gridChanged, grid] = ImGui.Checkbox('Grid', state.showGrid);
+	const [gridChanged, grid] = ImGui.Checkbox(zh ? '网格' : 'Grid', state.showGrid);
 	if (gridChanged) { state.showGrid = grid; state.previewDirty = true; }
 	ImGui.SameLine();
-	if (ImGui.Button('Center')) {
+	if (ImGui.Button(zh ? '居中' : 'Center')) {
 		state.viewportPanX = 0;
 		state.viewportPanY = 0;
 		state.zoom = 100;
 		state.previewDirty = true;
 	}
 	ImGui.SameLine();
-	ImGui.TextDisabled('Main.scene');
+	ImGui.TextDisabled(zh ? '当前场景：Main' : 'Scene: Main');
 	ImGui.Separator();
 	const cursor = ImGui.GetCursorScreenPos();
 	const avail = ImGui.GetContentRegionAvail();
@@ -630,13 +630,13 @@ function drawViewport(state: EditorState) {
 	if (ImGui.SmallButton('+##viewport_zoom_in')) zoomViewportFromCenter(state, 10);
 	ImGui.SetCursorScreenPos(Vec2(cursor.x, cursor.y + viewportHeight + 4));
 	ImGui.Separator();
-	ImGui.TextColored(okColor, 'Dora 2D Viewport');
+	ImGui.TextColored(okColor, zh ? '场景视口' : 'Scene Viewport');
 	ImGui.SameLine();
 	ImGui.TextDisabled(zh ? '滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。' : 'Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.');
 }
 
 function drawInspector(state: EditorState) {
-	ImGui.TextColored(themeColor, 'Inspector');
+	ImGui.TextColored(themeColor, zh ? '属性检查器' : 'Inspector');
 	ImGui.Separator();
 	const node = state.nodes[state.selectedId];
 	if (node === undefined) {
@@ -682,7 +682,7 @@ function drawInspector(state: EditorState) {
 }
 
 function drawConsole(state: EditorState) {
-	ImGui.TextColored(themeColor, 'Console');
+	ImGui.TextColored(themeColor, zh ? '控制台' : 'Console');
 	ImGui.SameLine();
 	ImGui.TextColored(okColor, state.status);
 	ImGui.Separator();
@@ -794,7 +794,7 @@ export function drawRuntimeError(message: string) {
 	ImGui.SetNextWindowPos(Vec2(10, 10), SetCond.Always);
 	ImGui.SetNextWindowSize(Vec2(math.max(320, size.width - 20), math.max(220, size.height - 20)), SetCond.Always);
 	ImGui.Begin('Dora Visual Editor Error', mainWindowFlags, () => {
-		ImGui.TextColored(warnColor, 'SceneImGuiEditor runtime error');
+		ImGui.TextColored(warnColor, zh ? 'Dora Visual Editor 运行时错误' : 'Dora Visual Editor Runtime Error');
 		ImGui.Separator();
 		ImGui.TextWrapped(message || 'unknown error');
 	});

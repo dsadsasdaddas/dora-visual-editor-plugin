@@ -10,7 +10,7 @@ import time
 import zipfile
 from pathlib import Path
 
-VERSION = "0.1.9"
+VERSION = "0.1.10"
 PACKAGE = "dora-visual-editor"
 OWNER = "dsadsasdaddas"
 REPO = "dora-visual-editor-plugin"
@@ -106,7 +106,7 @@ def write_manifests(zip_path: Path, size: int, sha256: str) -> None:
             "title": {"zh": "Dora 2D 可视化编辑器", "en": "Dora 2D Visual Editor"},
             "desc": {
                 "zh": "原生 ImGui 2D 场景编辑器：节点树、真实 Dora Viewport、资源导入、脚本入口。",
-                "en": "Native ImGui 2D scene editor with node tree, real Dora viewport, asset import, and script entry.",
+                "en": "Dora native 2D scene editor with node tree, real Dora viewport, asset import, and script entry.",
             },
             "kind": "tool",
             "entry": "init",
@@ -146,7 +146,7 @@ def ensure_banner() -> None:
             d = ImageDraw.Draw(img)
             d.rectangle((24, 24, 616, 336), outline=(255, 204, 51), width=4)
             d.text((52, 52), "Dora 2D Visual Editor", fill=(255, 204, 51))
-            d.text((52, 96), "Native ImGui / Real Dora Viewport", fill=(210, 210, 210))
+            d.text((52, 96), "Dora Native 2D Scene Editor", fill=(210, 210, 210))
             img.save(banner, quality=90)
         except Exception:
             banner.write_bytes(b"\xff\xd8\xff\xd9")

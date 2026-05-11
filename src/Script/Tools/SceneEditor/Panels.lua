@@ -147,47 +147,47 @@ end -- 85
 local function drawHeader(state) -- 98
 	ImGui.TextColored(themeColor, "✦ Dora Visual Editor") -- 99
 	ImGui.SameLine() -- 100
-	if ImGui.Button("2D") then -- 100
+	if ImGui.Button(zh and "场景" or "Scene") then -- 100
 		state.mode = "2D" -- 101
 	end -- 101
 	ImGui.SameLine() -- 102
-	if ImGui.Button("Script") then -- 102
+	if ImGui.Button(zh and "脚本" or "Scripts") then -- 102
 		state.mode = "Script" -- 103
 	end -- 103
 	ImGui.SameLine() -- 104
-	ImGui.TextDisabled(zh and "Native ImGui / Godot-like" or "Native ImGui / Godot-like") -- 105
+	ImGui.TextDisabled(zh and "Dora 原生 2D 场景编辑器" or "Dora Native 2D Scene Editor") -- 105
 	ImGui.Separator() -- 106
 	if state.isPlaying then -- 106
-		if ImGui.Button("■ Stop") then -- 106
+		if ImGui.Button(zh and "■ 停止" or "■ Stop") then -- 106
 			stopPlay(state) -- 108
 		end -- 108
-	elseif ImGui.Button("▶ Run") then -- 108
+	elseif ImGui.Button(zh and "▶ 运行" or "▶ Run") then -- 108
 		startPlay(state) -- 110
 	end -- 110
 	ImGui.SameLine() -- 112
-	if ImGui.Button("▣ Save") then -- 112
+	if ImGui.Button(zh and "▣ 保存" or "▣ Save") then -- 112
 		saveScene(state) -- 113
 	end -- 113
 	ImGui.SameLine() -- 114
-	if ImGui.Button("◇ Build") then -- 114
+	if ImGui.Button(zh and "◇ 构建" or "◇ Build") then -- 114
 		state.status = zh and "Build 会在代码生成稳定后接入" or "Build will be wired after codegen is stable" -- 116
 		pushConsole(state, state.status) -- 117
 	end -- 117
 	ImGui.SameLine() -- 119
 	ImGui.TextDisabled("|") -- 120
 	ImGui.SameLine() -- 121
-	if ImGui.Button("＋ Add") then -- 121
+	if ImGui.Button(zh and "＋ 添加" or "＋ Add") then -- 121
 		ImGui.OpenPopup("AddNodePopup") -- 122
 	end -- 122
 	drawAddNodePopup(state) -- 123
 	ImGui.SameLine() -- 124
-	if ImGui.Button("Delete") then -- 124
+	if ImGui.Button(zh and "删除" or "Delete") then -- 124
 		deleteNode(state, state.selectedId) -- 125
 	end -- 125
 	ImGui.Separator() -- 126
 end -- 98
 local function drawScenePanel(state) -- 129
-	ImGui.TextColored(themeColor, "Scene Tree") -- 130
+	ImGui.TextColored(themeColor, zh and "场景层级" or "Scene Hierarchy") -- 130
 	ImGui.SameLine() -- 131
 	if ImGui.SmallButton("＋##scene_add") then -- 131
 		ImGui.OpenPopup("AddNodePopup") -- 132
@@ -278,13 +278,13 @@ local function drawAssetRow(state, asset) -- 173
 	end -- 196
 end -- 173
 local function drawAssetsPanel(state) -- 200
-	ImGui.TextColored(themeColor, "FileSystem") -- 201
+	ImGui.TextColored(themeColor, zh and "资源" or "Assets") -- 201
 	ImGui.SameLine() -- 202
-	if ImGui.SmallButton("＋ File") then -- 202
+	if ImGui.SmallButton(zh and "＋ 文件" or "＋ File") then -- 202
 		importFileDialog(state) -- 203
 	end -- 203
 	ImGui.SameLine() -- 204
-	if ImGui.SmallButton("＋ Folder") then -- 204
+	if ImGui.SmallButton(zh and "＋ 文件夹" or "＋ Folder") then -- 204
 		importFolderDialog(state) -- 205
 	end -- 205
 	ImGui.Separator() -- 206
@@ -312,7 +312,7 @@ local function drawAssetsPanel(state) -- 200
 	end -- 223
 	if state.selectedAsset ~= "" and isTextureAsset(state.selectedAsset) then -- 223
 		ImGui.Separator() -- 226
-		ImGui.TextColored(themeColor, "Texture Preview") -- 227
+		ImGui.TextColored(themeColor, zh and "贴图预览" or "Texture Preview") -- 227
 		local ok = pcall(function() return ImGui.Image( -- 228
 			state.selectedAsset, -- 228
 			Vec2(160, 120) -- 228
@@ -484,7 +484,7 @@ end -- 384
 local function drawScriptPanel(state) -- 396
 	local activeId = state.activeScriptNodeId or state.selectedId -- 397
 	local node = state.nodes[activeId] -- 398
-	ImGui.TextColored(themeColor, "Script Workspace") -- 399
+	ImGui.TextColored(themeColor, zh and "脚本编辑器" or "Script Editor") -- 399
 	ImGui.SameLine() -- 400
 	ImGui.TextDisabled(node ~= nil and node.name or (zh and "独立文件模式" or "File mode")) -- 401
 	ImGui.Separator() -- 402
@@ -706,7 +706,7 @@ local function drawViewportToolButton(state, tool, label) -- 562
 	end -- 571
 end -- 562
 local function drawViewport(state) -- 575
-	ImGui.TextColored(themeColor, "2D") -- 576
+	ImGui.TextColored(themeColor, zh and "场景" or "Scene") -- 576
 	ImGui.SameLine() -- 577
 	drawViewportToolButton(state, "Select", "Select") -- 578
 	ImGui.SameLine() -- 579
@@ -718,25 +718,25 @@ local function drawViewport(state) -- 575
 	ImGui.SameLine() -- 585
 	ImGui.TextDisabled("|") -- 586
 	ImGui.SameLine() -- 587
-	local snapChanged, snap = ImGui.Checkbox("Snap", state.snapEnabled) -- 588
+	local snapChanged, snap = ImGui.Checkbox(zh and "吸附" or "Snap", state.snapEnabled) -- 588
 	if snapChanged then -- 588
 		state.snapEnabled = snap -- 589
 	end -- 589
 	ImGui.SameLine() -- 590
-	local gridChanged, grid = ImGui.Checkbox("Grid", state.showGrid) -- 591
+	local gridChanged, grid = ImGui.Checkbox(zh and "网格" or "Grid", state.showGrid) -- 591
 	if gridChanged then -- 591
 		state.showGrid = grid -- 592
 		state.previewDirty = true -- 592
 	end -- 592
 	ImGui.SameLine() -- 593
-	if ImGui.Button("Center") then -- 593
+	if ImGui.Button(zh and "居中" or "Center") then -- 593
 		state.viewportPanX = 0 -- 595
 		state.viewportPanY = 0 -- 596
 		state.zoom = 100 -- 597
 		state.previewDirty = true -- 598
 	end -- 598
 	ImGui.SameLine() -- 600
-	ImGui.TextDisabled("Main.scene") -- 601
+	ImGui.TextDisabled(zh and "当前场景：Main" or "Scene: Main") -- 601
 	ImGui.Separator() -- 602
 	local cursor = ImGui.GetCursorScreenPos() -- 603
 	local avail = ImGui.GetContentRegionAvail() -- 604
@@ -776,12 +776,12 @@ local function drawViewport(state) -- 575
 	end -- 630
 	ImGui.SetCursorScreenPos(Vec2(cursor.x, cursor.y + viewportHeight + 4)) -- 631
 	ImGui.Separator() -- 632
-	ImGui.TextColored(okColor, "Dora 2D Viewport") -- 633
+	ImGui.TextColored(okColor, zh and "场景视口" or "Scene Viewport") -- 633
 	ImGui.SameLine() -- 634
 	ImGui.TextDisabled(zh and "滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。" or "Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.") -- 635
 end -- 575
 local function drawInspector(state) -- 638
-	ImGui.TextColored(themeColor, "Inspector") -- 639
+	ImGui.TextColored(themeColor, zh and "属性检查器" or "Inspector") -- 639
 	ImGui.Separator() -- 640
 	local node = state.nodes[state.selectedId] -- 641
 	if node == nil then -- 641
@@ -874,7 +874,7 @@ local function drawInspector(state) -- 638
 	end -- 680
 end -- 638
 local function drawConsole(state) -- 684
-	ImGui.TextColored(themeColor, "Console") -- 685
+	ImGui.TextColored(themeColor, zh and "控制台" or "Console") -- 685
 	ImGui.SameLine() -- 686
 	ImGui.TextColored(okColor, state.status) -- 687
 	ImGui.Separator() -- 688
@@ -1104,7 +1104,7 @@ function ____exports.drawRuntimeError(message) -- 792
 		"Dora Visual Editor Error", -- 796
 		mainWindowFlags, -- 796
 		function() -- 796
-			ImGui.TextColored(warnColor, "SceneImGuiEditor runtime error") -- 797
+			ImGui.TextColored(warnColor, zh and "Dora Visual Editor 运行时错误" or "Dora Visual Editor Runtime Error") -- 797
 			ImGui.Separator() -- 798
 			ImGui.TextWrapped(message or "unknown error") -- 799
 		end -- 796
