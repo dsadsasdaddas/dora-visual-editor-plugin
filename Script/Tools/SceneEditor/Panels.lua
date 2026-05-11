@@ -26,7 +26,6 @@ local warnColor = ____Theme.warnColor -- 5
 local ____Model = require("Script.Tools.SceneEditor.Model") -- 6
 local addAssetPath = ____Model.addAssetPath -- 6
 local addChildNode = ____Model.addChildNode -- 6
-local deleteNode = ____Model.deleteNode -- 6
 local iconFor = ____Model.iconFor -- 6
 local importFileDialog = ____Model.importFileDialog -- 6
 local importFolderDialog = ____Model.importFolderDialog -- 6
@@ -40,1074 +39,1002 @@ local ____Runtime = require("Script.Tools.SceneEditor.Runtime") -- 7
 local updatePreviewRuntime = ____Runtime.updatePreviewRuntime -- 7
 local ____Player = require("Script.Tools.SceneEditor.Player") -- 8
 local drawGamePreviewWindow = ____Player.drawGamePreviewWindow -- 8
-local startPlay = ____Player.startPlay -- 8
-local stopPlay = ____Player.stopPlay -- 8
-local SceneModel = require("Script.Tools.SceneEditor.Model") -- 13
-local function workspacePath(path) -- 14
-	return SceneModel.workspacePath(path) -- 14
-end -- 14
-local function workspaceRoot() -- 15
-	return SceneModel.workspaceRoot() -- 15
-end -- 15
-local function sceneSaveFile() -- 17
-	return workspacePath(Path(".dora", "imgui-editor.scene.json")) -- 18
+local ____AddNodePopup = require("Script.Tools.SceneEditor.Panels.AddNodePopup") -- 9
+local drawAddNodePopup = ____AddNodePopup.drawAddNodePopup -- 9
+local ____HeaderPanel = require("Script.Tools.SceneEditor.Panels.HeaderPanel") -- 10
+local drawHeaderPanel = ____HeaderPanel.drawHeaderPanel -- 10
+local ____ConsolePanel = require("Script.Tools.SceneEditor.Panels.ConsolePanel") -- 11
+local drawConsolePanel = ____ConsolePanel.drawConsolePanel -- 11
+local SceneModel = require("Script.Tools.SceneEditor.Model") -- 16
+local function workspacePath(path) -- 17
+	return SceneModel.workspacePath(path) -- 17
 end -- 17
-local function drawNodeRow(state, id, depth) -- 21
-	local node = state.nodes[id] -- 22
-	if node == nil then -- 22
-		return -- 23
-	end -- 23
-	local indent = string.rep("  ", depth) -- 24
-	local label = ((((indent .. iconFor(node.kind)) .. "  ") .. node.name) .. "##tree_") .. id -- 25
-	if ImGui.Selectable(label, state.selectedId == id) then -- 25
-		state.selectedId = id -- 27
-		state.previewDirty = true -- 28
-	end -- 28
-	for ____, childId in ipairs(node.children) do -- 30
-		drawNodeRow(state, childId, depth + 1) -- 31
+local function workspaceRoot() -- 18
+	return SceneModel.workspaceRoot() -- 18
+end -- 18
+local function sceneSaveFile() -- 20
+	return workspacePath(Path(".dora", "imgui-editor.scene.json")) -- 21
+end -- 20
+local function drawNodeRow(state, id, depth) -- 24
+	local node = state.nodes[id] -- 25
+	if node == nil then -- 25
+		return -- 26
+	end -- 26
+	local indent = string.rep("  ", depth) -- 27
+	local label = ((((indent .. iconFor(node.kind)) .. "  ") .. node.name) .. "##tree_") .. id -- 28
+	if ImGui.Selectable(label, state.selectedId == id) then -- 28
+		state.selectedId = id -- 30
+		state.previewDirty = true -- 31
 	end -- 31
-end -- 21
-local function drawAddNodePopup(state) -- 35
-	ImGui.BeginPopup( -- 36
-		"AddNodePopup", -- 36
-		function() -- 36
-			ImGui.TextColored(themeColor, zh and "添加节点" or "Add Node") -- 37
-			ImGui.Separator() -- 38
-			if ImGui.Selectable("○  Node", false) then -- 38
-				addChildNode(state, "Node") -- 39
-				ImGui.CloseCurrentPopup() -- 39
-			end -- 39
-			if ImGui.Selectable("▣  Sprite", false) then -- 39
-				addChildNode(state, "Sprite") -- 40
-				ImGui.CloseCurrentPopup() -- 40
-			end -- 40
-			if ImGui.Selectable("T  Label", false) then -- 40
-				addChildNode(state, "Label") -- 41
-				ImGui.CloseCurrentPopup() -- 41
-			end -- 41
-			if ImGui.Selectable("◉  Camera", false) then -- 41
-				addChildNode(state, "Camera") -- 42
-				ImGui.CloseCurrentPopup() -- 42
-			end -- 42
-		end -- 36
-	) -- 36
-end -- 35
-local function writeSceneFile(state) -- 46
-	Content:mkdir(workspacePath(".dora")) -- 47
-	local data = {version = 1, nodes = {}} -- 48
-	for ____, id in ipairs(state.order) do -- 49
-		local node = state.nodes[id] -- 50
-		if node ~= nil then -- 50
-			local ____data_nodes_0 = data.nodes -- 50
-			____data_nodes_0[#____data_nodes_0 + 1] = { -- 52
-				id = node.id, -- 53
-				kind = node.kind, -- 54
-				name = node.name, -- 55
-				parentId = node.parentId, -- 56
-				x = node.x, -- 57
-				y = node.y, -- 58
-				scaleX = node.scaleX, -- 59
-				scaleY = node.scaleY, -- 60
-				rotation = node.rotation, -- 61
-				visible = node.visible, -- 62
-				texture = node.texture, -- 63
-				text = node.text, -- 64
-				script = node.script -- 65
-			} -- 65
-		end -- 65
-	end -- 65
-	local text = json.encode(data) -- 69
-	local file = sceneSaveFile() -- 70
-	if text ~= nil and Content:save(file, text) then -- 70
-		return file -- 71
-	end -- 71
-	return nil -- 72
-end -- 46
-local function saveScene(state) -- 75
-	local file = writeSceneFile(state) -- 76
-	if file ~= nil then -- 76
-		state.status = (zh and "已保存：" or "Saved: ") .. file -- 78
-	else -- 78
-		state.status = zh and "保存失败" or "Save failed" -- 80
-	end -- 80
-	pushConsole(state, state.status) -- 82
-end -- 75
-local function attachScriptToNode(state, node, scriptPath, message) -- 85
-	node.script = scriptPath -- 86
-	node.scriptBuffer.text = scriptPath -- 87
-	state.activeScriptNodeId = node.id -- 88
-	local sceneFile = writeSceneFile(state) -- 89
-	if sceneFile == nil then -- 89
-		state.status = zh and "脚本已挂载，但场景保存失败" or "Script attached, but scene save failed" -- 91
-	else -- 91
-		state.status = message or (zh and "脚本已挂载并保存：" or "Script attached and saved: ") .. scriptPath -- 93
+	for ____, childId in ipairs(node.children) do -- 33
+		drawNodeRow(state, childId, depth + 1) -- 34
+	end -- 34
+end -- 24
+local function writeSceneFile(state) -- 38
+	Content:mkdir(workspacePath(".dora")) -- 39
+	local data = {version = 1, nodes = {}} -- 40
+	for ____, id in ipairs(state.order) do -- 41
+		local node = state.nodes[id] -- 42
+		if node ~= nil then -- 42
+			local ____data_nodes_0 = data.nodes -- 42
+			____data_nodes_0[#____data_nodes_0 + 1] = { -- 44
+				id = node.id, -- 45
+				kind = node.kind, -- 46
+				name = node.name, -- 47
+				parentId = node.parentId, -- 48
+				x = node.x, -- 49
+				y = node.y, -- 50
+				scaleX = node.scaleX, -- 51
+				scaleY = node.scaleY, -- 52
+				rotation = node.rotation, -- 53
+				visible = node.visible, -- 54
+				texture = node.texture, -- 55
+				text = node.text, -- 56
+				script = node.script -- 57
+			} -- 57
+		end -- 57
+	end -- 57
+	local text = json.encode(data) -- 61
+	local file = sceneSaveFile() -- 62
+	if text ~= nil and Content:save(file, text) then -- 62
+		return file -- 63
+	end -- 63
+	return nil -- 64
+end -- 38
+local function saveScene(state) -- 67
+	local file = writeSceneFile(state) -- 68
+	if file ~= nil then -- 68
+		state.status = (zh and "已保存：" or "Saved: ") .. file -- 70
+	else -- 70
+		state.status = zh and "保存失败" or "Save failed" -- 72
+	end -- 72
+	pushConsole(state, state.status) -- 74
+end -- 67
+local function attachScriptToNode(state, node, scriptPath, message) -- 77
+	node.script = scriptPath -- 78
+	node.scriptBuffer.text = scriptPath -- 79
+	state.activeScriptNodeId = node.id -- 80
+	local sceneFile = writeSceneFile(state) -- 81
+	if sceneFile == nil then -- 81
+		state.status = zh and "脚本已挂载，但场景保存失败" or "Script attached, but scene save failed" -- 83
+	else -- 83
+		state.status = message or (zh and "脚本已挂载并保存：" or "Script attached and saved: ") .. scriptPath -- 85
+	end -- 85
+	pushConsole(state, state.status) -- 87
+end -- 77
+local function drawScenePanel(state) -- 90
+	ImGui.TextColored(themeColor, zh and "场景层级" or "Scene Hierarchy") -- 91
+	ImGui.SameLine() -- 92
+	if ImGui.SmallButton("＋##scene_add") then -- 92
+		ImGui.OpenPopup("AddNodePopup") -- 93
 	end -- 93
-	pushConsole(state, state.status) -- 95
-end -- 85
-local function drawHeader(state) -- 98
-	ImGui.TextColored(themeColor, "✦ Dora Visual Editor") -- 99
-	ImGui.SameLine() -- 100
-	if ImGui.Button(zh and "场景" or "Scene") then -- 100
-		state.mode = "2D" -- 101
-	end -- 101
-	ImGui.SameLine() -- 102
-	if ImGui.Button(zh and "脚本" or "Scripts") then -- 102
-		state.mode = "Script" -- 103
-	end -- 103
-	ImGui.SameLine() -- 104
-	ImGui.TextDisabled(zh and "Dora 原生 2D 场景编辑器" or "Dora Native 2D Scene Editor") -- 105
-	ImGui.Separator() -- 106
-	if state.isPlaying then -- 106
-		if ImGui.Button(zh and "■ 停止" or "■ Stop") then -- 106
-			stopPlay(state) -- 108
-		end -- 108
-	elseif ImGui.Button(zh and "▶ 运行" or "▶ Run") then -- 108
-		startPlay(state) -- 110
-	end -- 110
-	ImGui.SameLine() -- 112
-	if ImGui.Button(zh and "▣ 保存" or "▣ Save") then -- 112
-		saveScene(state) -- 113
-	end -- 113
-	ImGui.SameLine() -- 114
-	if ImGui.Button(zh and "◇ 构建" or "◇ Build") then -- 114
-		state.status = zh and "Build 会在代码生成稳定后接入" or "Build will be wired after codegen is stable" -- 116
-		pushConsole(state, state.status) -- 117
-	end -- 117
-	ImGui.SameLine() -- 119
-	ImGui.TextDisabled("|") -- 120
-	ImGui.SameLine() -- 121
-	if ImGui.Button(zh and "＋ 添加" or "＋ Add") then -- 121
-		ImGui.OpenPopup("AddNodePopup") -- 122
-	end -- 122
-	drawAddNodePopup(state) -- 123
-	ImGui.SameLine() -- 124
-	if ImGui.Button(zh and "删除" or "Delete") then -- 124
-		deleteNode(state, state.selectedId) -- 125
+	drawAddNodePopup(state) -- 94
+	ImGui.Separator() -- 95
+	drawNodeRow(state, "root", 0) -- 96
+	ImGui.Separator() -- 97
+	ImGui.TextDisabled(zh and "＋ 添加到当前选中节点下" or "+ adds under selected node") -- 98
+end -- 90
+local function bindTextureToSprite(state, node, texture) -- 101
+	node.texture = texture -- 102
+	node.textureBuffer.text = texture -- 103
+	state.selectedAsset = texture -- 104
+	state.previewDirty = true -- 105
+	state.status = (zh and "已绑定贴图：" or "Texture assigned: ") .. texture -- 106
+	pushConsole(state, state.status) -- 107
+end -- 101
+local function createSpriteFromTexture(state, texture) -- 110
+	addChildNode(state, "Sprite") -- 111
+	local node = state.nodes[state.selectedId] -- 112
+	if node ~= nil and node.kind == "Sprite" then -- 112
+		bindTextureToSprite(state, node, texture) -- 114
+	end -- 114
+end -- 110
+local function assetIcon(asset) -- 118
+	if isFolderAsset(asset) then -- 118
+		return "📁" -- 119
+	end -- 119
+	if isTextureAsset(asset) then -- 119
+		return "🖼" -- 120
+	end -- 120
+	if isScriptAsset(asset) then -- 120
+		return "◇" -- 121
+	end -- 121
+	local ext = lowerExt(asset) -- 122
+	if ext == "wav" or ext == "mp3" or ext == "ogg" or ext == "flac" then -- 122
+		return "♪" -- 123
+	end -- 123
+	if ext == "ttf" or ext == "otf" or ext == "fnt" then -- 123
+		return "F" -- 124
+	end -- 124
+	if ext == "json" or ext == "xml" or ext == "yaml" or ext == "yml" then -- 124
+		return "{}" -- 125
 	end -- 125
-	ImGui.Separator() -- 126
-end -- 98
-local function drawScenePanel(state) -- 129
-	ImGui.TextColored(themeColor, zh and "场景层级" or "Scene Hierarchy") -- 130
-	ImGui.SameLine() -- 131
-	if ImGui.SmallButton("＋##scene_add") then -- 131
-		ImGui.OpenPopup("AddNodePopup") -- 132
-	end -- 132
-	drawAddNodePopup(state) -- 133
-	ImGui.Separator() -- 134
-	drawNodeRow(state, "root", 0) -- 135
-	ImGui.Separator() -- 136
-	ImGui.TextDisabled(zh and "＋ 添加到当前选中节点下" or "+ adds under selected node") -- 137
-end -- 129
-local function bindTextureToSprite(state, node, texture) -- 140
-	node.texture = texture -- 141
-	node.textureBuffer.text = texture -- 142
-	state.selectedAsset = texture -- 143
-	state.previewDirty = true -- 144
-	state.status = (zh and "已绑定贴图：" or "Texture assigned: ") .. texture -- 145
-	pushConsole(state, state.status) -- 146
-end -- 140
-local function createSpriteFromTexture(state, texture) -- 149
-	addChildNode(state, "Sprite") -- 150
-	local node = state.nodes[state.selectedId] -- 151
-	if node ~= nil and node.kind == "Sprite" then -- 151
-		bindTextureToSprite(state, node, texture) -- 153
-	end -- 153
-end -- 149
-local function assetIcon(asset) -- 157
-	if isFolderAsset(asset) then -- 157
-		return "📁" -- 158
-	end -- 158
-	if isTextureAsset(asset) then -- 158
-		return "🖼" -- 159
-	end -- 159
-	if isScriptAsset(asset) then -- 159
-		return "◇" -- 160
-	end -- 160
-	local ext = lowerExt(asset) -- 161
-	if ext == "wav" or ext == "mp3" or ext == "ogg" or ext == "flac" then -- 161
-		return "♪" -- 162
-	end -- 162
-	if ext == "ttf" or ext == "otf" or ext == "fnt" then -- 162
-		return "F" -- 163
-	end -- 163
-	if ext == "json" or ext == "xml" or ext == "yaml" or ext == "yml" then -- 163
-		return "{}" -- 164
+	if ext == "atlas" or ext == "model" or ext == "skel" or ext == "anim" then -- 125
+		return "◆" -- 126
+	end -- 126
+	return "·" -- 127
+end -- 118
+local function startsWith(text, prefix) -- 130
+	return string.sub( -- 131
+		text, -- 131
+		1, -- 131
+		string.len(prefix) -- 131
+	) == prefix -- 131
+end -- 130
+local function drawAssetRow(state, asset) -- 134
+	if isFolderAsset(asset) then -- 134
+		ImGui.TreeNode( -- 136
+			(assetIcon(asset) .. "  ") .. asset, -- 136
+			function() -- 136
+				for ____, child in ipairs(state.assets) do -- 137
+					if child ~= asset and not isFolderAsset(child) and startsWith(child, asset) then -- 137
+						drawAssetRow(state, child) -- 139
+					end -- 139
+				end -- 139
+			end -- 136
+		) -- 136
+		return -- 143
+	end -- 143
+	if ImGui.Selectable( -- 143
+		(assetIcon(asset) .. "  ") .. asset, -- 145
+		state.selectedAsset == asset -- 145
+	) then -- 145
+		state.selectedAsset = asset -- 146
+		local node = state.nodes[state.selectedId] -- 147
+		if node ~= nil and node.kind == "Sprite" and isTextureAsset(asset) then -- 147
+			bindTextureToSprite(state, node, asset) -- 149
+			return -- 150
+		elseif node ~= nil and isScriptAsset(asset) then -- 150
+			attachScriptToNode(state, node, asset, (zh and "已绑定脚本并保存：" or "Script assigned and saved: ") .. asset) -- 152
+			return -- 153
+		else -- 153
+			state.status = zh and "已选择资源；选中 Sprite 可绑定图片，选中节点可绑定脚本" or "Asset selected; select a Sprite for images, or a node for scripts" -- 155
+		end -- 155
+		pushConsole(state, state.status) -- 157
+	end -- 157
+end -- 134
+local function drawAssetsPanel(state) -- 161
+	ImGui.TextColored(themeColor, zh and "资源" or "Assets") -- 162
+	ImGui.SameLine() -- 163
+	if ImGui.SmallButton(zh and "＋ 文件" or "＋ File") then -- 163
+		importFileDialog(state) -- 164
 	end -- 164
-	if ext == "atlas" or ext == "model" or ext == "skel" or ext == "anim" then -- 164
-		return "◆" -- 165
-	end -- 165
-	return "·" -- 166
-end -- 157
-local function startsWith(text, prefix) -- 169
-	return string.sub( -- 170
-		text, -- 170
-		1, -- 170
-		string.len(prefix) -- 170
-	) == prefix -- 170
-end -- 169
-local function drawAssetRow(state, asset) -- 173
-	if isFolderAsset(asset) then -- 173
-		ImGui.TreeNode( -- 175
-			(assetIcon(asset) .. "  ") .. asset, -- 175
-			function() -- 175
-				for ____, child in ipairs(state.assets) do -- 176
-					if child ~= asset and not isFolderAsset(child) and startsWith(child, asset) then -- 176
-						drawAssetRow(state, child) -- 178
-					end -- 178
-				end -- 178
-			end -- 175
-		) -- 175
-		return -- 182
-	end -- 182
-	if ImGui.Selectable( -- 182
-		(assetIcon(asset) .. "  ") .. asset, -- 184
-		state.selectedAsset == asset -- 184
-	) then -- 184
-		state.selectedAsset = asset -- 185
-		local node = state.nodes[state.selectedId] -- 186
-		if node ~= nil and node.kind == "Sprite" and isTextureAsset(asset) then -- 186
-			bindTextureToSprite(state, node, asset) -- 188
-			return -- 189
-		elseif node ~= nil and isScriptAsset(asset) then -- 189
-			attachScriptToNode(state, node, asset, (zh and "已绑定脚本并保存：" or "Script assigned and saved: ") .. asset) -- 191
-			return -- 192
-		else -- 192
-			state.status = zh and "已选择资源；选中 Sprite 可绑定图片，选中节点可绑定脚本" or "Asset selected; select a Sprite for images, or a node for scripts" -- 194
+	ImGui.SameLine() -- 165
+	if ImGui.SmallButton(zh and "＋ 文件夹" or "＋ Folder") then -- 165
+		importFolderDialog(state) -- 166
+	end -- 166
+	ImGui.Separator() -- 167
+	ImGui.TextDisabled(zh and "支持 png/jpg/webp/lua/ts/json/音频/字体/模型等；文件夹会递归导入。" or "Supports images, scripts, json, audio, fonts, models; folders import recursively.") -- 168
+	ImGui.Separator() -- 169
+	if #state.assets == 0 then -- 169
+		ImGui.TextDisabled(zh and "点击 + File 或 + Folder 导入资源。" or "Click + File or + Folder to import assets.") -- 171
+		return -- 172
+	end -- 172
+	for ____, asset in ipairs(state.assets) do -- 174
+		if isFolderAsset(asset) then -- 174
+			drawAssetRow(state, asset) -- 176
+		end -- 176
+	end -- 176
+	for ____, asset in ipairs(state.assets) do -- 179
+		local insideFolder = false -- 180
+		for ____, folder in ipairs(state.assets) do -- 181
+			if isFolderAsset(folder) and startsWith(asset, folder) then -- 181
+				insideFolder = true -- 182
+			end -- 182
+		end -- 182
+		if not insideFolder and not isFolderAsset(asset) then -- 182
+			drawAssetRow(state, asset) -- 184
+		end -- 184
+	end -- 184
+	if state.selectedAsset ~= "" and isTextureAsset(state.selectedAsset) then -- 184
+		ImGui.Separator() -- 187
+		ImGui.TextColored(themeColor, zh and "贴图预览" or "Texture Preview") -- 188
+		local ok = pcall(function() return ImGui.Image( -- 189
+			state.selectedAsset, -- 189
+			Vec2(160, 120) -- 189
+		) end) -- 189
+		if not ok then -- 189
+			ImGui.TextDisabled(zh and "无法预览该贴图；但仍可尝试绑定到 Sprite。" or "Unable to preview; still can bind to Sprite.") -- 190
+		end -- 190
+		local selectedNode = state.nodes[state.selectedId] -- 191
+		if selectedNode ~= nil and selectedNode.kind == "Sprite" then -- 191
+			if ImGui.Button(zh and "绑定到当前 Sprite" or "Bind To Sprite") then -- 191
+				bindTextureToSprite(state, selectedNode, state.selectedAsset) -- 193
+			end -- 193
+			ImGui.SameLine() -- 194
 		end -- 194
-		pushConsole(state, state.status) -- 196
+		if ImGui.Button(zh and "用此贴图创建 Sprite" or "Create Sprite") then -- 194
+			createSpriteFromTexture(state, state.selectedAsset) -- 196
+		end -- 196
 	end -- 196
-end -- 173
-local function drawAssetsPanel(state) -- 200
-	ImGui.TextColored(themeColor, zh and "资源" or "Assets") -- 201
-	ImGui.SameLine() -- 202
-	if ImGui.SmallButton(zh and "＋ 文件" or "＋ File") then -- 202
-		importFileDialog(state) -- 203
-	end -- 203
-	ImGui.SameLine() -- 204
-	if ImGui.SmallButton(zh and "＋ 文件夹" or "＋ Folder") then -- 204
-		importFolderDialog(state) -- 205
-	end -- 205
-	ImGui.Separator() -- 206
-	ImGui.TextDisabled(zh and "支持 png/jpg/webp/lua/ts/json/音频/字体/模型等；文件夹会递归导入。" or "Supports images, scripts, json, audio, fonts, models; folders import recursively.") -- 207
-	ImGui.Separator() -- 208
-	if #state.assets == 0 then -- 208
-		ImGui.TextDisabled(zh and "点击 + File 或 + Folder 导入资源。" or "Click + File or + Folder to import assets.") -- 210
-		return -- 211
-	end -- 211
-	for ____, asset in ipairs(state.assets) do -- 213
-		if isFolderAsset(asset) then -- 213
-			drawAssetRow(state, asset) -- 215
-		end -- 215
-	end -- 215
-	for ____, asset in ipairs(state.assets) do -- 218
-		local insideFolder = false -- 219
-		for ____, folder in ipairs(state.assets) do -- 220
-			if isFolderAsset(folder) and startsWith(asset, folder) then -- 220
-				insideFolder = true -- 221
-			end -- 221
-		end -- 221
-		if not insideFolder and not isFolderAsset(asset) then -- 221
-			drawAssetRow(state, asset) -- 223
-		end -- 223
-	end -- 223
-	if state.selectedAsset ~= "" and isTextureAsset(state.selectedAsset) then -- 223
-		ImGui.Separator() -- 226
-		ImGui.TextColored(themeColor, zh and "贴图预览" or "Texture Preview") -- 227
-		local ok = pcall(function() return ImGui.Image( -- 228
-			state.selectedAsset, -- 228
-			Vec2(160, 120) -- 228
-		) end) -- 228
-		if not ok then -- 228
-			ImGui.TextDisabled(zh and "无法预览该贴图；但仍可尝试绑定到 Sprite。" or "Unable to preview; still can bind to Sprite.") -- 229
-		end -- 229
-		local selectedNode = state.nodes[state.selectedId] -- 230
-		if selectedNode ~= nil and selectedNode.kind == "Sprite" then -- 230
-			if ImGui.Button(zh and "绑定到当前 Sprite" or "Bind To Sprite") then -- 230
-				bindTextureToSprite(state, selectedNode, state.selectedAsset) -- 232
-			end -- 232
-			ImGui.SameLine() -- 233
-		end -- 233
-		if ImGui.Button(zh and "用此贴图创建 Sprite" or "Create Sprite") then -- 233
-			createSpriteFromTexture(state, state.selectedAsset) -- 235
-		end -- 235
-	end -- 235
-end -- 200
-local function scriptTemplate(node) -- 239
-	local name = node ~= nil and node.name or "Script" -- 240
+end -- 161
+local function scriptTemplate(node) -- 200
+	local name = node ~= nil and node.name or "Script" -- 201
 	return (((((((((("-- " .. name) .. " behavior\n") .. "return function(node, scene, nodes)\n") .. "\tif node == nil then\n") .. "\t\tprint(\"[SceneScript] ") .. name) .. ": node is nil; run the scene/game preview instead of this behavior script directly.\")\n") .. "\t\treturn\n") .. "\tend\n") .. "\t-- write behavior here\n") .. "end\n"
-end -- 239
-local function loadScriptIntoEditor(state, node, scriptPath) -- 251
-	if node ~= nil then -- 251
-		attachScriptToNode(state, node, scriptPath) -- 253
-	else -- 253
-		state.activeScriptNodeId = nil -- 255
+end -- 200
+local function loadScriptIntoEditor(state, node, scriptPath) -- 212
+	if node ~= nil then -- 212
+		attachScriptToNode(state, node, scriptPath) -- 214
+	else -- 214
+		state.activeScriptNodeId = nil -- 216
+	end -- 216
+	state.scriptPathBuffer.text = scriptPath -- 218
+	local scriptFile = workspacePath(scriptPath) -- 219
+	if Content:exist(scriptFile) then -- 219
+		state.scriptContentBuffer.text = Content:load(scriptFile) or "" -- 221
+	elseif Content:exist(scriptPath) then -- 221
+		state.scriptContentBuffer.text = Content:load(scriptPath) or "" -- 223
+	else -- 223
+		state.scriptContentBuffer.text = scriptTemplate(node) -- 225
+	end -- 225
+	state.mode = "Script" -- 227
+end -- 212
+local function openScriptForNode(state, node) -- 230
+	local path = node.script ~= "" and node.script or ("Script/" .. node.name) .. ".lua" -- 231
+	loadScriptIntoEditor(state, node, path) -- 232
+end -- 230
+local function saveScriptFile(state, node) -- 235
+	local path = state.scriptPathBuffer.text ~= "" and state.scriptPathBuffer.text or "Script/NewScript.lua" -- 236
+	state.scriptPathBuffer.text = path -- 237
+	local scriptFile = workspacePath(path) -- 238
+	Content:mkdir(Path:getPath(scriptFile)) -- 239
+	local statusAlreadyLogged = false -- 240
+	if Content:save(scriptFile, state.scriptContentBuffer.text) then -- 240
+		if node ~= nil then -- 240
+			attachScriptToNode(state, node, path, (zh and "脚本已保存并挂载：" or "Script saved and attached: ") .. path) -- 243
+			statusAlreadyLogged = true -- 244
+		else -- 244
+			state.status = (zh and "脚本已保存：" or "Script saved: ") .. path -- 246
+		end -- 246
+		if state.selectedAsset ~= path then -- 246
+			state.selectedAsset = path -- 248
+		end -- 248
+		local exists = false -- 249
+		for ____, asset in ipairs(state.assets) do -- 250
+			if asset == path then -- 250
+				exists = true -- 250
+			end -- 250
+		end -- 250
+		if not exists then -- 250
+			local ____state_assets_1 = state.assets -- 250
+			____state_assets_1[#____state_assets_1 + 1] = path -- 251
+		end -- 251
+	else -- 251
+		state.status = zh and "脚本保存失败" or "Failed to save script" -- 253
+	end -- 253
+	if not statusAlreadyLogged then -- 253
+		pushConsole(state, state.status) -- 255
 	end -- 255
-	state.scriptPathBuffer.text = scriptPath -- 257
-	local scriptFile = workspacePath(scriptPath) -- 258
-	if Content:exist(scriptFile) then -- 258
-		state.scriptContentBuffer.text = Content:load(scriptFile) or "" -- 260
-	elseif Content:exist(scriptPath) then -- 260
-		state.scriptContentBuffer.text = Content:load(scriptPath) or "" -- 262
-	else -- 262
-		state.scriptContentBuffer.text = scriptTemplate(node) -- 264
-	end -- 264
-	state.mode = "Script" -- 266
-end -- 251
-local function openScriptForNode(state, node) -- 269
-	local path = node.script ~= "" and node.script or ("Script/" .. node.name) .. ".lua" -- 270
-	loadScriptIntoEditor(state, node, path) -- 271
-end -- 269
-local function saveScriptFile(state, node) -- 274
-	local path = state.scriptPathBuffer.text ~= "" and state.scriptPathBuffer.text or "Script/NewScript.lua" -- 275
-	state.scriptPathBuffer.text = path -- 276
-	local scriptFile = workspacePath(path) -- 277
-	Content:mkdir(Path:getPath(scriptFile)) -- 278
-	local statusAlreadyLogged = false -- 279
-	if Content:save(scriptFile, state.scriptContentBuffer.text) then -- 279
-		if node ~= nil then -- 279
-			attachScriptToNode(state, node, path, (zh and "脚本已保存并挂载：" or "Script saved and attached: ") .. path) -- 282
-			statusAlreadyLogged = true -- 283
-		else -- 283
-			state.status = (zh and "脚本已保存：" or "Script saved: ") .. path -- 285
-		end -- 285
-		if state.selectedAsset ~= path then -- 285
-			state.selectedAsset = path -- 287
-		end -- 287
-		local exists = false -- 288
-		for ____, asset in ipairs(state.assets) do -- 289
-			if asset == path then -- 289
-				exists = true -- 289
-			end -- 289
-		end -- 289
-		if not exists then -- 289
-			local ____state_assets_1 = state.assets -- 289
-			____state_assets_1[#____state_assets_1 + 1] = path -- 290
-		end -- 290
-	else -- 290
-		state.status = zh and "脚本保存失败" or "Failed to save script" -- 292
-	end -- 292
-	if not statusAlreadyLogged then -- 292
-		pushConsole(state, state.status) -- 294
-	end -- 294
-end -- 274
-local function currentScriptPath(state, node) -- 297
-	if state.scriptPathBuffer.text ~= "" then -- 297
-		return state.scriptPathBuffer.text -- 298
-	end -- 298
-	if node ~= nil and node.script ~= "" then -- 298
-		return node.script -- 299
-	end -- 299
-	if node ~= nil then -- 299
-		return ("Script/" .. node.name) .. ".lua" -- 300
-	end -- 300
-	return "Script/NewScript.lua" -- 301
-end -- 297
-local function sendWebIDEMessage(payload) -- 304
-	local text = json.encode(payload) -- 305
-	if text ~= nil then -- 305
-		emit("AppWS", "Send", text) -- 306
-	end -- 306
-end -- 304
-local function openScriptInWebIDE(state, node) -- 309
-	local scriptPath = currentScriptPath(state, node) -- 310
-	state.scriptPathBuffer.text = scriptPath -- 311
-	if state.scriptContentBuffer.text == "" then -- 311
-		state.scriptContentBuffer.text = scriptTemplate(node) -- 313
-	end -- 313
-	saveScriptFile(state, node) -- 315
-	local title = Path:getFilename(scriptPath) or scriptPath -- 316
-	local root = workspaceRoot() -- 317
-	local rootTitle = Path:getFilename(root) or "Workspace" -- 318
-	local fullScriptPath = workspacePath(scriptPath) -- 319
-	local openWorkspaceMessage = { -- 320
-		name = "OpenFile", -- 321
-		file = root, -- 322
-		title = rootTitle, -- 323
-		folder = true, -- 324
-		workspaceView = "agent" -- 325
-	} -- 325
-	local updateScriptMessage = {name = "UpdateFile", file = fullScriptPath, exists = true, content = state.scriptContentBuffer.text} -- 327
-	local openScriptMessage = { -- 333
-		name = "OpenFile", -- 334
-		file = fullScriptPath, -- 335
-		title = title, -- 336
-		folder = false, -- 337
-		position = {lineNumber = 1, column = 1} -- 338
-	} -- 338
-	local function sendOpenMessages() -- 340
-		sendWebIDEMessage(openWorkspaceMessage) -- 341
-		sendWebIDEMessage(updateScriptMessage) -- 342
-		sendWebIDEMessage(openScriptMessage) -- 343
-	end -- 340
-	local editingInfo = {index = 1, files = {{key = root, title = rootTitle, folder = true, workspaceView = "agent"}, {key = fullScriptPath, title = title, folder = false, position = {lineNumber = 1, column = 1}}}} -- 345
-	local editingText = json.encode(editingInfo) -- 362
-	if editingText ~= nil then -- 362
-		Content:mkdir(workspacePath(".dora")) -- 364
-		Content:save( -- 365
-			workspacePath(Path(".dora", "open-script.editing.json")), -- 365
-			editingText -- 365
-		) -- 365
-		pcall(function() -- 366
-			local Entry = require("Script.Dev.Entry") -- 367
-			local config = Entry.getConfig() -- 368
-			if config ~= nil then -- 368
-				config.editingInfo = editingText -- 369
-			end -- 369
-		end) -- 366
-	end -- 366
-	App:openURL("http://127.0.0.1:8866/") -- 372
-	sendOpenMessages() -- 373
-	thread(function() -- 374
-		do -- 374
-			local i = 0 -- 375
-			while i < 4 do -- 375
-				sleep(0.5) -- 376
-				sendOpenMessages() -- 377
-				i = i + 1 -- 375
-			end -- 375
-		end -- 375
-	end) -- 374
-	state.status = (zh and "已打开 Web IDE：" or "Opened Web IDE: ") .. scriptPath -- 380
-	pushConsole(state, state.status) -- 381
-end -- 309
-local function drawScriptAssetList(state, node) -- 384
-	ImGui.TextColored(themeColor, zh and "脚本资源" or "Script Assets") -- 385
-	for ____, asset in ipairs(state.assets) do -- 386
-		if isScriptAsset(asset) and not isFolderAsset(asset) then -- 386
-			if ImGui.Selectable("◇  " .. asset, state.selectedAsset == asset) then -- 386
-				state.selectedAsset = asset -- 389
-				loadScriptIntoEditor(state, node, asset) -- 390
-			end -- 390
-		end -- 390
-	end -- 390
-end -- 384
-local function drawScriptPanel(state) -- 396
-	local activeId = state.activeScriptNodeId or state.selectedId -- 397
-	local node = state.nodes[activeId] -- 398
-	ImGui.TextColored(themeColor, zh and "脚本编辑器" or "Script Editor") -- 399
-	ImGui.SameLine() -- 400
-	ImGui.TextDisabled(node ~= nil and node.name or (zh and "独立文件模式" or "File mode")) -- 401
-	ImGui.Separator() -- 402
-	ImGui.BeginChild( -- 403
-		"ScriptSidebar", -- 403
-		Vec2(220, 0), -- 403
-		{}, -- 403
-		noScrollFlags, -- 403
-		function() -- 403
-			drawScriptAssetList(state, node) -- 404
-			ImGui.Separator() -- 405
-			if ImGui.Button(zh and "新建脚本" or "New Script") then -- 405
-				local scriptName = node ~= nil and node.name or "NewScript" -- 407
-				local path = ("Script/" .. scriptName) .. ".lua" -- 408
-				state.scriptPathBuffer.text = path -- 409
-				state.scriptContentBuffer.text = scriptTemplate(node) -- 410
-				if node ~= nil then -- 410
-					attachScriptToNode(state, node, path, (zh and "已新建脚本并挂载：" or "New script attached and saved: ") .. path) -- 412
-				end -- 412
-			end -- 412
-			if ImGui.Button(zh and "导入脚本文件" or "Import Script") then -- 412
-				importFileDialog(state) -- 415
-			end -- 415
-			if node ~= nil and ImGui.Button(zh and "绑定选中资源" or "Attach Selected") then -- 415
-				if state.selectedAsset ~= "" and isScriptAsset(state.selectedAsset) then -- 415
-					loadScriptIntoEditor(state, node, state.selectedAsset) -- 418
-				end -- 418
-			end -- 418
-			if ImGui.Button(zh and "重新加载" or "Reload") then -- 418
-				loadScriptIntoEditor(state, node, state.scriptPathBuffer.text) -- 422
-			end -- 422
-		end -- 403
-	) -- 403
-	ImGui.SameLine() -- 425
-	ImGui.PushStyleColor( -- 426
-		"ChildBg", -- 426
-		scriptPanelBg, -- 426
-		function() -- 426
-			ImGui.BeginChild( -- 427
-				"ScriptEditorPane", -- 427
-				Vec2(0, 0), -- 427
-				{}, -- 427
-				noScrollFlags, -- 427
-				function() -- 427
-					ImGui.TextDisabled(zh and "脚本路径" or "Script Path") -- 428
-					ImGui.InputText("##ScriptPath", state.scriptPathBuffer, inputTextFlags) -- 429
-					ImGui.SameLine() -- 430
-					if ImGui.Button(zh and "保存" or "Save") then -- 430
-						saveScriptFile(state, node) -- 431
-					end -- 431
-					ImGui.SameLine() -- 432
-					if ImGui.Button(zh and "Web IDE 打开" or "Open in Web IDE") then -- 432
-						openScriptInWebIDE(state, node) -- 433
-					end -- 433
-					if node ~= nil then -- 433
-						ImGui.SameLine() -- 435
-						if ImGui.Button(zh and "绑定到节点" or "Attach Node") then -- 435
-							attachScriptToNode(state, node, state.scriptPathBuffer.text, (zh and "脚本已挂载并保存到节点：" or "Script attached and saved to node: ") .. node.name) -- 437
-						end -- 437
-					end -- 437
-					ImGui.Separator() -- 440
-					ImGui.InputTextMultiline( -- 441
-						"##ScriptEditor", -- 441
-						state.scriptContentBuffer, -- 441
-						Vec2(0, -4), -- 441
-						{} -- 441
-					) -- 441
-				end -- 427
-			) -- 427
-		end -- 426
-	) -- 426
-end -- 396
-local function viewportScale(state) -- 446
-	return math.max(0.25, state.zoom / 100) -- 447
+end -- 235
+local function currentScriptPath(state, node) -- 258
+	if state.scriptPathBuffer.text ~= "" then -- 258
+		return state.scriptPathBuffer.text -- 259
+	end -- 259
+	if node ~= nil and node.script ~= "" then -- 259
+		return node.script -- 260
+	end -- 260
+	if node ~= nil then -- 260
+		return ("Script/" .. node.name) .. ".lua" -- 261
+	end -- 261
+	return "Script/NewScript.lua" -- 262
+end -- 258
+local function sendWebIDEMessage(payload) -- 265
+	local text = json.encode(payload) -- 266
+	if text ~= nil then -- 266
+		emit("AppWS", "Send", text) -- 267
+	end -- 267
+end -- 265
+local function openScriptInWebIDE(state, node) -- 270
+	local scriptPath = currentScriptPath(state, node) -- 271
+	state.scriptPathBuffer.text = scriptPath -- 272
+	if state.scriptContentBuffer.text == "" then -- 272
+		state.scriptContentBuffer.text = scriptTemplate(node) -- 274
+	end -- 274
+	saveScriptFile(state, node) -- 276
+	local title = Path:getFilename(scriptPath) or scriptPath -- 277
+	local root = workspaceRoot() -- 278
+	local rootTitle = Path:getFilename(root) or "Workspace" -- 279
+	local fullScriptPath = workspacePath(scriptPath) -- 280
+	local openWorkspaceMessage = { -- 281
+		name = "OpenFile", -- 282
+		file = root, -- 283
+		title = rootTitle, -- 284
+		folder = true, -- 285
+		workspaceView = "agent" -- 286
+	} -- 286
+	local updateScriptMessage = {name = "UpdateFile", file = fullScriptPath, exists = true, content = state.scriptContentBuffer.text} -- 288
+	local openScriptMessage = { -- 294
+		name = "OpenFile", -- 295
+		file = fullScriptPath, -- 296
+		title = title, -- 297
+		folder = false, -- 298
+		position = {lineNumber = 1, column = 1} -- 299
+	} -- 299
+	local function sendOpenMessages() -- 301
+		sendWebIDEMessage(openWorkspaceMessage) -- 302
+		sendWebIDEMessage(updateScriptMessage) -- 303
+		sendWebIDEMessage(openScriptMessage) -- 304
+	end -- 301
+	local editingInfo = {index = 1, files = {{key = root, title = rootTitle, folder = true, workspaceView = "agent"}, {key = fullScriptPath, title = title, folder = false, position = {lineNumber = 1, column = 1}}}} -- 306
+	local editingText = json.encode(editingInfo) -- 323
+	if editingText ~= nil then -- 323
+		Content:mkdir(workspacePath(".dora")) -- 325
+		Content:save( -- 326
+			workspacePath(Path(".dora", "open-script.editing.json")), -- 326
+			editingText -- 326
+		) -- 326
+		pcall(function() -- 327
+			local Entry = require("Script.Dev.Entry") -- 328
+			local config = Entry.getConfig() -- 329
+			if config ~= nil then -- 329
+				config.editingInfo = editingText -- 330
+			end -- 330
+		end) -- 327
+	end -- 327
+	App:openURL("http://127.0.0.1:8866/") -- 333
+	sendOpenMessages() -- 334
+	thread(function() -- 335
+		do -- 335
+			local i = 0 -- 336
+			while i < 4 do -- 336
+				sleep(0.5) -- 337
+				sendOpenMessages() -- 338
+				i = i + 1 -- 336
+			end -- 336
+		end -- 336
+	end) -- 335
+	state.status = (zh and "已打开 Web IDE：" or "Opened Web IDE: ") .. scriptPath -- 341
+	pushConsole(state, state.status) -- 342
+end -- 270
+local function drawScriptAssetList(state, node) -- 345
+	ImGui.TextColored(themeColor, zh and "脚本资源" or "Script Assets") -- 346
+	for ____, asset in ipairs(state.assets) do -- 347
+		if isScriptAsset(asset) and not isFolderAsset(asset) then -- 347
+			if ImGui.Selectable("◇  " .. asset, state.selectedAsset == asset) then -- 347
+				state.selectedAsset = asset -- 350
+				loadScriptIntoEditor(state, node, asset) -- 351
+			end -- 351
+		end -- 351
+	end -- 351
+end -- 345
+local function drawScriptPanel(state) -- 357
+	local activeId = state.activeScriptNodeId or state.selectedId -- 358
+	local node = state.nodes[activeId] -- 359
+	ImGui.TextColored(themeColor, zh and "脚本编辑器" or "Script Editor") -- 360
+	ImGui.SameLine() -- 361
+	ImGui.TextDisabled(node ~= nil and node.name or (zh and "独立文件模式" or "File mode")) -- 362
+	ImGui.Separator() -- 363
+	ImGui.BeginChild( -- 364
+		"ScriptSidebar", -- 364
+		Vec2(220, 0), -- 364
+		{}, -- 364
+		noScrollFlags, -- 364
+		function() -- 364
+			drawScriptAssetList(state, node) -- 365
+			ImGui.Separator() -- 366
+			if ImGui.Button(zh and "新建脚本" or "New Script") then -- 366
+				local scriptName = node ~= nil and node.name or "NewScript" -- 368
+				local path = ("Script/" .. scriptName) .. ".lua" -- 369
+				state.scriptPathBuffer.text = path -- 370
+				state.scriptContentBuffer.text = scriptTemplate(node) -- 371
+				if node ~= nil then -- 371
+					attachScriptToNode(state, node, path, (zh and "已新建脚本并挂载：" or "New script attached and saved: ") .. path) -- 373
+				end -- 373
+			end -- 373
+			if ImGui.Button(zh and "导入脚本文件" or "Import Script") then -- 373
+				importFileDialog(state) -- 376
+			end -- 376
+			if node ~= nil and ImGui.Button(zh and "绑定选中资源" or "Attach Selected") then -- 376
+				if state.selectedAsset ~= "" and isScriptAsset(state.selectedAsset) then -- 376
+					loadScriptIntoEditor(state, node, state.selectedAsset) -- 379
+				end -- 379
+			end -- 379
+			if ImGui.Button(zh and "重新加载" or "Reload") then -- 379
+				loadScriptIntoEditor(state, node, state.scriptPathBuffer.text) -- 383
+			end -- 383
+		end -- 364
+	) -- 364
+	ImGui.SameLine() -- 386
+	ImGui.PushStyleColor( -- 387
+		"ChildBg", -- 387
+		scriptPanelBg, -- 387
+		function() -- 387
+			ImGui.BeginChild( -- 388
+				"ScriptEditorPane", -- 388
+				Vec2(0, 0), -- 388
+				{}, -- 388
+				noScrollFlags, -- 388
+				function() -- 388
+					ImGui.TextDisabled(zh and "脚本路径" or "Script Path") -- 389
+					ImGui.InputText("##ScriptPath", state.scriptPathBuffer, inputTextFlags) -- 390
+					ImGui.SameLine() -- 391
+					if ImGui.Button(zh and "保存" or "Save") then -- 391
+						saveScriptFile(state, node) -- 392
+					end -- 392
+					ImGui.SameLine() -- 393
+					if ImGui.Button(zh and "Web IDE 打开" or "Open in Web IDE") then -- 393
+						openScriptInWebIDE(state, node) -- 394
+					end -- 394
+					if node ~= nil then -- 394
+						ImGui.SameLine() -- 396
+						if ImGui.Button(zh and "绑定到节点" or "Attach Node") then -- 396
+							attachScriptToNode(state, node, state.scriptPathBuffer.text, (zh and "脚本已挂载并保存到节点：" or "Script attached and saved to node: ") .. node.name) -- 398
+						end -- 398
+					end -- 398
+					ImGui.Separator() -- 401
+					ImGui.InputTextMultiline( -- 402
+						"##ScriptEditor", -- 402
+						state.scriptContentBuffer, -- 402
+						Vec2(0, -4), -- 402
+						{} -- 402
+					) -- 402
+				end -- 388
+			) -- 388
+		end -- 387
+	) -- 387
+end -- 357
+local function viewportScale(state) -- 407
+	return math.max(0.25, state.zoom / 100) -- 408
+end -- 407
+local function clampZoom(value) -- 411
+	return math.max( -- 412
+		25, -- 412
+		math.min(400, value) -- 412
+	) -- 412
+end -- 411
+local function zoomViewportAt(state, delta, screenX, screenY) -- 415
+	if delta == 0 then -- 415
+		return -- 416
+	end -- 416
+	local before = state.zoom -- 417
+	local beforeScale = viewportScale(state) -- 418
+	local p = state.preview -- 419
+	local centerX = p.x + p.width / 2 -- 420
+	local centerY = p.y + p.height / 2 -- 421
+	local sceneX = (screenX - centerX - state.viewportPanX) / beforeScale -- 422
+	local sceneY = (centerY - screenY - state.viewportPanY) / beforeScale -- 423
+	state.zoom = clampZoom(state.zoom + delta) -- 424
+	if state.zoom ~= before then -- 424
+		local afterScale = viewportScale(state) -- 426
+		state.viewportPanX = screenX - centerX - sceneX * afterScale -- 427
+		state.viewportPanY = centerY - screenY - sceneY * afterScale -- 428
+		state.previewDirty = true -- 429
+	end -- 429
+end -- 415
+local function zoomViewportFromCenter(state, delta) -- 433
+	local p = state.preview -- 434
+	zoomViewportAt(state, delta, p.x + p.width / 2, p.y + p.height / 2) -- 435
+end -- 433
+local function screenToScene(state, screenX, screenY) -- 438
+	local p = state.preview -- 439
+	local scale = viewportScale(state) -- 440
+	local localX = screenX - (p.x + p.width / 2) - state.viewportPanX -- 441
+	local localY = p.y + p.height / 2 - screenY - state.viewportPanY -- 442
+	return {localX / scale, localY / scale} -- 443
+end -- 438
+local function pickNodeAt(state, screenX, screenY) -- 446
+	local sceneX, sceneY = table.unpack( -- 447
+		screenToScene(state, screenX, screenY), -- 447
+		1, -- 447
+		2 -- 447
+	) -- 447
+	do -- 447
+		local i = #state.order -- 448
+		while i >= 1 do -- 448
+			local id = state.order[i] -- 449
+			local node = state.nodes[id] -- 450
+			if node ~= nil and id ~= "root" and node.visible then -- 450
+				local dx = sceneX - node.x -- 452
+				local dy = sceneY - node.y -- 453
+				local radius = node.kind == "Camera" and 185 or (node.kind == "Sprite" and 82 or 54) -- 454
+				if dx * dx + dy * dy <= radius * radius then -- 454
+					return id -- 455
+				end -- 455
+			end -- 455
+			i = i - 1 -- 448
+		end -- 448
+	end -- 448
+	return nil -- 458
 end -- 446
-local function clampZoom(value) -- 450
-	return math.max( -- 451
-		25, -- 451
-		math.min(400, value) -- 451
-	) -- 451
-end -- 450
-local function zoomViewportAt(state, delta, screenX, screenY) -- 454
-	if delta == 0 then -- 454
-		return -- 455
-	end -- 455
-	local before = state.zoom -- 456
-	local beforeScale = viewportScale(state) -- 457
-	local p = state.preview -- 458
-	local centerX = p.x + p.width / 2 -- 459
-	local centerY = p.y + p.height / 2 -- 460
-	local sceneX = (screenX - centerX - state.viewportPanX) / beforeScale -- 461
-	local sceneY = (centerY - screenY - state.viewportPanY) / beforeScale -- 462
-	state.zoom = clampZoom(state.zoom + delta) -- 463
-	if state.zoom ~= before then -- 463
-		local afterScale = viewportScale(state) -- 465
-		state.viewportPanX = screenX - centerX - sceneX * afterScale -- 466
-		state.viewportPanY = centerY - screenY - sceneY * afterScale -- 467
-		state.previewDirty = true -- 468
+local function handleViewportMouse(state, hovered) -- 461
+	if not hovered then -- 461
+		return -- 462
+	end -- 462
+	local spacePressed = Keyboard:isKeyPressed("Space") -- 463
+	local wheel = Mouse.wheel -- 464
+	local wheelDelta = math.abs(wheel.y) >= math.abs(wheel.x) and wheel.y or wheel.x -- 465
+	if wheelDelta ~= 0 then -- 465
+		local mouse = ImGui.GetMousePos() -- 467
+		zoomViewportAt(state, wheelDelta > 0 and 6 or -6, mouse.x, mouse.y) -- 468
 	end -- 468
-end -- 454
-local function zoomViewportFromCenter(state, delta) -- 472
-	local p = state.preview -- 473
-	zoomViewportAt(state, delta, p.x + p.width / 2, p.y + p.height / 2) -- 474
-end -- 472
-local function screenToScene(state, screenX, screenY) -- 477
-	local p = state.preview -- 478
-	local scale = viewportScale(state) -- 479
-	local localX = screenX - (p.x + p.width / 2) - state.viewportPanX -- 480
-	local localY = p.y + p.height / 2 - screenY - state.viewportPanY -- 481
-	return {localX / scale, localY / scale} -- 482
-end -- 477
-local function pickNodeAt(state, screenX, screenY) -- 485
-	local sceneX, sceneY = table.unpack( -- 486
-		screenToScene(state, screenX, screenY), -- 486
-		1, -- 486
-		2 -- 486
-	) -- 486
-	do -- 486
-		local i = #state.order -- 487
-		while i >= 1 do -- 487
-			local id = state.order[i] -- 488
-			local node = state.nodes[id] -- 489
-			if node ~= nil and id ~= "root" and node.visible then -- 489
-				local dx = sceneX - node.x -- 491
-				local dy = sceneY - node.y -- 492
-				local radius = node.kind == "Camera" and 185 or (node.kind == "Sprite" and 82 or 54) -- 493
-				if dx * dx + dy * dy <= radius * radius then -- 493
-					return id -- 494
-				end -- 494
-			end -- 494
-			i = i - 1 -- 487
-		end -- 487
-	end -- 487
-	return nil -- 497
-end -- 485
-local function handleViewportMouse(state, hovered) -- 500
-	if not hovered then -- 500
-		return -- 501
-	end -- 501
-	local spacePressed = Keyboard:isKeyPressed("Space") -- 502
-	local wheel = Mouse.wheel -- 503
-	local wheelDelta = math.abs(wheel.y) >= math.abs(wheel.x) and wheel.y or wheel.x -- 504
-	if wheelDelta ~= 0 then -- 504
-		local mouse = ImGui.GetMousePos() -- 506
-		zoomViewportAt(state, wheelDelta > 0 and 6 or -6, mouse.x, mouse.y) -- 507
-	end -- 507
-	if ImGui.IsMouseClicked(2) then -- 507
-		state.draggingNodeId = nil -- 510
-		state.draggingViewport = true -- 511
-		ImGui.ResetMouseDragDelta(2) -- 512
-	end -- 512
-	if ImGui.IsMouseClicked(0) then -- 512
-		if spacePressed then -- 512
-			state.draggingNodeId = nil -- 516
-			state.draggingViewport = true -- 517
-		else -- 517
-			local mouse = ImGui.GetMousePos() -- 519
-			local picked = pickNodeAt(state, mouse.x, mouse.y) -- 520
-			if picked ~= nil then -- 520
-				state.selectedId = picked -- 522
-				state.previewDirty = true -- 523
-				state.draggingNodeId = picked -- 524
-				state.draggingViewport = false -- 525
-			else -- 525
-				state.draggingNodeId = nil -- 527
-				state.draggingViewport = true -- 528
-			end -- 528
-		end -- 528
-		ImGui.ResetMouseDragDelta(0) -- 531
-	end -- 531
-	if ImGui.IsMouseReleased(0) or ImGui.IsMouseReleased(2) then -- 531
-		state.draggingNodeId = nil -- 534
-		state.draggingViewport = false -- 535
-	end -- 535
-	if ImGui.IsMouseDragging(0) or ImGui.IsMouseDragging(2) then -- 535
-		local panButton = ImGui.IsMouseDragging(2) and 2 or 0 -- 538
-		local delta = ImGui.GetMouseDragDelta(panButton) -- 539
-		if delta.x ~= 0 or delta.y ~= 0 then -- 539
-			if state.draggingNodeId ~= nil and panButton == 0 then -- 539
-				local node = state.nodes[state.draggingNodeId] -- 542
-				if node ~= nil then -- 542
-					local scale = viewportScale(state) -- 544
-					node.x = node.x + delta.x / scale -- 545
-					node.y = node.y - delta.y / scale -- 546
-					if state.snapEnabled then -- 546
-						local step = 16 -- 548
-						node.x = math.floor(node.x / step + 0.5) * step -- 549
-						node.y = math.floor(node.y / step + 0.5) * step -- 550
-					end -- 550
-				end -- 550
-			elseif state.draggingViewport then -- 550
-				state.viewportPanX = state.viewportPanX + delta.x -- 554
-				state.viewportPanY = state.viewportPanY - delta.y -- 555
-			end -- 555
-			ImGui.ResetMouseDragDelta(panButton) -- 557
-		end -- 557
-	end -- 557
-end -- 500
-local function drawViewportToolButton(state, tool, label) -- 562
-	local active = state.viewportTool == tool -- 563
-	if active then -- 563
-		ImGui.PushStyleColor( -- 565
-			"Button", -- 565
-			Color(4281349698), -- 565
-			function() -- 565
-				ImGui.PushStyleColor( -- 566
-					"Text", -- 566
-					themeColor, -- 566
-					function() -- 566
-						if ImGui.Button(label) then -- 566
-							state.viewportTool = tool -- 567
-						end -- 567
-					end -- 566
-				) -- 566
-			end -- 565
-		) -- 565
-	elseif ImGui.Button(label) then -- 565
-		state.viewportTool = tool -- 571
-	end -- 571
-end -- 562
-local function drawViewport(state) -- 575
-	ImGui.TextColored(themeColor, zh and "场景" or "Scene") -- 576
-	ImGui.SameLine() -- 577
-	drawViewportToolButton(state, "Select", "Select") -- 578
-	ImGui.SameLine() -- 579
-	drawViewportToolButton(state, "Move", "Move") -- 580
+	if ImGui.IsMouseClicked(2) then -- 468
+		state.draggingNodeId = nil -- 471
+		state.draggingViewport = true -- 472
+		ImGui.ResetMouseDragDelta(2) -- 473
+	end -- 473
+	if ImGui.IsMouseClicked(0) then -- 473
+		if spacePressed then -- 473
+			state.draggingNodeId = nil -- 477
+			state.draggingViewport = true -- 478
+		else -- 478
+			local mouse = ImGui.GetMousePos() -- 480
+			local picked = pickNodeAt(state, mouse.x, mouse.y) -- 481
+			if picked ~= nil then -- 481
+				state.selectedId = picked -- 483
+				state.previewDirty = true -- 484
+				state.draggingNodeId = picked -- 485
+				state.draggingViewport = false -- 486
+			else -- 486
+				state.draggingNodeId = nil -- 488
+				state.draggingViewport = true -- 489
+			end -- 489
+		end -- 489
+		ImGui.ResetMouseDragDelta(0) -- 492
+	end -- 492
+	if ImGui.IsMouseReleased(0) or ImGui.IsMouseReleased(2) then -- 492
+		state.draggingNodeId = nil -- 495
+		state.draggingViewport = false -- 496
+	end -- 496
+	if ImGui.IsMouseDragging(0) or ImGui.IsMouseDragging(2) then -- 496
+		local panButton = ImGui.IsMouseDragging(2) and 2 or 0 -- 499
+		local delta = ImGui.GetMouseDragDelta(panButton) -- 500
+		if delta.x ~= 0 or delta.y ~= 0 then -- 500
+			if state.draggingNodeId ~= nil and panButton == 0 then -- 500
+				local node = state.nodes[state.draggingNodeId] -- 503
+				if node ~= nil then -- 503
+					local scale = viewportScale(state) -- 505
+					node.x = node.x + delta.x / scale -- 506
+					node.y = node.y - delta.y / scale -- 507
+					if state.snapEnabled then -- 507
+						local step = 16 -- 509
+						node.x = math.floor(node.x / step + 0.5) * step -- 510
+						node.y = math.floor(node.y / step + 0.5) * step -- 511
+					end -- 511
+				end -- 511
+			elseif state.draggingViewport then -- 511
+				state.viewportPanX = state.viewportPanX + delta.x -- 515
+				state.viewportPanY = state.viewportPanY - delta.y -- 516
+			end -- 516
+			ImGui.ResetMouseDragDelta(panButton) -- 518
+		end -- 518
+	end -- 518
+end -- 461
+local function drawViewportToolButton(state, tool, label) -- 523
+	local active = state.viewportTool == tool -- 524
+	if active then -- 524
+		ImGui.PushStyleColor( -- 526
+			"Button", -- 526
+			Color(4281349698), -- 526
+			function() -- 526
+				ImGui.PushStyleColor( -- 527
+					"Text", -- 527
+					themeColor, -- 527
+					function() -- 527
+						if ImGui.Button(label) then -- 527
+							state.viewportTool = tool -- 528
+						end -- 528
+					end -- 527
+				) -- 527
+			end -- 526
+		) -- 526
+	elseif ImGui.Button(label) then -- 526
+		state.viewportTool = tool -- 532
+	end -- 532
+end -- 523
+local function drawViewport(state) -- 536
+	ImGui.TextColored(themeColor, zh and "场景" or "Scene") -- 537
+	ImGui.SameLine() -- 538
+	drawViewportToolButton(state, "Select", "Select") -- 539
+	ImGui.SameLine() -- 540
+	drawViewportToolButton(state, "Move", "Move") -- 541
+	ImGui.SameLine() -- 542
+	drawViewportToolButton(state, "Rotate", "Rotate") -- 543
+	ImGui.SameLine() -- 544
+	drawViewportToolButton(state, "Scale", "Scale") -- 545
+	ImGui.SameLine() -- 546
+	ImGui.TextDisabled("|") -- 547
+	ImGui.SameLine() -- 548
+	local snapChanged, snap = ImGui.Checkbox(zh and "吸附" or "Snap", state.snapEnabled) -- 549
+	if snapChanged then -- 549
+		state.snapEnabled = snap -- 550
+	end -- 550
+	ImGui.SameLine() -- 551
+	local gridChanged, grid = ImGui.Checkbox(zh and "网格" or "Grid", state.showGrid) -- 552
+	if gridChanged then -- 552
+		state.showGrid = grid -- 553
+		state.previewDirty = true -- 553
+	end -- 553
+	ImGui.SameLine() -- 554
+	if ImGui.Button(zh and "居中" or "Center") then -- 554
+		state.viewportPanX = 0 -- 556
+		state.viewportPanY = 0 -- 557
+		state.zoom = 100 -- 558
+		state.previewDirty = true -- 559
+	end -- 559
+	ImGui.SameLine() -- 561
+	ImGui.TextDisabled(zh and "当前场景：Main" or "Scene: Main") -- 562
+	ImGui.Separator() -- 563
+	local cursor = ImGui.GetCursorScreenPos() -- 564
+	local avail = ImGui.GetContentRegionAvail() -- 565
+	local viewportWidth = math.max(360, avail.x - 8) -- 566
+	local viewportHeight = math.max(300, avail.y - 38) -- 567
+	if math.abs(state.preview.width - viewportWidth) > 1 or math.abs(state.preview.height - viewportHeight) > 1 then -- 567
+		state.previewDirty = true -- 569
+	end -- 569
+	state.preview.x = cursor.x -- 571
+	state.preview.y = cursor.y -- 572
+	state.preview.width = viewportWidth -- 573
+	state.preview.height = viewportHeight -- 574
+	updatePreviewRuntime(state) -- 575
+	ImGui.Dummy(Vec2(viewportWidth, viewportHeight)) -- 576
+	local hovered = ImGui.IsItemHovered() -- 577
+	handleViewportMouse(state, hovered) -- 578
+	ImGui.SetCursorScreenPos(Vec2(cursor.x + viewportWidth - 142, cursor.y + 8)) -- 579
+	if ImGui.SmallButton("-##viewport_zoom_out") then -- 579
+		zoomViewportFromCenter(state, -10) -- 580
+	end -- 580
 	ImGui.SameLine() -- 581
-	drawViewportToolButton(state, "Rotate", "Rotate") -- 582
-	ImGui.SameLine() -- 583
-	drawViewportToolButton(state, "Scale", "Scale") -- 584
-	ImGui.SameLine() -- 585
-	ImGui.TextDisabled("|") -- 586
-	ImGui.SameLine() -- 587
-	local snapChanged, snap = ImGui.Checkbox(zh and "吸附" or "Snap", state.snapEnabled) -- 588
-	if snapChanged then -- 588
-		state.snapEnabled = snap -- 589
-	end -- 589
+	ImGui.PushStyleColor( -- 582
+		"Text", -- 582
+		themeColor, -- 582
+		function() -- 582
+			if ImGui.SmallButton(tostring(math.floor(state.zoom)) .. "%") then -- 582
+				state.zoom = 100 -- 584
+				state.viewportPanX = 0 -- 585
+				state.viewportPanY = 0 -- 586
+				state.previewDirty = true -- 587
+			end -- 587
+		end -- 582
+	) -- 582
 	ImGui.SameLine() -- 590
-	local gridChanged, grid = ImGui.Checkbox(zh and "网格" or "Grid", state.showGrid) -- 591
-	if gridChanged then -- 591
-		state.showGrid = grid -- 592
-		state.previewDirty = true -- 592
-	end -- 592
-	ImGui.SameLine() -- 593
-	if ImGui.Button(zh and "居中" or "Center") then -- 593
-		state.viewportPanX = 0 -- 595
-		state.viewportPanY = 0 -- 596
-		state.zoom = 100 -- 597
-		state.previewDirty = true -- 598
-	end -- 598
-	ImGui.SameLine() -- 600
-	ImGui.TextDisabled(zh and "当前场景：Main" or "Scene: Main") -- 601
-	ImGui.Separator() -- 602
-	local cursor = ImGui.GetCursorScreenPos() -- 603
-	local avail = ImGui.GetContentRegionAvail() -- 604
-	local viewportWidth = math.max(360, avail.x - 8) -- 605
-	local viewportHeight = math.max(300, avail.y - 38) -- 606
-	if math.abs(state.preview.width - viewportWidth) > 1 or math.abs(state.preview.height - viewportHeight) > 1 then -- 606
-		state.previewDirty = true -- 608
+	if ImGui.SmallButton("+##viewport_zoom_in") then -- 590
+		zoomViewportFromCenter(state, 10) -- 591
+	end -- 591
+	ImGui.SetCursorScreenPos(Vec2(cursor.x, cursor.y + viewportHeight + 4)) -- 592
+	ImGui.Separator() -- 593
+	ImGui.TextColored(okColor, zh and "场景视口" or "Scene Viewport") -- 594
+	ImGui.SameLine() -- 595
+	ImGui.TextDisabled(zh and "滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。" or "Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.") -- 596
+end -- 536
+local function drawInspector(state) -- 599
+	ImGui.TextColored(themeColor, zh and "属性检查器" or "Inspector") -- 600
+	ImGui.Separator() -- 601
+	local node = state.nodes[state.selectedId] -- 602
+	if node == nil then -- 602
+		ImGui.TextDisabled(zh and "没有选中节点" or "No node selected") -- 604
+		return -- 605
+	end -- 605
+	ImGui.Text((iconFor(node.kind) .. "  ") .. node.kind) -- 607
+	if ImGui.InputText("Name", node.nameBuffer, inputTextFlags) then -- 607
+		node.name = node.nameBuffer.text -- 608
 	end -- 608
-	state.preview.x = cursor.x -- 610
-	state.preview.y = cursor.y -- 611
-	state.preview.width = viewportWidth -- 612
-	state.preview.height = viewportHeight -- 613
-	updatePreviewRuntime(state) -- 614
-	ImGui.Dummy(Vec2(viewportWidth, viewportHeight)) -- 615
-	local hovered = ImGui.IsItemHovered() -- 616
-	handleViewportMouse(state, hovered) -- 617
-	ImGui.SetCursorScreenPos(Vec2(cursor.x + viewportWidth - 142, cursor.y + 8)) -- 618
-	if ImGui.SmallButton("-##viewport_zoom_out") then -- 618
-		zoomViewportFromCenter(state, -10) -- 619
+	local changed, x, y = ImGui.DragFloat2( -- 609
+		"Position", -- 609
+		node.x, -- 609
+		node.y, -- 609
+		1, -- 609
+		-10000, -- 609
+		10000, -- 609
+		"%.1f" -- 609
+	) -- 609
+	if changed then -- 609
+		node.x = x -- 610
+		node.y = y -- 610
+	end -- 610
+	changed, x, y = ImGui.DragFloat2( -- 611
+		"Scale", -- 611
+		node.scaleX, -- 611
+		node.scaleY, -- 611
+		0.01, -- 611
+		-100, -- 611
+		100, -- 611
+		"%.2f" -- 611
+	) -- 611
+	if changed then -- 611
+		node.scaleX = x -- 612
+		node.scaleY = y -- 612
+	end -- 612
+	local angleChanged, angle = ImGui.DragFloat( -- 613
+		"Rotation", -- 613
+		node.rotation, -- 613
+		1, -- 613
+		-360, -- 613
+		360, -- 613
+		"%.1f" -- 613
+	) -- 613
+	if angleChanged then -- 613
+		node.rotation = angle -- 614
+	end -- 614
+	local visibleChanged, visible = ImGui.Checkbox("Visible", node.visible) -- 615
+	if visibleChanged then -- 615
+		node.visible = visible -- 616
+	end -- 616
+	ImGui.Separator() -- 617
+	if ImGui.InputText("Script", node.scriptBuffer, inputTextFlags) then -- 617
+		node.script = node.scriptBuffer.text -- 618
+	end -- 618
+	if ImGui.Button(zh and "打开脚本" or "Open Script") then -- 618
+		openScriptForNode(state, node) -- 619
 	end -- 619
-	ImGui.SameLine() -- 620
-	ImGui.PushStyleColor( -- 621
-		"Text", -- 621
-		themeColor, -- 621
-		function() -- 621
-			if ImGui.SmallButton(tostring(math.floor(state.zoom)) .. "%") then -- 621
-				state.zoom = 100 -- 623
-				state.viewportPanX = 0 -- 624
-				state.viewportPanY = 0 -- 625
-				state.previewDirty = true -- 626
-			end -- 626
-		end -- 621
-	) -- 621
-	ImGui.SameLine() -- 629
-	if ImGui.SmallButton("+##viewport_zoom_in") then -- 629
-		zoomViewportFromCenter(state, 10) -- 630
-	end -- 630
-	ImGui.SetCursorScreenPos(Vec2(cursor.x, cursor.y + viewportHeight + 4)) -- 631
-	ImGui.Separator() -- 632
-	ImGui.TextColored(okColor, zh and "场景视口" or "Scene Viewport") -- 633
-	ImGui.SameLine() -- 634
-	ImGui.TextDisabled(zh and "滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。" or "Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.") -- 635
-end -- 575
-local function drawInspector(state) -- 638
-	ImGui.TextColored(themeColor, zh and "属性检查器" or "Inspector") -- 639
-	ImGui.Separator() -- 640
-	local node = state.nodes[state.selectedId] -- 641
-	if node == nil then -- 641
-		ImGui.TextDisabled(zh and "没有选中节点" or "No node selected") -- 643
-		return -- 644
-	end -- 644
-	ImGui.Text((iconFor(node.kind) .. "  ") .. node.kind) -- 646
-	if ImGui.InputText("Name", node.nameBuffer, inputTextFlags) then -- 646
-		node.name = node.nameBuffer.text -- 647
-	end -- 647
-	local changed, x, y = ImGui.DragFloat2( -- 648
-		"Position", -- 648
-		node.x, -- 648
-		node.y, -- 648
-		1, -- 648
-		-10000, -- 648
-		10000, -- 648
-		"%.1f" -- 648
-	) -- 648
-	if changed then -- 648
-		node.x = x -- 649
-		node.y = y -- 649
-	end -- 649
-	changed, x, y = ImGui.DragFloat2( -- 650
-		"Scale", -- 650
-		node.scaleX, -- 650
-		node.scaleY, -- 650
-		0.01, -- 650
-		-100, -- 650
-		100, -- 650
-		"%.2f" -- 650
-	) -- 650
-	if changed then -- 650
-		node.scaleX = x -- 651
-		node.scaleY = y -- 651
-	end -- 651
-	local angleChanged, angle = ImGui.DragFloat( -- 652
-		"Rotation", -- 652
-		node.rotation, -- 652
-		1, -- 652
-		-360, -- 652
-		360, -- 652
-		"%.1f" -- 652
-	) -- 652
-	if angleChanged then -- 652
-		node.rotation = angle -- 653
-	end -- 653
-	local visibleChanged, visible = ImGui.Checkbox("Visible", node.visible) -- 654
-	if visibleChanged then -- 654
-		node.visible = visible -- 655
-	end -- 655
-	ImGui.Separator() -- 656
-	if ImGui.InputText("Script", node.scriptBuffer, inputTextFlags) then -- 656
-		node.script = node.scriptBuffer.text -- 657
-	end -- 657
-	if ImGui.Button(zh and "打开脚本" or "Open Script") then -- 657
-		openScriptForNode(state, node) -- 658
-	end -- 658
-	if node.kind == "Sprite" then -- 658
-		ImGui.Separator() -- 660
-		if ImGui.InputText("Texture", node.textureBuffer, inputTextFlags) then -- 660
-			node.texture = node.textureBuffer.text -- 662
-			state.previewDirty = true -- 663
-		end -- 663
-		if ImGui.Button(zh and "导入并绑定贴图" or "Import Texture") then -- 663
-			App:openFileDialog( -- 666
-				false, -- 666
-				function(path) -- 666
-					local asset = addAssetPath(state, path) -- 667
-					if asset ~= nil and isTextureAsset(asset) then -- 667
-						bindTextureToSprite(state, node, asset) -- 668
-					end -- 668
-				end -- 666
-			) -- 666
-		end -- 666
-		ImGui.SameLine() -- 671
-		if ImGui.Button(zh and "绑定选中贴图" or "Use Selected") then -- 671
-			if state.selectedAsset ~= "" and isTextureAsset(state.selectedAsset) then -- 671
-				bindTextureToSprite(state, node, state.selectedAsset) -- 673
-			end -- 673
-		end -- 673
-	elseif node.kind == "Label" then -- 673
-		ImGui.Separator() -- 676
-		if ImGui.InputText("Text", node.textBuffer, inputTextFlags) then -- 676
-			node.text = node.textBuffer.text -- 677
-		end -- 677
-	elseif node.kind == "Camera" then -- 677
-		ImGui.Separator() -- 679
-		ImGui.TextDisabled(zh and "Camera 显示真实取景框。" or "Camera shows a real frame in viewport.") -- 680
-	end -- 680
-end -- 638
-local function drawConsole(state) -- 684
-	ImGui.TextColored(themeColor, zh and "控制台" or "Console") -- 685
-	ImGui.SameLine() -- 686
-	ImGui.TextColored(okColor, state.status) -- 687
-	ImGui.Separator() -- 688
-	for ____, line in ipairs(state.console) do -- 689
-		ImGui.TextDisabled(line) -- 689
-	end -- 689
-end -- 684
-local function drawVerticalSplitter(id, height, onDrag) -- 692
-	ImGui.PushStyleColor( -- 693
-		"Button", -- 693
-		Color(4281612868), -- 693
-		function() -- 693
-			ImGui.PushStyleColor( -- 694
-				"ButtonHovered", -- 694
-				Color(4283259240), -- 694
-				function() -- 694
-					ImGui.PushStyleColor( -- 695
-						"ButtonActive", -- 695
-						Color(4294954035), -- 695
-						function() -- 695
-							ImGui.Button( -- 696
-								"##" .. id, -- 696
-								Vec2(8, height) -- 696
-							) -- 696
-						end -- 695
-					) -- 695
-				end -- 694
-			) -- 694
-		end -- 693
-	) -- 693
-	if ImGui.IsItemHovered() then -- 693
-		ImGui.BeginTooltip(function() return ImGui.Text(zh and "拖动调整面板宽度" or "Drag to resize panel") end) -- 701
-	end -- 701
-	if ImGui.IsItemActive() and ImGui.IsMouseDragging(0) then -- 701
-		local delta = ImGui.GetMouseDragDelta(0) -- 704
-		if delta.x ~= 0 then -- 704
-			onDrag(delta.x) -- 706
-			ImGui.ResetMouseDragDelta(0) -- 707
-		end -- 707
-	end -- 707
-end -- 692
-function ____exports.drawEditor(state) -- 712
-	local size = App.visualSize -- 713
-	local margin = 10 -- 714
-	local nativeFooterSafeArea = 60 -- 715
-	local windowWidth = math.max(360, size.width - margin * 2) -- 716
-	local windowHeight = math.max(260, size.height - margin * 2 - nativeFooterSafeArea) -- 717
-	ImGui.SetNextWindowPos( -- 718
-		Vec2(margin, margin), -- 718
-		"Always" -- 718
-	) -- 718
-	ImGui.SetNextWindowSize( -- 719
-		Vec2(windowWidth, windowHeight), -- 719
-		"Always" -- 719
-	) -- 719
-	ImGui.SetNextWindowBgAlpha(state.mode == "Script" and 0.96 or 0.1) -- 720
-	ImGui.Begin( -- 721
-		"Dora Visual Editor", -- 721
-		mainWindowFlags, -- 721
-		function() -- 721
-			drawHeader(state) -- 722
-			local avail = ImGui.GetContentRegionAvail() -- 723
-			local bottomHeight = math.max( -- 724
-				72, -- 724
-				math.min( -- 724
-					state.bottomHeight, -- 724
-					math.floor(avail.y * 0.28) -- 724
-				) -- 724
+	if node.kind == "Sprite" then -- 619
+		ImGui.Separator() -- 621
+		if ImGui.InputText("Texture", node.textureBuffer, inputTextFlags) then -- 621
+			node.texture = node.textureBuffer.text -- 623
+			state.previewDirty = true -- 624
+		end -- 624
+		if ImGui.Button(zh and "导入并绑定贴图" or "Import Texture") then -- 624
+			App:openFileDialog( -- 627
+				false, -- 627
+				function(path) -- 627
+					local asset = addAssetPath(state, path) -- 628
+					if asset ~= nil and isTextureAsset(asset) then -- 628
+						bindTextureToSprite(state, node, asset) -- 629
+					end -- 629
+				end -- 627
+			) -- 627
+		end -- 627
+		ImGui.SameLine() -- 632
+		if ImGui.Button(zh and "绑定选中贴图" or "Use Selected") then -- 632
+			if state.selectedAsset ~= "" and isTextureAsset(state.selectedAsset) then -- 632
+				bindTextureToSprite(state, node, state.selectedAsset) -- 634
+			end -- 634
+		end -- 634
+	elseif node.kind == "Label" then -- 634
+		ImGui.Separator() -- 637
+		if ImGui.InputText("Text", node.textBuffer, inputTextFlags) then -- 637
+			node.text = node.textBuffer.text -- 638
+		end -- 638
+	elseif node.kind == "Camera" then -- 638
+		ImGui.Separator() -- 640
+		ImGui.TextDisabled(zh and "Camera 显示真实取景框。" or "Camera shows a real frame in viewport.") -- 641
+	end -- 641
+end -- 599
+local function drawVerticalSplitter(id, height, onDrag) -- 645
+	ImGui.PushStyleColor( -- 646
+		"Button", -- 646
+		Color(4281612868), -- 646
+		function() -- 646
+			ImGui.PushStyleColor( -- 647
+				"ButtonHovered", -- 647
+				Color(4283259240), -- 647
+				function() -- 647
+					ImGui.PushStyleColor( -- 648
+						"ButtonActive", -- 648
+						Color(4294954035), -- 648
+						function() -- 648
+							ImGui.Button( -- 649
+								"##" .. id, -- 649
+								Vec2(8, height) -- 649
+							) -- 649
+						end -- 648
+					) -- 648
+				end -- 647
+			) -- 647
+		end -- 646
+	) -- 646
+	if ImGui.IsItemHovered() then -- 646
+		ImGui.BeginTooltip(function() return ImGui.Text(zh and "拖动调整面板宽度" or "Drag to resize panel") end) -- 654
+	end -- 654
+	if ImGui.IsItemActive() and ImGui.IsMouseDragging(0) then -- 654
+		local delta = ImGui.GetMouseDragDelta(0) -- 657
+		if delta.x ~= 0 then -- 657
+			onDrag(delta.x) -- 659
+			ImGui.ResetMouseDragDelta(0) -- 660
+		end -- 660
+	end -- 660
+end -- 645
+function ____exports.drawEditor(state) -- 665
+	local size = App.visualSize -- 666
+	local margin = 10 -- 667
+	local nativeFooterSafeArea = 60 -- 668
+	local windowWidth = math.max(360, size.width - margin * 2) -- 669
+	local windowHeight = math.max(260, size.height - margin * 2 - nativeFooterSafeArea) -- 670
+	ImGui.SetNextWindowPos( -- 671
+		Vec2(margin, margin), -- 671
+		"Always" -- 671
+	) -- 671
+	ImGui.SetNextWindowSize( -- 672
+		Vec2(windowWidth, windowHeight), -- 672
+		"Always" -- 672
+	) -- 672
+	ImGui.SetNextWindowBgAlpha(state.mode == "Script" and 0.96 or 0.1) -- 673
+	ImGui.Begin( -- 674
+		"Dora Visual Editor", -- 674
+		mainWindowFlags, -- 674
+		function() -- 674
+			drawHeaderPanel(state, saveScene) -- 675
+			local avail = ImGui.GetContentRegionAvail() -- 676
+			local bottomHeight = math.max( -- 677
+				72, -- 677
+				math.min( -- 677
+					state.bottomHeight, -- 677
+					math.floor(avail.y * 0.28) -- 677
+				) -- 677
+			) -- 677
+			if state.mode == "Script" then -- 677
+				local scriptHeight = math.max(180, avail.y - bottomHeight - 8) -- 679
+				ImGui.PushStyleColor( -- 680
+					"ChildBg", -- 680
+					panelBg, -- 680
+					function() -- 680
+						ImGui.BeginChild( -- 681
+							"ScriptWorkspaceRoot", -- 681
+							Vec2(0, scriptHeight), -- 681
+							{}, -- 681
+							noScrollFlags, -- 681
+							function() return drawScriptPanel(state) end -- 681
+						) -- 681
+					end -- 680
+				) -- 680
+				ImGui.BeginChild( -- 683
+					"ScriptConsoleDock", -- 683
+					Vec2(0, bottomHeight), -- 683
+					{}, -- 683
+					noScrollFlags, -- 683
+					function() return drawConsolePanel(state) end -- 683
+				) -- 683
+				return -- 684
+			end -- 684
+			local mainHeight = math.max(160, avail.y - bottomHeight - 10) -- 686
+			local availableWidth = math.max(320, avail.x) -- 687
+			local splitterWidth = 8 -- 688
+			local compactLayout = availableWidth < 760 -- 689
+			local minLeftWidth = compactLayout and 110 or 170 -- 690
+			local minRightWidth = compactLayout and 130 or 220 -- 691
+			local minCenterWidth = compactLayout and 80 or 180 -- 692
+			local sideBudget = math.max(0, availableWidth - splitterWidth * 2 - minCenterWidth) -- 693
+			if sideBudget <= minLeftWidth + minRightWidth then -- 693
+				state.leftWidth = math.max( -- 695
+					1, -- 695
+					math.floor(sideBudget * 0.45) -- 695
+				) -- 695
+				state.rightWidth = math.max(1, sideBudget - state.leftWidth) -- 696
+			else -- 696
+				state.leftWidth = math.max(minLeftWidth, state.leftWidth) -- 698
+				state.rightWidth = math.max(minRightWidth, state.rightWidth) -- 699
+				if state.leftWidth + state.rightWidth > sideBudget then -- 699
+					local ratio = state.leftWidth / math.max(1, state.leftWidth + state.rightWidth) -- 701
+					state.leftWidth = math.max( -- 702
+						minLeftWidth, -- 702
+						math.floor(sideBudget * ratio) -- 702
+					) -- 702
+					state.rightWidth = math.max(minRightWidth, sideBudget - state.leftWidth) -- 703
+				end -- 703
+				state.leftWidth = math.min(state.leftWidth, sideBudget - minRightWidth) -- 705
+				state.rightWidth = math.min(state.rightWidth, sideBudget - state.leftWidth) -- 706
+			end -- 706
+			local centerWidth = math.max(1, availableWidth - state.leftWidth - state.rightWidth - splitterWidth * 2) -- 708
+			local leftTopHeight = math.floor(mainHeight * 0.58) -- 709
+			local leftBottomHeight = mainHeight - leftTopHeight - 8 -- 710
+			local function clampPanelWidth(value, minValue, maxValue) -- 711
+				local safeMax = math.max(1, maxValue) -- 712
+				local safeMin = math.min(minValue, safeMax) -- 713
+				return math.max( -- 714
+					safeMin, -- 714
+					math.min(value, safeMax) -- 714
+				) -- 714
+			end -- 711
+			local function resizeSidePanels(deltaX, side) -- 716
+				if side == "left" then -- 716
+					state.leftWidth = clampPanelWidth(state.leftWidth + deltaX, minLeftWidth, availableWidth - state.rightWidth - splitterWidth * 2 - minCenterWidth) -- 718
+				else -- 718
+					state.rightWidth = clampPanelWidth(state.rightWidth - deltaX, minRightWidth, availableWidth - state.leftWidth - splitterWidth * 2 - minCenterWidth) -- 720
+				end -- 720
+			end -- 716
+			ImGui.BeginChild( -- 724
+				"LeftDock", -- 724
+				Vec2(state.leftWidth, mainHeight), -- 724
+				{}, -- 724
+				noScrollFlags, -- 724
+				function() -- 724
+					ImGui.BeginChild( -- 725
+						"SceneDock", -- 725
+						Vec2(0, leftTopHeight), -- 725
+						{}, -- 725
+						noScrollFlags, -- 725
+						function() return drawScenePanel(state) end -- 725
+					) -- 725
+					ImGui.BeginChild( -- 726
+						"AssetDock", -- 726
+						Vec2(0, leftBottomHeight), -- 726
+						{}, -- 726
+						noScrollFlags, -- 726
+						function() return drawAssetsPanel(state) end -- 726
+					) -- 726
+				end -- 724
 			) -- 724
-			if state.mode == "Script" then -- 724
-				local scriptHeight = math.max(180, avail.y - bottomHeight - 8) -- 726
-				ImGui.PushStyleColor( -- 727
-					"ChildBg", -- 727
-					panelBg, -- 727
-					function() -- 727
-						ImGui.BeginChild( -- 728
-							"ScriptWorkspaceRoot", -- 728
-							Vec2(0, scriptHeight), -- 728
-							{}, -- 728
-							noScrollFlags, -- 728
-							function() return drawScriptPanel(state) end -- 728
-						) -- 728
-					end -- 727
-				) -- 727
-				ImGui.BeginChild( -- 730
-					"ScriptConsoleDock", -- 730
-					Vec2(0, bottomHeight), -- 730
-					{}, -- 730
-					noScrollFlags, -- 730
-					function() return drawConsole(state) end -- 730
-				) -- 730
-				return -- 731
-			end -- 731
-			local mainHeight = math.max(160, avail.y - bottomHeight - 10) -- 733
-			local availableWidth = math.max(320, avail.x) -- 734
-			local splitterWidth = 8 -- 735
-			local compactLayout = availableWidth < 760 -- 736
-			local minLeftWidth = compactLayout and 110 or 170 -- 737
-			local minRightWidth = compactLayout and 130 or 220 -- 738
-			local minCenterWidth = compactLayout and 80 or 180 -- 739
-			local sideBudget = math.max(0, availableWidth - splitterWidth * 2 - minCenterWidth) -- 740
-			if sideBudget <= minLeftWidth + minRightWidth then -- 740
-				state.leftWidth = math.max( -- 742
-					1, -- 742
-					math.floor(sideBudget * 0.45) -- 742
-				) -- 742
-				state.rightWidth = math.max(1, sideBudget - state.leftWidth) -- 743
-			else -- 743
-				state.leftWidth = math.max(minLeftWidth, state.leftWidth) -- 745
-				state.rightWidth = math.max(minRightWidth, state.rightWidth) -- 746
-				if state.leftWidth + state.rightWidth > sideBudget then -- 746
-					local ratio = state.leftWidth / math.max(1, state.leftWidth + state.rightWidth) -- 748
-					state.leftWidth = math.max( -- 749
-						minLeftWidth, -- 749
-						math.floor(sideBudget * ratio) -- 749
-					) -- 749
-					state.rightWidth = math.max(minRightWidth, sideBudget - state.leftWidth) -- 750
-				end -- 750
-				state.leftWidth = math.min(state.leftWidth, sideBudget - minRightWidth) -- 752
-				state.rightWidth = math.min(state.rightWidth, sideBudget - state.leftWidth) -- 753
-			end -- 753
-			local centerWidth = math.max(1, availableWidth - state.leftWidth - state.rightWidth - splitterWidth * 2) -- 755
-			local leftTopHeight = math.floor(mainHeight * 0.58) -- 756
-			local leftBottomHeight = mainHeight - leftTopHeight - 8 -- 757
-			local function clampPanelWidth(value, minValue, maxValue) -- 758
-				local safeMax = math.max(1, maxValue) -- 759
-				local safeMin = math.min(minValue, safeMax) -- 760
-				return math.max( -- 761
-					safeMin, -- 761
-					math.min(value, safeMax) -- 761
-				) -- 761
-			end -- 758
-			local function resizeSidePanels(deltaX, side) -- 763
-				if side == "left" then -- 763
-					state.leftWidth = clampPanelWidth(state.leftWidth + deltaX, minLeftWidth, availableWidth - state.rightWidth - splitterWidth * 2 - minCenterWidth) -- 765
-				else -- 765
-					state.rightWidth = clampPanelWidth(state.rightWidth - deltaX, minRightWidth, availableWidth - state.leftWidth - splitterWidth * 2 - minCenterWidth) -- 767
-				end -- 767
-			end -- 763
-			ImGui.BeginChild( -- 771
-				"LeftDock", -- 771
-				Vec2(state.leftWidth, mainHeight), -- 771
-				{}, -- 771
-				noScrollFlags, -- 771
-				function() -- 771
-					ImGui.BeginChild( -- 772
-						"SceneDock", -- 772
-						Vec2(0, leftTopHeight), -- 772
-						{}, -- 772
-						noScrollFlags, -- 772
-						function() return drawScenePanel(state) end -- 772
-					) -- 772
-					ImGui.BeginChild( -- 773
-						"AssetDock", -- 773
-						Vec2(0, leftBottomHeight), -- 773
-						{}, -- 773
-						noScrollFlags, -- 773
-						function() return drawAssetsPanel(state) end -- 773
-					) -- 773
-				end -- 771
-			) -- 771
-			ImGui.SameLine(0, 0) -- 775
-			drawVerticalSplitter( -- 776
-				"LeftSplitter", -- 776
-				mainHeight, -- 776
-				function(deltaX) return resizeSidePanels(deltaX, "left") end -- 776
-			) -- 776
-			ImGui.SameLine(0, 0) -- 777
-			ImGui.PushStyleColor( -- 778
-				"ChildBg", -- 778
-				transparent, -- 778
-				function() -- 778
-					ImGui.BeginChild( -- 779
-						"CenterDock", -- 779
-						Vec2(centerWidth, mainHeight), -- 779
-						{}, -- 779
-						noScrollFlags, -- 779
-						function() -- 779
-							if state.mode == "Script" then -- 779
-								drawScriptPanel(state) -- 780
-							else -- 780
-								drawViewport(state) -- 780
-							end -- 780
-						end -- 779
-					) -- 779
-				end -- 778
-			) -- 778
-			ImGui.SameLine(0, 0) -- 783
-			drawVerticalSplitter( -- 784
-				"RightSplitter", -- 784
-				mainHeight, -- 784
-				function(deltaX) return resizeSidePanels(deltaX, "right") end -- 784
-			) -- 784
-			ImGui.SameLine(0, 0) -- 785
-			ImGui.BeginChild( -- 786
-				"RightDock", -- 786
-				Vec2(state.rightWidth, mainHeight), -- 786
-				{}, -- 786
-				noScrollFlags, -- 786
-				function() return drawInspector(state) end -- 786
-			) -- 786
-			ImGui.BeginChild( -- 787
-				"BottomConsoleDock", -- 787
-				Vec2(0, bottomHeight), -- 787
-				{}, -- 787
-				noScrollFlags, -- 787
-				function() return drawConsole(state) end -- 787
-			) -- 787
-		end -- 721
-	) -- 721
-	drawGamePreviewWindow(state) -- 789
-end -- 712
-function ____exports.drawRuntimeError(message) -- 792
-	local size = App.visualSize -- 793
-	ImGui.SetNextWindowPos( -- 794
-		Vec2(10, 10), -- 794
-		"Always" -- 794
-	) -- 794
-	ImGui.SetNextWindowSize( -- 795
-		Vec2( -- 795
-			math.max(320, size.width - 20), -- 795
-			math.max(220, size.height - 20) -- 795
-		), -- 795
-		"Always" -- 795
-	) -- 795
-	ImGui.Begin( -- 796
-		"Dora Visual Editor Error", -- 796
-		mainWindowFlags, -- 796
-		function() -- 796
-			ImGui.TextColored(warnColor, zh and "Dora Visual Editor 运行时错误" or "Dora Visual Editor Runtime Error") -- 797
-			ImGui.Separator() -- 798
-			ImGui.TextWrapped(message or "unknown error") -- 799
-		end -- 796
-	) -- 796
-end -- 792
-return ____exports -- 792
+			ImGui.SameLine(0, 0) -- 728
+			drawVerticalSplitter( -- 729
+				"LeftSplitter", -- 729
+				mainHeight, -- 729
+				function(deltaX) return resizeSidePanels(deltaX, "left") end -- 729
+			) -- 729
+			ImGui.SameLine(0, 0) -- 730
+			ImGui.PushStyleColor( -- 731
+				"ChildBg", -- 731
+				transparent, -- 731
+				function() -- 731
+					ImGui.BeginChild( -- 732
+						"CenterDock", -- 732
+						Vec2(centerWidth, mainHeight), -- 732
+						{}, -- 732
+						noScrollFlags, -- 732
+						function() -- 732
+							if state.mode == "Script" then -- 732
+								drawScriptPanel(state) -- 733
+							else -- 733
+								drawViewport(state) -- 733
+							end -- 733
+						end -- 732
+					) -- 732
+				end -- 731
+			) -- 731
+			ImGui.SameLine(0, 0) -- 736
+			drawVerticalSplitter( -- 737
+				"RightSplitter", -- 737
+				mainHeight, -- 737
+				function(deltaX) return resizeSidePanels(deltaX, "right") end -- 737
+			) -- 737
+			ImGui.SameLine(0, 0) -- 738
+			ImGui.BeginChild( -- 739
+				"RightDock", -- 739
+				Vec2(state.rightWidth, mainHeight), -- 739
+				{}, -- 739
+				noScrollFlags, -- 739
+				function() return drawInspector(state) end -- 739
+			) -- 739
+			ImGui.BeginChild( -- 740
+				"BottomConsoleDock", -- 740
+				Vec2(0, bottomHeight), -- 740
+				{}, -- 740
+				noScrollFlags, -- 740
+				function() return drawConsolePanel(state) end -- 740
+			) -- 740
+		end -- 674
+	) -- 674
+	drawGamePreviewWindow(state) -- 742
+end -- 665
+function ____exports.drawRuntimeError(message) -- 745
+	local size = App.visualSize -- 746
+	ImGui.SetNextWindowPos( -- 747
+		Vec2(10, 10), -- 747
+		"Always" -- 747
+	) -- 747
+	ImGui.SetNextWindowSize( -- 748
+		Vec2( -- 748
+			math.max(320, size.width - 20), -- 748
+			math.max(220, size.height - 20) -- 748
+		), -- 748
+		"Always" -- 748
+	) -- 748
+	ImGui.Begin( -- 749
+		"Dora Visual Editor Error", -- 749
+		mainWindowFlags, -- 749
+		function() -- 749
+			ImGui.TextColored(warnColor, zh and "Dora Visual Editor 运行时错误" or "Dora Visual Editor Runtime Error") -- 750
+			ImGui.Separator() -- 751
+			ImGui.TextWrapped(message or "unknown error") -- 752
+		end -- 749
+	) -- 749
+end -- 745
+return ____exports -- 745

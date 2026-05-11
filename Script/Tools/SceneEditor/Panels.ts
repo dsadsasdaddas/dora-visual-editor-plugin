@@ -3,9 +3,12 @@ import * as ImGui from 'ImGui';
 import { SetCond, StyleColor } from 'ImGui';
 import { EditorState, SceneNodeData, ViewportTool } from 'Script/Tools/SceneEditor/Types';
 import { inputTextFlags, mainWindowFlags, noScrollFlags, okColor, panelBg, scriptPanelBg, themeColor, transparent, warnColor } from 'Script/Tools/SceneEditor/Theme';
-import { addAssetPath, addChildNode, deleteNode, iconFor, importFileDialog, importFolderDialog, isFolderAsset, isScriptAsset, isTextureAsset, lowerExt, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
+import { addAssetPath, addChildNode, iconFor, importFileDialog, importFolderDialog, isFolderAsset, isScriptAsset, isTextureAsset, lowerExt, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 import { updatePreviewRuntime } from 'Script/Tools/SceneEditor/Runtime';
-import { drawGamePreviewWindow, startPlay, stopPlay } from 'Script/Tools/SceneEditor/Player';
+import { drawGamePreviewWindow } from 'Script/Tools/SceneEditor/Player';
+import { drawAddNodePopup } from 'Script/Tools/SceneEditor/Panels/AddNodePopup';
+import { drawHeaderPanel } from 'Script/Tools/SceneEditor/Panels/HeaderPanel';
+import { drawConsolePanel } from 'Script/Tools/SceneEditor/Panels/ConsolePanel';
 
 declare function pcall(fn: () => void): LuaMultiReturn<[boolean, unknown]>;
 declare function require(path: string): any;
@@ -30,17 +33,6 @@ function drawNodeRow(state: EditorState, id: string, depth: number) {
 	for (const childId of node.children) {
 		drawNodeRow(state, childId, depth + 1);
 	}
-}
-
-function drawAddNodePopup(state: EditorState) {
-	ImGui.BeginPopup('AddNodePopup', () => {
-		ImGui.TextColored(themeColor, zh ? '添加节点' : 'Add Node');
-		ImGui.Separator();
-		if (ImGui.Selectable('○  Node', false)) { addChildNode(state, 'Node'); ImGui.CloseCurrentPopup(); }
-		if (ImGui.Selectable('▣  Sprite', false)) { addChildNode(state, 'Sprite'); ImGui.CloseCurrentPopup(); }
-		if (ImGui.Selectable('T  Label', false)) { addChildNode(state, 'Label'); ImGui.CloseCurrentPopup(); }
-		if (ImGui.Selectable('◉  Camera', false)) { addChildNode(state, 'Camera'); ImGui.CloseCurrentPopup(); }
-	});
 }
 
 function writeSceneFile(state: EditorState) {
@@ -93,37 +85,6 @@ function attachScriptToNode(state: EditorState, node: SceneNodeData, scriptPath:
 		state.status = message || ((zh ? '脚本已挂载并保存：' : 'Script attached and saved: ') + scriptPath);
 	}
 	pushConsole(state, state.status);
-}
-
-function drawHeader(state: EditorState) {
-	ImGui.TextColored(themeColor, '✦ Dora Visual Editor');
-	ImGui.SameLine();
-	if (ImGui.Button(zh ? '场景' : 'Scene')) state.mode = '2D';
-	ImGui.SameLine();
-	if (ImGui.Button(zh ? '脚本' : 'Scripts')) state.mode = 'Script';
-	ImGui.SameLine();
-	ImGui.TextDisabled(zh ? 'Dora 原生 2D 场景编辑器' : 'Dora Native 2D Scene Editor');
-	ImGui.Separator();
-	if (state.isPlaying) {
-		if (ImGui.Button(zh ? '■ 停止' : '■ Stop')) stopPlay(state);
-	} else if (ImGui.Button(zh ? '▶ 运行' : '▶ Run')) {
-		startPlay(state);
-	}
-	ImGui.SameLine();
-	if (ImGui.Button(zh ? '▣ 保存' : '▣ Save')) saveScene(state);
-	ImGui.SameLine();
-	if (ImGui.Button(zh ? '◇ 构建' : '◇ Build')) {
-		state.status = zh ? 'Build 会在代码生成稳定后接入' : 'Build will be wired after codegen is stable';
-		pushConsole(state, state.status);
-	}
-	ImGui.SameLine();
-	ImGui.TextDisabled('|');
-	ImGui.SameLine();
-	if (ImGui.Button(zh ? '＋ 添加' : '＋ Add')) ImGui.OpenPopup('AddNodePopup');
-	drawAddNodePopup(state);
-	ImGui.SameLine();
-	if (ImGui.Button(zh ? '删除' : 'Delete')) deleteNode(state, state.selectedId);
-	ImGui.Separator();
 }
 
 function drawScenePanel(state: EditorState) {
@@ -681,14 +642,6 @@ function drawInspector(state: EditorState) {
 	}
 }
 
-function drawConsole(state: EditorState) {
-	ImGui.TextColored(themeColor, zh ? '控制台' : 'Console');
-	ImGui.SameLine();
-	ImGui.TextColored(okColor, state.status);
-	ImGui.Separator();
-	for (const line of state.console) ImGui.TextDisabled(line);
-}
-
 function drawVerticalSplitter(id: string, height: number, onDrag: (deltaX: number) => void) {
 	ImGui.PushStyleColor(StyleColor.Button, Color(0xff343a44), () => {
 		ImGui.PushStyleColor(StyleColor.ButtonHovered, Color(0xff4d5968), () => {
@@ -719,7 +672,7 @@ export function drawEditor(state: EditorState) {
 	ImGui.SetNextWindowSize(Vec2(windowWidth, windowHeight), SetCond.Always);
 	ImGui.SetNextWindowBgAlpha(state.mode === 'Script' ? 0.96 : 0.10);
 	ImGui.Begin('Dora Visual Editor', mainWindowFlags, () => {
-		drawHeader(state);
+		drawHeaderPanel(state, saveScene);
 		const avail = ImGui.GetContentRegionAvail();
 		const bottomHeight = math.max(72, math.min(state.bottomHeight, math.floor(avail.y * 0.28)));
 		if (state.mode === 'Script') {
@@ -727,7 +680,7 @@ export function drawEditor(state: EditorState) {
 			ImGui.PushStyleColor(StyleColor.ChildBg, panelBg, () => {
 				ImGui.BeginChild('ScriptWorkspaceRoot', Vec2(0, scriptHeight), [], noScrollFlags, () => drawScriptPanel(state));
 			});
-			ImGui.BeginChild('ScriptConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsole(state));
+			ImGui.BeginChild('ScriptConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsolePanel(state));
 			return;
 		}
 		const mainHeight = math.max(160, avail.y - bottomHeight - 10);
@@ -784,7 +737,7 @@ export function drawEditor(state: EditorState) {
 		drawVerticalSplitter('RightSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'right'));
 		ImGui.SameLine(0, 0);
 		ImGui.BeginChild('RightDock', Vec2(state.rightWidth, mainHeight), [], noScrollFlags, () => drawInspector(state));
-		ImGui.BeginChild('BottomConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsole(state));
+		ImGui.BeginChild('BottomConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsolePanel(state));
 	});
 	drawGamePreviewWindow(state);
 }
