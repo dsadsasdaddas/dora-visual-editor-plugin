@@ -39,7 +39,7 @@ function drawAddNodePopup(state: EditorState) {
 	});
 }
 
-function saveScene(state: EditorState) {
+function writeSceneFile(state: EditorState) {
 	Content.mkdir(workspacePath('.dora'));
 	const data = { version: 1, nodes: [] as object[] };
 	for (const id of state.order) {
@@ -64,10 +64,29 @@ function saveScene(state: EditorState) {
 	}
 	const [text] = json.encode(data);
 	const file = sceneSaveFile();
-	if (text !== undefined && Content.save(file, text)) {
+	if (text !== undefined && Content.save(file, text)) return file;
+	return undefined;
+}
+
+function saveScene(state: EditorState) {
+	const file = writeSceneFile(state);
+	if (file !== undefined) {
 		state.status = (zh ? '已保存：' : 'Saved: ') + file;
 	} else {
 		state.status = zh ? '保存失败' : 'Save failed';
+	}
+	pushConsole(state, state.status);
+}
+
+function attachScriptToNode(state: EditorState, node: SceneNodeData, scriptPath: string, message?: string) {
+	node.script = scriptPath;
+	node.scriptBuffer.text = scriptPath;
+	state.activeScriptNodeId = node.id;
+	const sceneFile = writeSceneFile(state);
+	if (sceneFile === undefined) {
+		state.status = zh ? '脚本已挂载，但场景保存失败' : 'Script attached, but scene save failed';
+	} else {
+		state.status = message || ((zh ? '脚本已挂载并保存：' : 'Script attached and saved: ') + scriptPath);
 	}
 	pushConsole(state, state.status);
 }
@@ -165,9 +184,8 @@ function drawAssetRow(state: EditorState, asset: string) {
 			bindTextureToSprite(state, node, asset);
 			return;
 		} else if (node !== undefined && isScriptAsset(asset)) {
-			node.script = asset;
-			node.scriptBuffer.text = asset;
-			state.status = (zh ? '已绑定脚本：' : 'Script assigned: ') + asset;
+			attachScriptToNode(state, node, asset, (zh ? '已绑定脚本并保存：' : 'Script assigned and saved: ') + asset);
+			return;
 		} else {
 			state.status = zh ? '已选择资源；选中 Sprite 可绑定图片，选中节点可绑定脚本' : 'Asset selected; select a Sprite for images, or a node for scripts';
 		}
@@ -228,9 +246,7 @@ function scriptTemplate(node?: SceneNodeData) {
 
 function loadScriptIntoEditor(state: EditorState, node: SceneNodeData | undefined, scriptPath: string) {
 	if (node !== undefined) {
-		node.script = scriptPath;
-		node.scriptBuffer.text = scriptPath;
-		state.activeScriptNodeId = node.id;
+		attachScriptToNode(state, node, scriptPath);
 	} else {
 		state.activeScriptNodeId = undefined;
 	}
@@ -254,14 +270,16 @@ function openScriptForNode(state: EditorState, node: SceneNodeData) {
 function saveScriptFile(state: EditorState, node?: SceneNodeData) {
 	const path = state.scriptPathBuffer.text !== '' ? state.scriptPathBuffer.text : 'Script/NewScript.lua';
 	state.scriptPathBuffer.text = path;
-	if (node !== undefined) {
-		node.script = path;
-		node.scriptBuffer.text = path;
-	}
 	const scriptFile = workspacePath(path);
 	Content.mkdir(Path.getPath(scriptFile));
+	let statusAlreadyLogged = false;
 	if (Content.save(scriptFile, state.scriptContentBuffer.text)) {
-		state.status = (zh ? '脚本已保存：' : 'Script saved: ') + path;
+		if (node !== undefined) {
+			attachScriptToNode(state, node, path, (zh ? '脚本已保存并挂载：' : 'Script saved and attached: ') + path);
+			statusAlreadyLogged = true;
+		} else {
+			state.status = (zh ? '脚本已保存：' : 'Script saved: ') + path;
+		}
 		if (state.selectedAsset !== path) state.selectedAsset = path;
 		let exists = false;
 		for (const asset of state.assets) if (asset === path) exists = true;
@@ -269,7 +287,7 @@ function saveScriptFile(state: EditorState, node?: SceneNodeData) {
 	} else {
 		state.status = zh ? '脚本保存失败' : 'Failed to save script';
 	}
-	pushConsole(state, state.status);
+	if (!statusAlreadyLogged) pushConsole(state, state.status);
 }
 
 function currentScriptPath(state: EditorState, node?: SceneNodeData) {
@@ -387,9 +405,7 @@ function drawScriptPanel(state: EditorState) {
 			state.scriptPathBuffer.text = path;
 			state.scriptContentBuffer.text = scriptTemplate(node);
 			if (node !== undefined) {
-				node.script = path;
-				node.scriptBuffer.text = path;
-				state.activeScriptNodeId = node.id;
+				attachScriptToNode(state, node, path, (zh ? '已新建脚本并挂载：' : 'New script attached and saved: ') + path);
 			}
 		}
 		if (ImGui.Button(zh ? '导入脚本文件' : 'Import Script')) importFileDialog(state);
@@ -414,10 +430,7 @@ function drawScriptPanel(state: EditorState) {
 			if (node !== undefined) {
 				ImGui.SameLine();
 				if (ImGui.Button(zh ? '绑定到节点' : 'Attach Node')) {
-					node.script = state.scriptPathBuffer.text;
-					node.scriptBuffer.text = node.script;
-					state.status = (zh ? '脚本已绑定到节点：' : 'Script attached to node: ') + node.name;
-					pushConsole(state, state.status);
+					attachScriptToNode(state, node, state.scriptPathBuffer.text, (zh ? '脚本已挂载并保存到节点：' : 'Script attached and saved to node: ') + node.name);
 				}
 			}
 			ImGui.Separator();
