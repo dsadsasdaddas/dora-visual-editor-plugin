@@ -3,12 +3,14 @@ import * as ImGui from 'ImGui';
 import { SetCond, StyleColor } from 'ImGui';
 import { EditorState, SceneNodeData, ViewportTool } from 'Script/Tools/SceneEditor/Types';
 import { inputTextFlags, mainWindowFlags, noScrollFlags, okColor, panelBg, scriptPanelBg, themeColor, transparent, warnColor } from 'Script/Tools/SceneEditor/Theme';
-import { addAssetPath, addChildNode, iconFor, importFileDialog, importFolderDialog, isFolderAsset, isScriptAsset, isTextureAsset, lowerExt, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
+import { addChildNode, importFileDialog, isFolderAsset, isScriptAsset, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 import { updatePreviewRuntime } from 'Script/Tools/SceneEditor/Runtime';
 import { drawGamePreviewWindow } from 'Script/Tools/SceneEditor/Player';
-import { drawAddNodePopup } from 'Script/Tools/SceneEditor/Panels/AddNodePopup';
 import { drawHeaderPanel } from 'Script/Tools/SceneEditor/Panels/HeaderPanel';
 import { drawConsolePanel } from 'Script/Tools/SceneEditor/Panels/ConsolePanel';
+import { drawSceneTreePanel } from 'Script/Tools/SceneEditor/Panels/SceneTreePanel';
+import { drawAssetsPanel } from 'Script/Tools/SceneEditor/Panels/AssetsPanel';
+import { drawInspectorPanel } from 'Script/Tools/SceneEditor/Panels/InspectorPanel';
 
 declare function pcall(fn: () => void): LuaMultiReturn<[boolean, unknown]>;
 declare function require(path: string): any;
@@ -19,20 +21,6 @@ function workspaceRoot() { return SceneModel.workspaceRoot() as string; }
 
 function sceneSaveFile() {
 	return workspacePath(Path('.dora', 'imgui-editor.scene.json'));
-}
-
-function drawNodeRow(state: EditorState, id: string, depth: number) {
-	const node = state.nodes[id];
-	if (node === undefined) return;
-	const indent = string.rep('  ', depth);
-	const label = indent + iconFor(node.kind) + '  ' + node.name + '##tree_' + id;
-	if (ImGui.Selectable(label, state.selectedId === id)) {
-		state.selectedId = id;
-		state.previewDirty = true;
-	}
-	for (const childId of node.children) {
-		drawNodeRow(state, childId, depth + 1);
-	}
 }
 
 function writeSceneFile(state: EditorState) {
@@ -87,17 +75,6 @@ function attachScriptToNode(state: EditorState, node: SceneNodeData, scriptPath:
 	pushConsole(state, state.status);
 }
 
-function drawScenePanel(state: EditorState) {
-	ImGui.TextColored(themeColor, zh ? '场景层级' : 'Scene Hierarchy');
-	ImGui.SameLine();
-	if (ImGui.SmallButton('＋##scene_add')) ImGui.OpenPopup('AddNodePopup');
-	drawAddNodePopup(state);
-	ImGui.Separator();
-	drawNodeRow(state, 'root', 0);
-	ImGui.Separator();
-	ImGui.TextDisabled(zh ? '＋ 添加到当前选中节点下' : '+ adds under selected node');
-}
-
 function bindTextureToSprite(state: EditorState, node: SceneNodeData, texture: string) {
 	node.texture = texture;
 	node.textureBuffer.text = texture;
@@ -112,88 +89,6 @@ function createSpriteFromTexture(state: EditorState, texture: string) {
 	const node = state.nodes[state.selectedId];
 	if (node !== undefined && node.kind === 'Sprite') {
 		bindTextureToSprite(state, node, texture);
-	}
-}
-
-function assetIcon(asset: string) {
-	if (isFolderAsset(asset)) return '📁';
-	if (isTextureAsset(asset)) return '🖼';
-	if (isScriptAsset(asset)) return '◇';
-	const ext = lowerExt(asset);
-	if (ext === 'wav' || ext === 'mp3' || ext === 'ogg' || ext === 'flac') return '♪';
-	if (ext === 'ttf' || ext === 'otf' || ext === 'fnt') return 'F';
-	if (ext === 'json' || ext === 'xml' || ext === 'yaml' || ext === 'yml') return '{}';
-	if (ext === 'atlas' || ext === 'model' || ext === 'skel' || ext === 'anim') return '◆';
-	return '·';
-}
-
-function startsWith(text: string, prefix: string) {
-	return string.sub(text, 1, string.len(prefix)) === prefix;
-}
-
-function drawAssetRow(state: EditorState, asset: string) {
-	if (isFolderAsset(asset)) {
-		ImGui.TreeNode(assetIcon(asset) + '  ' + asset, () => {
-			for (const child of state.assets) {
-				if (child !== asset && !isFolderAsset(child) && startsWith(child, asset)) {
-					drawAssetRow(state, child);
-				}
-			}
-		});
-		return;
-	}
-	if (ImGui.Selectable(assetIcon(asset) + '  ' + asset, state.selectedAsset === asset)) {
-		state.selectedAsset = asset;
-		const node = state.nodes[state.selectedId];
-		if (node !== undefined && node.kind === 'Sprite' && isTextureAsset(asset)) {
-			bindTextureToSprite(state, node, asset);
-			return;
-		} else if (node !== undefined && isScriptAsset(asset)) {
-			attachScriptToNode(state, node, asset, (zh ? '已绑定脚本并保存：' : 'Script assigned and saved: ') + asset);
-			return;
-		} else {
-			state.status = zh ? '已选择资源；选中 Sprite 可绑定图片，选中节点可绑定脚本' : 'Asset selected; select a Sprite for images, or a node for scripts';
-		}
-		pushConsole(state, state.status);
-	}
-}
-
-function drawAssetsPanel(state: EditorState) {
-	ImGui.TextColored(themeColor, zh ? '资源' : 'Assets');
-	ImGui.SameLine();
-	if (ImGui.SmallButton(zh ? '＋ 文件' : '＋ File')) importFileDialog(state);
-	ImGui.SameLine();
-	if (ImGui.SmallButton(zh ? '＋ 文件夹' : '＋ Folder')) importFolderDialog(state);
-	ImGui.Separator();
-	ImGui.TextDisabled(zh ? '支持 png/jpg/webp/lua/ts/json/音频/字体/模型等；文件夹会递归导入。' : 'Supports images, scripts, json, audio, fonts, models; folders import recursively.');
-	ImGui.Separator();
-	if (state.assets.length === 0) {
-		ImGui.TextDisabled(zh ? '点击 + File 或 + Folder 导入资源。' : 'Click + File or + Folder to import assets.');
-		return;
-	}
-	for (const asset of state.assets) {
-		if (isFolderAsset(asset)) {
-			drawAssetRow(state, asset);
-		}
-	}
-	for (const asset of state.assets) {
-		let insideFolder = false;
-		for (const folder of state.assets) {
-			if (isFolderAsset(folder) && startsWith(asset, folder)) insideFolder = true;
-		}
-		if (!insideFolder && !isFolderAsset(asset)) drawAssetRow(state, asset);
-	}
-	if (state.selectedAsset !== '' && isTextureAsset(state.selectedAsset)) {
-		ImGui.Separator();
-		ImGui.TextColored(themeColor, zh ? '贴图预览' : 'Texture Preview');
-		const [ok] = pcall(() => ImGui.Image(state.selectedAsset, Vec2(160, 120)));
-		if (!ok) ImGui.TextDisabled(zh ? '无法预览该贴图；但仍可尝试绑定到 Sprite。' : 'Unable to preview; still can bind to Sprite.');
-		const selectedNode = state.nodes[state.selectedId];
-		if (selectedNode !== undefined && selectedNode.kind === 'Sprite') {
-			if (ImGui.Button(zh ? '绑定到当前 Sprite' : 'Bind To Sprite')) bindTextureToSprite(state, selectedNode, state.selectedAsset);
-			ImGui.SameLine();
-		}
-		if (ImGui.Button(zh ? '用此贴图创建 Sprite' : 'Create Sprite')) createSpriteFromTexture(state, state.selectedAsset);
 	}
 }
 
@@ -596,52 +491,6 @@ function drawViewport(state: EditorState) {
 	ImGui.TextDisabled(zh ? '滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。' : 'Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.');
 }
 
-function drawInspector(state: EditorState) {
-	ImGui.TextColored(themeColor, zh ? '属性检查器' : 'Inspector');
-	ImGui.Separator();
-	const node = state.nodes[state.selectedId];
-	if (node === undefined) {
-		ImGui.TextDisabled(zh ? '没有选中节点' : 'No node selected');
-		return;
-	}
-	ImGui.Text(iconFor(node.kind) + '  ' + node.kind);
-	if (ImGui.InputText('Name', node.nameBuffer, inputTextFlags)) node.name = node.nameBuffer.text;
-	let [changed, x, y] = ImGui.DragFloat2('Position', node.x, node.y, 1, -10000, 10000, '%.1f');
-	if (changed) { node.x = x; node.y = y; }
-	[changed, x, y] = ImGui.DragFloat2('Scale', node.scaleX, node.scaleY, 0.01, -100, 100, '%.2f');
-	if (changed) { node.scaleX = x; node.scaleY = y; }
-	const [angleChanged, angle] = ImGui.DragFloat('Rotation', node.rotation, 1, -360, 360, '%.1f');
-	if (angleChanged) node.rotation = angle;
-	const [visibleChanged, visible] = ImGui.Checkbox('Visible', node.visible);
-	if (visibleChanged) node.visible = visible;
-	ImGui.Separator();
-	if (ImGui.InputText('Script', node.scriptBuffer, inputTextFlags)) node.script = node.scriptBuffer.text;
-	if (ImGui.Button(zh ? '打开脚本' : 'Open Script')) openScriptForNode(state, node);
-	if (node.kind === 'Sprite') {
-		ImGui.Separator();
-		if (ImGui.InputText('Texture', node.textureBuffer, inputTextFlags)) {
-			node.texture = node.textureBuffer.text;
-			state.previewDirty = true;
-		}
-		if (ImGui.Button(zh ? '导入并绑定贴图' : 'Import Texture')) {
-			App.openFileDialog(false, function(this: void, path: string) {
-				const asset = addAssetPath(state, path);
-				if (asset !== undefined && isTextureAsset(asset)) bindTextureToSprite(state, node, asset);
-			});
-		}
-		ImGui.SameLine();
-		if (ImGui.Button(zh ? '绑定选中贴图' : 'Use Selected')) {
-			if (state.selectedAsset !== '' && isTextureAsset(state.selectedAsset)) bindTextureToSprite(state, node, state.selectedAsset);
-		}
-	} else if (node.kind === 'Label') {
-		ImGui.Separator();
-		if (ImGui.InputText('Text', node.textBuffer, inputTextFlags)) node.text = node.textBuffer.text;
-	} else if (node.kind === 'Camera') {
-		ImGui.Separator();
-		ImGui.TextDisabled(zh ? 'Camera 显示真实取景框。' : 'Camera shows a real frame in viewport.');
-	}
-}
-
 function drawVerticalSplitter(id: string, height: number, onDrag: (deltaX: number) => void) {
 	ImGui.PushStyleColor(StyleColor.Button, Color(0xff343a44), () => {
 		ImGui.PushStyleColor(StyleColor.ButtonHovered, Color(0xff4d5968), () => {
@@ -722,8 +571,8 @@ export function drawEditor(state: EditorState) {
 		};
 
 		ImGui.BeginChild('LeftDock', Vec2(state.leftWidth, mainHeight), [], noScrollFlags, () => {
-			ImGui.BeginChild('SceneDock', Vec2(0, leftTopHeight), [], noScrollFlags, () => drawScenePanel(state));
-			ImGui.BeginChild('AssetDock', Vec2(0, leftBottomHeight), [], noScrollFlags, () => drawAssetsPanel(state));
+			ImGui.BeginChild('SceneDock', Vec2(0, leftTopHeight), [], noScrollFlags, () => drawSceneTreePanel(state));
+			ImGui.BeginChild('AssetDock', Vec2(0, leftBottomHeight), [], noScrollFlags, () => drawAssetsPanel(state, bindTextureToSprite, createSpriteFromTexture, attachScriptToNode));
 		});
 		ImGui.SameLine(0, 0);
 		drawVerticalSplitter('LeftSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'left'));
@@ -736,7 +585,7 @@ export function drawEditor(state: EditorState) {
 		ImGui.SameLine(0, 0);
 		drawVerticalSplitter('RightSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'right'));
 		ImGui.SameLine(0, 0);
-		ImGui.BeginChild('RightDock', Vec2(state.rightWidth, mainHeight), [], noScrollFlags, () => drawInspector(state));
+		ImGui.BeginChild('RightDock', Vec2(state.rightWidth, mainHeight), [], noScrollFlags, () => drawInspectorPanel(state, bindTextureToSprite, openScriptForNode));
 		ImGui.BeginChild('BottomConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsolePanel(state));
 	});
 	drawGamePreviewWindow(state);
