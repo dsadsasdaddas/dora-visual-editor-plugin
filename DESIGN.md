@@ -65,15 +65,14 @@ zip 解压后的根目录必须可被 Dora 当项目运行：
 
 ```text
 init.lua
-.tools/Script/Tools/SceneImGuiEditor.lua
-.tools/Script/Tools/SceneEditor/*.lua
-.tools/Script/Tools/SceneEditor/*.ts
+Script/Tools/SceneImGuiEditor.lua
+Script/Tools/SceneEditor/*.lua
+Script/Tools/SceneEditor/*.ts
 ```
 
 `init.lua` 内容：
 
 ```lua
-Content:insertSearchPath(1, Path(root, ".tools"))
 return require("Script.Tools.SceneImGuiEditor")
 ```
 
