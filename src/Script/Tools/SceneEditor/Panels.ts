@@ -3,14 +3,16 @@ import * as ImGui from 'ImGui';
 import { SetCond, StyleColor } from 'ImGui';
 import { EditorState, SceneNodeData, ViewportTool } from 'Script/Tools/SceneEditor/Types';
 import { inputTextFlags, mainWindowFlags, noScrollFlags, okColor, panelBg, scriptPanelBg, themeColor, transparent, warnColor } from 'Script/Tools/SceneEditor/Theme';
-import { addAssetPath, addChildNode, deleteNode, iconFor, importFileDialog, importFolderDialog, isFolderAsset, isScriptAsset, isTextureAsset, lowerExt, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
+import { addAssetPath, addChildNode, deleteNode, iconFor, importFileDialog, importFolderDialog, isFolderAsset, isScriptAsset, isTextureAsset, lowerExt, pushConsole, workspacePath, workspaceRoot, zh } from 'Script/Tools/SceneEditor/Model';
 import { updatePreviewRuntime } from 'Script/Tools/SceneEditor/Runtime';
 import { drawGamePreviewWindow, startPlay, stopPlay } from 'Script/Tools/SceneEditor/Player';
 
 declare function pcall(fn: () => void): LuaMultiReturn<[boolean, unknown]>;
 declare function require(path: string): any;
 
-const sceneSaveFile = Path(Content.writablePath, '.dora', 'imgui-editor.scene.json');
+function sceneSaveFile() {
+	return workspacePath(Path('.dora', 'imgui-editor.scene.json'));
+}
 
 function drawNodeRow(state: EditorState, id: string, depth: number) {
 	const node = state.nodes[id];
@@ -38,7 +40,7 @@ function drawAddNodePopup(state: EditorState) {
 }
 
 function saveScene(state: EditorState) {
-	Content.mkdir(Path(Content.writablePath, '.dora'));
+	Content.mkdir(workspacePath('.dora'));
 	const data = { version: 1, nodes: [] as object[] };
 	for (const id of state.order) {
 		const node = state.nodes[id];
@@ -61,8 +63,9 @@ function saveScene(state: EditorState) {
 		}
 	}
 	const [text] = json.encode(data);
-	if (text !== undefined && Content.save(sceneSaveFile, text)) {
-		state.status = (zh ? '已保存：' : 'Saved: ') + sceneSaveFile;
+	const file = sceneSaveFile();
+	if (text !== undefined && Content.save(file, text)) {
+		state.status = (zh ? '已保存：' : 'Saved: ') + file;
 	} else {
 		state.status = zh ? '保存失败' : 'Save failed';
 	}
@@ -232,7 +235,7 @@ function loadScriptIntoEditor(state: EditorState, node: SceneNodeData | undefine
 		state.activeScriptNodeId = undefined;
 	}
 	state.scriptPathBuffer.text = scriptPath;
-	const scriptFile = Path(Content.writablePath, scriptPath);
+	const scriptFile = workspacePath(scriptPath);
 	if (Content.exist(scriptFile)) {
 		state.scriptContentBuffer.text = Content.load(scriptFile) || '';
 	} else if (Content.exist(scriptPath)) {
@@ -255,7 +258,7 @@ function saveScriptFile(state: EditorState, node?: SceneNodeData) {
 		node.script = path;
 		node.scriptBuffer.text = path;
 	}
-	const scriptFile = Path(Content.writablePath, path);
+	const scriptFile = workspacePath(path);
 	Content.mkdir(Path.getPath(scriptFile));
 	if (Content.save(scriptFile, state.scriptContentBuffer.text)) {
 		state.status = (zh ? '脚本已保存：' : 'Script saved: ') + path;
@@ -289,7 +292,16 @@ function openScriptInWebIDE(state: EditorState, node?: SceneNodeData) {
 	}
 	saveScriptFile(state, node);
 	const title = Path.getFilename(scriptPath) || scriptPath;
-	const fullScriptPath = Path(Content.writablePath, scriptPath);
+	const root = workspaceRoot();
+	const rootTitle = Path.getFilename(root) || 'Workspace';
+	const fullScriptPath = workspacePath(scriptPath);
+	sendWebIDEMessage({
+		name: 'OpenFile',
+		file: root,
+		title: rootTitle,
+		folder: true,
+		workspaceView: 'upload',
+	});
 	sendWebIDEMessage({
 		name: 'UpdateFile',
 		file: fullScriptPath,
@@ -304,18 +316,26 @@ function openScriptInWebIDE(state: EditorState, node?: SceneNodeData) {
 		position: { lineNumber: 1, column: 1 },
 	});
 	const editingInfo = {
-		index: 0,
-		files: [{
-			key: fullScriptPath,
-			title,
-			folder: false,
-			position: { lineNumber: 1, column: 1 },
-		}],
+		index: 1,
+		files: [
+			{
+				key: root,
+				title: rootTitle,
+				folder: true,
+				workspaceView: 'upload',
+			},
+			{
+				key: fullScriptPath,
+				title,
+				folder: false,
+				position: { lineNumber: 1, column: 1 },
+			},
+		],
 	};
 	const [editingText] = json.encode(editingInfo);
 	if (editingText !== undefined) {
-		Content.mkdir(Path(Content.writablePath, '.dora'));
-		Content.save(Path(Content.writablePath, '.dora', 'open-script.editing.json'), editingText);
+		Content.mkdir(workspacePath('.dora'));
+		Content.save(workspacePath(Path('.dora', 'open-script.editing.json')), editingText);
 		pcall(() => {
 			const Entry = require('Script.Dev.Entry');
 			const config = Entry.getConfig();

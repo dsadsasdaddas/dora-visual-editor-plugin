@@ -7,11 +7,36 @@ export const zh = localeMatch !== undefined;
 const importedAssetRoot = 'Imported';
 const importedAssetRootEntry = importedAssetRoot + '/';
 
-function workspaceRoot() {
+function isPathInside(path: string, root: string) {
+	const cleanPath = normalizeSlash(path);
+	const cleanRoot = normalizeSlash(root);
+	return cleanPath === cleanRoot || string.sub(cleanPath, 1, string.len(cleanRoot) + 1) === cleanRoot + '/';
+}
+
+function isProjectRootDir(dir: string) {
+	if (dir === '' || !Content.exist(dir) || !Content.isdir(dir)) return false;
+	for (const file of Content.getFiles(dir)) {
+		if (string.lower(Path.getName(file)) === 'init') return true;
+	}
+	return false;
+}
+
+function detectWorkspaceRoot() {
+	for (const searchPath of Content.searchPaths) {
+		let candidate = searchPath;
+		if (Path.getFilename(candidate) === 'Script') candidate = Path.getPath(candidate);
+		if (candidate !== Content.writablePath && isPathInside(candidate, Content.writablePath) && isProjectRootDir(candidate)) {
+			return candidate;
+		}
+	}
 	return Content.writablePath;
 }
 
-function workspacePath(path: string) {
+export function workspaceRoot() {
+	return detectWorkspaceRoot();
+}
+
+export function workspacePath(path: string) {
 	return Path(workspaceRoot(), path);
 }
 

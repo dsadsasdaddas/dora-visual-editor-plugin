@@ -33,6 +33,8 @@ local isScriptAsset = ____Model.isScriptAsset -- 6
 local isTextureAsset = ____Model.isTextureAsset -- 6
 local lowerExt = ____Model.lowerExt -- 6
 local pushConsole = ____Model.pushConsole -- 6
+local workspacePath = ____Model.workspacePath -- 6
+local workspaceRoot = ____Model.workspaceRoot -- 6
 local zh = ____Model.zh -- 6
 local ____Runtime = require("Script.Tools.SceneEditor.Runtime") -- 7
 local updatePreviewRuntime = ____Runtime.updatePreviewRuntime -- 7
@@ -40,7 +42,9 @@ local ____Player = require("Script.Tools.SceneEditor.Player") -- 8
 local drawGamePreviewWindow = ____Player.drawGamePreviewWindow -- 8
 local startPlay = ____Player.startPlay -- 8
 local stopPlay = ____Player.stopPlay -- 8
-local sceneSaveFile = Path(Content.writablePath, ".dora", "imgui-editor.scene.json") -- 12
+local function sceneSaveFile()
+	return workspacePath(Path(".dora", "imgui-editor.scene.json"))
+end
 local function drawNodeRow(state, id, depth) -- 14
 	local node = state.nodes[id] -- 15
 	if node == nil then -- 15
@@ -82,7 +86,7 @@ local function drawAddNodePopup(state) -- 28
 	) -- 29
 end -- 28
 local function saveScene(state) -- 39
-	Content:mkdir(Path(Content.writablePath, ".dora")) -- 40
+	Content:mkdir(workspacePath(".dora")) -- 40
 	local data = {version = 1, nodes = {}} -- 41
 	for ____, id in ipairs(state.order) do -- 42
 		local node = state.nodes[id] -- 43
@@ -106,8 +110,9 @@ local function saveScene(state) -- 39
 		end -- 58
 	end -- 58
 	local text = json.encode(data) -- 62
-	if text ~= nil and Content:save(sceneSaveFile, text) then -- 62
-		state.status = (zh and "已保存：" or "Saved: ") .. sceneSaveFile -- 64
+	local file = sceneSaveFile()
+	if text ~= nil and Content:save(file, text) then -- 62
+		state.status = (zh and "已保存：" or "Saved: ") .. file -- 64
 	else -- 64
 		state.status = zh and "保存失败" or "Save failed" -- 66
 	end -- 66
@@ -315,7 +320,7 @@ local function loadScriptIntoEditor(state, node, scriptPath) -- 218
 		state.activeScriptNodeId = nil -- 224
 	end -- 224
 	state.scriptPathBuffer.text = scriptPath -- 226
-	local scriptFile = Path(Content.writablePath, scriptPath) -- 227
+	local scriptFile = workspacePath(scriptPath) -- 227
 	if Content:exist(scriptFile) then -- 227
 		state.scriptContentBuffer.text = Content:load(scriptFile) or "" -- 229
 	elseif Content:exist(scriptPath) then -- 229
@@ -336,7 +341,7 @@ local function saveScriptFile(state, node) -- 243
 		node.script = path -- 247
 		node.scriptBuffer.text = path -- 248
 	end -- 248
-	local scriptFile = Path(Content.writablePath, path) -- 250
+	local scriptFile = workspacePath(path) -- 250
 	Content:mkdir(Path:getPath(scriptFile)) -- 251
 	if Content:save(scriptFile, state.scriptContentBuffer.text) then -- 251
 		state.status = (zh and "脚本已保存：" or "Script saved: ") .. path -- 253
@@ -384,7 +389,16 @@ local function openScriptInWebIDE(state, node) -- 271
 	end -- 275
 	saveScriptFile(state, node) -- 277
 	local title = Path:getFilename(scriptPath) or scriptPath -- 278
-	local fullScriptPath = Path(Content.writablePath, scriptPath) -- 279
+	local root = workspaceRoot()
+	local rootTitle = Path:getFilename(root) or "Workspace"
+	local fullScriptPath = workspacePath(scriptPath) -- 279
+	sendWebIDEMessage({
+		name = "OpenFile",
+		file = root,
+		title = rootTitle,
+		folder = true,
+		workspaceView = "upload"
+	})
 	sendWebIDEMessage({ -- 280
 		name = "UpdateFile", -- 281
 		file = fullScriptPath, -- 282
@@ -398,12 +412,28 @@ local function openScriptInWebIDE(state, node) -- 271
 		folder = false, -- 290
 		position = {lineNumber = 1, column = 1} -- 291
 	}) -- 291
-	local editingInfo = {index = 0, files = {{key = fullScriptPath, title = title, folder = false, position = {lineNumber = 1, column = 1}}}} -- 293
+	local editingInfo = {
+		index = 1,
+		files = {
+			{
+				key = root,
+				title = rootTitle,
+				folder = true,
+				workspaceView = "upload"
+			},
+			{
+				key = fullScriptPath,
+				title = title,
+				folder = false,
+				position = {lineNumber = 1, column = 1}
+			}
+		}
+	} -- 293
 	local editingText = json.encode(editingInfo) -- 302
 	if editingText ~= nil then -- 288
-		Content:mkdir(Path(Content.writablePath, ".dora")) -- 290
+		Content:mkdir(workspacePath(".dora")) -- 290
 		Content:save( -- 291
-			Path(Content.writablePath, ".dora", "open-script.editing.json"), -- 291
+			workspacePath(Path(".dora", "open-script.editing.json")), -- 291
 			editingText -- 291
 		) -- 291
 		pcall(function()

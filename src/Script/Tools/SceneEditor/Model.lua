@@ -2,7 +2,7 @@
 local ____lualib = require("lualib_bundle") -- 1
 local __TS__Delete = ____lualib.__TS__Delete -- 1
 local ____exports = {} -- 1
-local workspaceRoot, workspacePath, hasAsset, rememberAsset, sortAssets, normalizeSlash, stripFolderPrefix, refreshAssetSearchPath, notifyWebIDEFileAdded, copyFileToImported, sceneNodeKind, stringValue, numberValue, booleanValue, updateNextIdFromNodeId, importedAssetRoot, importedAssetRootEntry -- 1
+local isPathInside, isProjectRootDir, detectWorkspaceRoot, workspaceRoot, workspacePath, hasAsset, rememberAsset, sortAssets, normalizeSlash, stripFolderPrefix, refreshAssetSearchPath, notifyWebIDEFileAdded, copyFileToImported, sceneNodeKind, stringValue, numberValue, booleanValue, updateNextIdFromNodeId, importedAssetRoot, importedAssetRootEntry -- 1
 local ____Dora = require("Dora") -- 1
 local App = ____Dora.App -- 1
 local Buffer = ____Dora.Buffer -- 1
@@ -10,15 +10,49 @@ local Content = ____Dora.Content -- 1
 local Path = ____Dora.Path -- 1
 local emit = ____Dora.emit -- 1
 local json = ____Dora.json -- 1
-function workspaceRoot() -- 10
-	return Content.writablePath -- 11
-end -- 11
-function workspacePath(path) -- 14
+function isPathInside(path, root) -- 10
+	local cleanPath = normalizeSlash(path) -- 11
+	local cleanRoot = normalizeSlash(root) -- 12
+	return cleanPath == cleanRoot or string.sub(
+		cleanPath,
+		1,
+		string.len(cleanRoot) + 1
+	) == cleanRoot .. "/" -- 13
+end -- 13
+function isProjectRootDir(dir) -- 16
+	if dir == "" or not Content:exist(dir) or not Content:isdir(dir) then -- 16
+		return false -- 17
+	end -- 17
+	for ____, file in ipairs(Content:getFiles(dir)) do -- 18
+		if string.lower(Path:getName(file)) == "init" then -- 18
+			return true -- 19
+		end -- 19
+	end -- 19
+	return false -- 21
+end -- 21
+function detectWorkspaceRoot() -- 24
+	for ____, searchPath in ipairs(Content.searchPaths) do -- 25
+		local candidate = searchPath -- 26
+		if Path:getFilename(candidate) == "Script" then -- 26
+			candidate = Path:getPath(candidate) -- 27
+		end -- 27
+		if candidate ~= Content.writablePath and isPathInside(candidate, Content.writablePath) and isProjectRootDir(candidate) then -- 27
+			return candidate -- 29
+		end -- 29
+	end -- 29
+	return Content.writablePath -- 32
+end -- 32
+function workspaceRoot() -- 35
+	return detectWorkspaceRoot() -- 36
+end -- 36
+function workspacePath(path) -- 39
 	return Path( -- 15
 		workspaceRoot(), -- 15
 		path -- 15
 	) -- 15
 end -- 15
+____exports.workspaceRoot = workspaceRoot
+____exports.workspacePath = workspacePath
 function ____exports.pushConsole(state, message) -- 65
 	local ____state_console_0 = state.console -- 65
 	____state_console_0[#____state_console_0 + 1] = message -- 66
