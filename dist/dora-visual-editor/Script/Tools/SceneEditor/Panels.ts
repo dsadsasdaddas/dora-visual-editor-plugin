@@ -300,7 +300,7 @@ function openScriptInWebIDE(state: EditorState, node?: SceneNodeData) {
 		file: root,
 		title: rootTitle,
 		folder: true,
-		workspaceView: 'upload',
+		workspaceView: 'agent',
 	});
 	sendWebIDEMessage({
 		name: 'UpdateFile',
@@ -322,7 +322,7 @@ function openScriptInWebIDE(state: EditorState, node?: SceneNodeData) {
 				key: root,
 				title: rootTitle,
 				folder: true,
-				workspaceView: 'upload',
+				workspaceView: 'agent',
 			},
 			{
 				key: fullScriptPath,

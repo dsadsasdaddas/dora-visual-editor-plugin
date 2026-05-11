@@ -397,7 +397,7 @@ local function openScriptInWebIDE(state, node) -- 271
 		file = root,
 		title = rootTitle,
 		folder = true,
-		workspaceView = "upload"
+		workspaceView = "agent"
 	})
 	sendWebIDEMessage({ -- 280
 		name = "UpdateFile", -- 281
@@ -419,7 +419,7 @@ local function openScriptInWebIDE(state, node) -- 271
 				key = root,
 				title = rootTitle,
 				folder = true,
-				workspaceView = "upload"
+				workspaceView = "agent"
 			},
 			{
 				key = fullScriptPath,

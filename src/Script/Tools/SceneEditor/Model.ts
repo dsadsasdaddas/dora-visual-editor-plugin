@@ -18,7 +18,8 @@ function isProjectRootDir(dir: string) {
 	for (const file of Content.getFiles(dir)) {
 		if (string.lower(Path.getName(file)) === 'init') return true;
 	}
-	return false;
+	const agentDir = Path(dir, '.agent');
+	return Content.exist(agentDir) && Content.isdir(agentDir);
 }
 
 function detectWorkspaceRoot() {

@@ -28,7 +28,8 @@ function isProjectRootDir(dir) -- 16
 			return true -- 19
 		end -- 19
 	end -- 19
-	return false -- 21
+	local agentDir = Path(dir, ".agent")
+	return Content:exist(agentDir) and Content:isdir(agentDir)
 end -- 21
 function detectWorkspaceRoot() -- 24
 	for ____, searchPath in ipairs(Content.searchPaths) do -- 25
