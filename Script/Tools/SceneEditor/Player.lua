@@ -214,117 +214,119 @@ local function rebuildPlayRuntime(state) -- 147
 	state.playRoot:removeAllChildren(true) -- 153
 	state.playRuntimeNodes = {} -- 154
 	state.playRuntimeLabels = {} -- 155
-	local renderScale = App.devicePixelRatio or 1 -- 157
-	local width = math.max(160, state.playViewport.width * renderScale) -- 158
-	local height = math.max(120, state.playViewport.height * renderScale) -- 159
-	local clip = ClipNode(makeClipStencil(width, height)) -- 160
-	clip.alphaThreshold = 0.01 -- 161
-	state.playRoot:addChild(clip) -- 162
-	clip:addChild(makeGameBackground(width, height)) -- 163
-	local world = Node() -- 165
-	state.playWorld = world -- 166
-	clip:addChild(world) -- 167
-	local content = Node() -- 168
-	state.playContent = content -- 169
-	world:addChild(content) -- 170
-	state.playRuntimeNodes.root = content -- 171
-	local camera = firstCamera(state) -- 173
-	if camera ~= nil then -- 173
-		world.x = -camera.x -- 175
-		world.y = -camera.y -- 176
-		world.angle = -camera.rotation -- 177
-	end -- 177
-	for ____, id in ipairs(state.order) do -- 180
-		local item = state.nodes[id] -- 181
-		if item ~= nil and id ~= "root" and item.kind ~= "Camera" then -- 181
-			local runtime = createPlayVisual(item) -- 183
-			applyTransform(runtime, item) -- 184
-			state.playRuntimeNodes[id] = runtime -- 185
-			if item.kind == "Label" then -- 185
-				state.playRuntimeLabels[id] = runtime -- 186
-			end -- 186
-			local parent = state.playRuntimeNodes[item.parentId or "root"] or content -- 187
-			parent:addChild(runtime) -- 188
-		end -- 188
-	end -- 188
-	for ____, id in ipairs(state.order) do -- 191
-		local item = state.nodes[id] -- 192
-		local runtime = state.playRuntimeNodes[id] -- 193
-		if item ~= nil and runtime ~= nil then -- 193
-			runNodeScript(state, item, runtime) -- 195
-		end -- 195
-	end -- 195
-	state.playDirty = false -- 198
+	local width = math.max(160, state.playViewport.width) -- 157
+	local height = math.max(120, state.playViewport.height) -- 158
+	local clip = ClipNode(makeClipStencil(width, height)) -- 159
+	clip.alphaThreshold = 0.01 -- 160
+	state.playRoot:addChild(clip) -- 161
+	clip:addChild(makeGameBackground(width, height)) -- 162
+	local world = Node() -- 164
+	state.playWorld = world -- 165
+	clip:addChild(world) -- 166
+	local content = Node() -- 167
+	state.playContent = content -- 168
+	world:addChild(content) -- 169
+	state.playRuntimeNodes.root = content -- 170
+	local camera = firstCamera(state) -- 172
+	if camera ~= nil then -- 172
+		world.x = -camera.x -- 174
+		world.y = -camera.y -- 175
+		world.angle = -camera.rotation -- 176
+	end -- 176
+	for ____, id in ipairs(state.order) do -- 179
+		local item = state.nodes[id] -- 180
+		if item ~= nil and id ~= "root" and item.kind ~= "Camera" then -- 180
+			local runtime = createPlayVisual(item) -- 182
+			applyTransform(runtime, item) -- 183
+			state.playRuntimeNodes[id] = runtime -- 184
+			if item.kind == "Label" then -- 184
+				state.playRuntimeLabels[id] = runtime -- 185
+			end -- 185
+			local parent = state.playRuntimeNodes[item.parentId or "root"] or content -- 186
+			parent:addChild(runtime) -- 187
+		end -- 187
+	end -- 187
+	for ____, id in ipairs(state.order) do -- 190
+		local item = state.nodes[id] -- 191
+		local runtime = state.playRuntimeNodes[id] -- 192
+		if item ~= nil and runtime ~= nil then -- 192
+			runNodeScript(state, item, runtime) -- 194
+		end -- 194
+	end -- 194
+	state.playDirty = false -- 197
 end -- 147
-local function updatePlayRuntime(state) -- 201
-	if not state.isPlaying then -- 201
-		return -- 202
+local function updatePlayRuntime(state) -- 200
+	if not state.isPlaying then -- 200
+		return -- 201
+	end -- 201
+	if state.playDirty or state.playRoot == nil then -- 201
+		rebuildPlayRuntime(state) -- 202
 	end -- 202
-	if state.playDirty or state.playRoot == nil then -- 202
-		rebuildPlayRuntime(state) -- 203
-	end -- 203
-	local p = state.playViewport -- 204
-	local cx, cy = table.unpack( -- 205
-		worldPointFromScreen(p.x + p.width / 2, p.y + p.height / 2), -- 205
-		1, -- 205
-		2 -- 205
-	) -- 205
-	if state.playRoot ~= nil then -- 205
-		state.playRoot.x = cx -- 207
-		state.playRoot.y = cy -- 208
-	end -- 208
-end -- 201
-function ____exports.drawGamePreviewWindow(state) -- 212
-	if not state.gameWindowOpen then -- 212
-		return -- 213
-	end -- 213
-	local appSize = App.visualSize -- 214
-	ImGui.SetNextWindowSize( -- 215
-		Vec2( -- 215
-			math.min(960, appSize.width - 80), -- 215
-			math.min(620, appSize.height - 80) -- 215
-		), -- 215
-		"FirstUseEver" -- 215
-	) -- 215
-	ImGui.SetNextWindowBgAlpha(0.16) -- 216
-	ImGui.Begin( -- 217
-		"Game Preview", -- 217
-		{"NoSavedSettings"}, -- 217
-		function() -- 217
-			if state.isPlaying then -- 217
-				ImGui.TextColored(okColor, zh and "运行中" or "Running") -- 219
-				ImGui.SameLine() -- 220
-				if ImGui.Button("■ Stop") then -- 220
-					____exports.stopPlay(state) -- 221
-				end -- 221
-				ImGui.SameLine() -- 222
-				if ImGui.Button("↻ Restart") then -- 222
-					____exports.startPlay(state) -- 223
-				end -- 223
-			else -- 223
-				ImGui.TextColored(warnColor, zh and "已停止" or "Stopped") -- 225
-				ImGui.SameLine() -- 226
-				if ImGui.Button("▶ Run") then -- 226
-					____exports.startPlay(state) -- 227
-				end -- 227
-			end -- 227
-			ImGui.SameLine() -- 229
-			ImGui.TextDisabled(zh and "这是独立 Game 预览，不是编辑视口。" or "Independent game preview, not the editor viewport.") -- 230
-			ImGui.Separator() -- 231
-			local cursor = ImGui.GetCursorScreenPos() -- 232
-			local avail = ImGui.GetContentRegionAvail() -- 233
-			local width = math.max(320, avail.x - 8) -- 234
-			local height = math.max(240, avail.y - 8) -- 235
-			if math.abs(state.playViewport.width - width) > 1 or math.abs(state.playViewport.height - height) > 1 then -- 235
-				state.playDirty = true -- 237
-			end -- 237
-			state.playViewport.x = cursor.x -- 239
-			state.playViewport.y = cursor.y -- 240
-			state.playViewport.width = width -- 241
-			state.playViewport.height = height -- 242
-			updatePlayRuntime(state) -- 243
-			ImGui.Dummy(Vec2(width, height)) -- 244
-		end -- 217
-	) -- 217
-end -- 212
-return ____exports -- 212
+	local p = state.playViewport -- 203
+	local cx, cy = table.unpack( -- 204
+		worldPointFromScreen(p.x + p.width / 2, p.y + p.height / 2), -- 204
+		1, -- 204
+		2 -- 204
+	) -- 204
+	if state.playRoot ~= nil then -- 204
+		state.playRoot.x = cx -- 206
+		state.playRoot.y = cy -- 207
+	end -- 207
+end -- 200
+function ____exports.drawGamePreviewWindow(state) -- 211
+	if not state.gameWindowOpen then -- 211
+		return -- 212
+	end -- 212
+	local appSize = App.visualSize -- 213
+	ImGui.SetNextWindowSize( -- 214
+		Vec2( -- 214
+			math.min(960, appSize.width - 80), -- 214
+			math.min(620, appSize.height - 80) -- 214
+		), -- 214
+		"FirstUseEver" -- 214
+	) -- 214
+	ImGui.SetNextWindowBgAlpha(0.16) -- 215
+	ImGui.Begin( -- 216
+		"Game Preview", -- 216
+		{"NoSavedSettings"}, -- 216
+		function() -- 216
+			if state.isPlaying then -- 216
+				ImGui.TextColored(okColor, zh and "运行中" or "Running") -- 218
+				ImGui.SameLine() -- 219
+				if ImGui.Button("■ Stop") then -- 219
+					____exports.stopPlay(state) -- 220
+				end -- 220
+				ImGui.SameLine() -- 221
+				if ImGui.Button("↻ Restart") then -- 221
+					____exports.startPlay(state) -- 222
+				end -- 222
+			else -- 222
+				ImGui.TextColored(warnColor, zh and "已停止" or "Stopped") -- 224
+				ImGui.SameLine() -- 225
+				if ImGui.Button("▶ Run") then -- 225
+					____exports.startPlay(state) -- 226
+				end -- 226
+			end -- 226
+			ImGui.SameLine() -- 228
+			ImGui.TextDisabled(zh and "这是独立 Game 预览，不是编辑视口。" or "Independent game preview, not the editor viewport.") -- 229
+			ImGui.Separator() -- 230
+			local avail = ImGui.GetContentRegionAvail() -- 231
+			local width = math.max(320, avail.x - 8) -- 232
+			local height = math.max(240, avail.y - 8) -- 233
+			ImGui.Dummy(Vec2(width, height)) -- 234
+			local rectMin = ImGui.GetItemRectMin() -- 235
+			local rectMax = ImGui.GetItemRectMax() -- 236
+			local actualWidth = math.max(160, rectMax.x - rectMin.x) -- 237
+			local actualHeight = math.max(120, rectMax.y - rectMin.y) -- 238
+			if math.abs(state.playViewport.width - actualWidth) > 1 or math.abs(state.playViewport.height - actualHeight) > 1 then -- 238
+				state.playDirty = true -- 240
+			end -- 240
+			state.playViewport.x = rectMin.x -- 242
+			state.playViewport.y = rectMin.y -- 243
+			state.playViewport.width = actualWidth -- 244
+			state.playViewport.height = actualHeight -- 245
+			updatePlayRuntime(state) -- 246
+		end -- 216
+	) -- 216
+end -- 211
+return ____exports -- 211

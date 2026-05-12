@@ -154,9 +154,8 @@ function rebuildPlayRuntime(state: EditorState) {
 	state.playRuntimeNodes = {};
 	state.playRuntimeLabels = {};
 
-	const renderScale = App.devicePixelRatio || 1;
-	const width = math.max(160, state.playViewport.width * renderScale);
-	const height = math.max(120, state.playViewport.height * renderScale);
+	const width = math.max(160, state.playViewport.width);
+	const height = math.max(120, state.playViewport.height);
 	const clip = ClipNode(makeClipStencil(width, height));
 	clip.alphaThreshold = 0.01;
 	state.playRoot.addChild(clip);
@@ -229,18 +228,21 @@ export function drawGamePreviewWindow(state: EditorState) {
 		ImGui.SameLine();
 		ImGui.TextDisabled(zh ? '这是独立 Game 预览，不是编辑视口。' : 'Independent game preview, not the editor viewport.');
 		ImGui.Separator();
-		const cursor = ImGui.GetCursorScreenPos();
 		const avail = ImGui.GetContentRegionAvail();
 		const width = math.max(320, avail.x - 8);
 		const height = math.max(240, avail.y - 8);
-		if (math.abs(state.playViewport.width - width) > 1 || math.abs(state.playViewport.height - height) > 1) {
+		ImGui.Dummy(Vec2(width, height));
+		const rectMin = ImGui.GetItemRectMin();
+		const rectMax = ImGui.GetItemRectMax();
+		const actualWidth = math.max(160, rectMax.x - rectMin.x);
+		const actualHeight = math.max(120, rectMax.y - rectMin.y);
+		if (math.abs(state.playViewport.width - actualWidth) > 1 || math.abs(state.playViewport.height - actualHeight) > 1) {
 			state.playDirty = true;
 		}
-		state.playViewport.x = cursor.x;
-		state.playViewport.y = cursor.y;
-		state.playViewport.width = width;
-		state.playViewport.height = height;
+		state.playViewport.x = rectMin.x;
+		state.playViewport.y = rectMin.y;
+		state.playViewport.width = actualWidth;
+		state.playViewport.height = actualHeight;
 		updatePlayRuntime(state);
-		ImGui.Dummy(Vec2(width, height));
 	});
 }
