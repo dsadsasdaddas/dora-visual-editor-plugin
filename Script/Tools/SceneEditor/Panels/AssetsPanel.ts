@@ -1,6 +1,6 @@
 import { Vec2 } from 'Dora';
 import * as ImGui from 'ImGui';
-import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/Types';
+import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { importFileDialog, importFolderDialog, isFolderAsset, isScriptAsset, isTextureAsset, lowerExt, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 

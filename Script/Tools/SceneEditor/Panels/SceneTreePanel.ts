@@ -1,5 +1,5 @@
 import * as ImGui from 'ImGui';
-import { EditorState } from 'Script/Tools/SceneEditor/Types';
+import { EditorState } from 'Script/Tools/SceneEditor/EditorTypes';
 import { themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { iconFor, zh } from 'Script/Tools/SceneEditor/Model';
 import { drawAddNodePopup } from 'Script/Tools/SceneEditor/Panels/AddNodePopup';

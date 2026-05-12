@@ -1,6 +1,6 @@
 import { App } from 'Dora';
 import * as ImGui from 'ImGui';
-import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/Types';
+import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { inputTextFlags, themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { addAssetPath, iconFor, isTextureAsset, zh } from 'Script/Tools/SceneEditor/Model';
 

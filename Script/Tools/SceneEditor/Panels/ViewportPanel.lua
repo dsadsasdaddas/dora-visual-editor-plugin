@@ -67,8 +67,8 @@ local function pickNodeAt(state, screenX, screenY) -- 49
 			local node = state.nodes[id] -- 53
 			if node ~= nil and id ~= "root" and node.visible then -- 53
 				if node.kind == "Camera" then -- 53
-					local width = math.max(160, state.gameWidth or 960) -- 56
-					local height = math.max(120, state.gameHeight or 540) -- 57
+					local width = math.max(160, state.gameWidth) -- 56
+					local height = math.max(120, state.gameHeight) -- 57
 					if math.abs(sceneX - node.x) <= width / 2 and math.abs(sceneY - node.y) <= height / 2 then -- 57
 						return id -- 58
 					end -- 58

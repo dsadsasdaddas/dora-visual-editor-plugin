@@ -203,10 +203,10 @@ function ____exports.startPlay(state) -- 137
 	pushConsole(state, state.status) -- 143
 end -- 137
 local function gameWidthOf(state) -- 146
-	return math.max(160, state.gameWidth or 960) -- 147
+	return math.max(160, state.gameWidth) -- 147
 end -- 146
 local function gameHeightOf(state) -- 150
-	return math.max(120, state.gameHeight or 540) -- 151
+	return math.max(120, state.gameHeight) -- 151
 end -- 150
 local function playScaleForViewport(state) -- 154
 	local renderScale = App.devicePixelRatio or 1 -- 155

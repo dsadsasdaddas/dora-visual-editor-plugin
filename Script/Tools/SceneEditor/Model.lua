@@ -212,31 +212,31 @@ function ____exports.createEditorState() -- 50
 		leftWidth = 280, -- 61
 		rightWidth = 340, -- 62
 		bottomHeight = 132, -- 63
-		status = ____exports.zh and "Dora Visual Editor 已加载" or "Dora Visual Editor loaded", -- 64
-		console = {____exports.zh and "真实 Dora Viewport 已启用。" or "Real Dora viewport enabled."}, -- 65
-		nodes = {}, -- 66
-		order = {}, -- 67
-		preview = {x = 0, y = 0, width = 640, height = 360}, -- 68
-		previewDirty = true, -- 69
-		runtimeNodes = {}, -- 70
-		runtimeLabels = {}, -- 71
-		isPlaying = false, -- 72
-		gameWindowOpen = false, -- 73
-		playViewport = {x = 0, y = 0, width = 960, height = 540}, -- 74
-		playDirty = true, -- 75
-		playRuntimeNodes = {}, -- 76
-		playRuntimeLabels = {}, -- 77
-		assetImportBuffer = ____exports.makeBuffer(importedAssetRoot .. "/new.png", 256), -- 78
-		scriptPathBuffer = ____exports.makeBuffer("", 256), -- 79
-		scriptContentBuffer = ____exports.makeBuffer("", 8192), -- 80
-		selectedAsset = "", -- 81
-		assets = {}, -- 82
-		viewportPanX = 0, -- 83
-		viewportPanY = 0, -- 84
-		draggingViewport = false -- 85
-	} -- 85
-	state.gameWidth = 960 -- 87
-	state.gameHeight = 540 -- 88
+		gameWidth = 960, -- 64
+		gameHeight = 540, -- 65
+		status = ____exports.zh and "Dora Visual Editor 已加载" or "Dora Visual Editor loaded", -- 66
+		console = {____exports.zh and "真实 Dora Viewport 已启用。" or "Real Dora viewport enabled."}, -- 67
+		nodes = {}, -- 68
+		order = {}, -- 69
+		preview = {x = 0, y = 0, width = 640, height = 360}, -- 70
+		previewDirty = true, -- 71
+		runtimeNodes = {}, -- 72
+		runtimeLabels = {}, -- 73
+		isPlaying = false, -- 74
+		gameWindowOpen = false, -- 75
+		playViewport = {x = 0, y = 0, width = 960, height = 540}, -- 76
+		playDirty = true, -- 77
+		playRuntimeNodes = {}, -- 78
+		playRuntimeLabels = {}, -- 79
+		assetImportBuffer = ____exports.makeBuffer(importedAssetRoot .. "/new.png", 256), -- 80
+		scriptPathBuffer = ____exports.makeBuffer("", 256), -- 81
+		scriptContentBuffer = ____exports.makeBuffer("", 8192), -- 82
+		selectedAsset = "", -- 83
+		assets = {}, -- 84
+		viewportPanX = 0, -- 85
+		viewportPanY = 0, -- 86
+		draggingViewport = false -- 87
+	} -- 87
 	____exports.refreshImportedAssets(state) -- 89
 	return state -- 90
 end -- 50

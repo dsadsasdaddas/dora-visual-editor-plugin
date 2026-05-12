@@ -1,7 +1,7 @@
 import { App, Content, Path, Vec2, emit, json, sleep, thread } from 'Dora';
 import * as ImGui from 'ImGui';
 import { StyleColor } from 'ImGui';
-import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/Types';
+import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { inputTextFlags, noScrollFlags, scriptPanelBg, themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { importFileDialog, isFolderAsset, isScriptAsset, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 

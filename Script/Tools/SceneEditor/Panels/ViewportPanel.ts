@@ -1,7 +1,7 @@
 import { Color, Keyboard, KeyName, Mouse, Vec2 } from 'Dora';
 import * as ImGui from 'ImGui';
 import { StyleColor } from 'ImGui';
-import { EditorState, ViewportTool } from 'Script/Tools/SceneEditor/Types';
+import { EditorState, ViewportTool } from 'Script/Tools/SceneEditor/EditorTypes';
 import { okColor, themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { zh } from 'Script/Tools/SceneEditor/Model';
 import { updatePreviewRuntime } from 'Script/Tools/SceneEditor/Runtime';
@@ -53,8 +53,8 @@ function pickNodeAt(state: EditorState, screenX: number, screenY: number) {
 		const node = state.nodes[id];
 		if (node !== undefined && id !== 'root' && node.visible) {
 			if (node.kind === 'Camera') {
-				const width = math.max(160, (state as any).gameWidth || 960);
-				const height = math.max(120, (state as any).gameHeight || 540);
+				const width = math.max(160, state.gameWidth);
+				const height = math.max(120, state.gameHeight);
 				if (math.abs(sceneX - node.x) <= width / 2 && math.abs(sceneY - node.y) <= height / 2) return id;
 			} else if (isScenePointInsideNode(node, sceneX, sceneY)) return id;
 		}

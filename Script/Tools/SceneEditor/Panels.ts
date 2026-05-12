@@ -1,7 +1,7 @@
 import { App, Color, Content, Path, Vec2, json } from 'Dora';
 import * as ImGui from 'ImGui';
 import { SetCond, StyleColor } from 'ImGui';
-import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/Types';
+import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { mainWindowFlags, noScrollFlags, panelBg, transparent, warnColor } from 'Script/Tools/SceneEditor/Theme';
 import { addChildNode, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 import { drawGamePreviewWindow } from 'Script/Tools/SceneEditor/Player';
@@ -26,8 +26,8 @@ function writeSceneFile(state: EditorState) {
 	Content.mkdir(workspacePath('.dora'));
 	const data = {
 		version: 1,
-		gameWidth: math.floor((state as any).gameWidth || 960),
-		gameHeight: math.floor((state as any).gameHeight || 540),
+		gameWidth: math.floor(state.gameWidth),
+		gameHeight: math.floor(state.gameHeight),
 		nodes: [] as object[],
 	};
 	for (const id of state.order) {

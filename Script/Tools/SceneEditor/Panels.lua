@@ -46,8 +46,8 @@ local function writeSceneFile(state) -- 25
 	Content:mkdir(workspacePath(".dora")) -- 26
 	local data = { -- 27
 		version = 1, -- 28
-		gameWidth = math.floor(state.gameWidth or 960), -- 29
-		gameHeight = math.floor(state.gameHeight or 540), -- 30
+		gameWidth = math.floor(state.gameWidth), -- 29
+		gameHeight = math.floor(state.gameHeight), -- 30
 		nodes = {} -- 31
 	} -- 31
 	for ____, id in ipairs(state.order) do -- 33

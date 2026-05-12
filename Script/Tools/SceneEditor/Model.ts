@@ -1,5 +1,5 @@
 import { App, Buffer, Content, Path, emit, json } from 'Dora';
-import { EditorState, SceneNodeData, SceneNodeKind } from 'Script/Tools/SceneEditor/Types';
+import { EditorState, SceneNodeData, SceneNodeKind } from 'Script/Tools/SceneEditor/EditorTypes';
 
 const [localeMatch] = string.match(App.locale, '^zh');
 export const zh = localeMatch !== undefined;
@@ -61,6 +61,8 @@ export function createEditorState(): EditorState {
 		leftWidth: 280,
 		rightWidth: 340,
 		bottomHeight: 132,
+		gameWidth: 960,
+		gameHeight: 540,
 		status: zh ? 'Dora Visual Editor 已加载' : 'Dora Visual Editor loaded',
 		console: [zh ? '真实 Dora Viewport 已启用。' : 'Real Dora viewport enabled.'],
 		nodes: {},
@@ -84,8 +86,6 @@ export function createEditorState(): EditorState {
 		viewportPanY: 0,
 		draggingViewport: false,
 	};
-	(state as any).gameWidth = 960;
-	(state as any).gameHeight = 540;
 	refreshImportedAssets(state);
 	return state;
 }
@@ -340,8 +340,8 @@ export function loadSceneFromFile(state: EditorState, file: string) {
 	if (data === undefined) return false;
 	const rawNodes = (data as any).nodes as any[] | undefined;
 	if (rawNodes === undefined) return false;
-	(state as any).gameWidth = math.max(160, math.min(8192, numberValue((data as any).gameWidth, (state as any).gameWidth || 960)));
-	(state as any).gameHeight = math.max(120, math.min(8192, numberValue((data as any).gameHeight, (state as any).gameHeight || 540)));
+	state.gameWidth = math.max(160, math.min(8192, numberValue((data as any).gameWidth, state.gameWidth || 960)));
+	state.gameHeight = math.max(120, math.min(8192, numberValue((data as any).gameHeight, state.gameHeight || 540)));
 
 	state.nodes = {};
 	state.order = [];

@@ -1,5 +1,5 @@
 import * as ImGui from 'ImGui';
-import { EditorState } from 'Script/Tools/SceneEditor/Types';
+import { EditorState } from 'Script/Tools/SceneEditor/EditorTypes';
 import { themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { addChildNode, zh } from 'Script/Tools/SceneEditor/Model';
 

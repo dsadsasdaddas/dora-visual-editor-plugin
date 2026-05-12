@@ -1,5 +1,5 @@
 import { App, ClipNode, Color, Director, DrawNode, Label, Line, Node, Sprite, Vec2 } from 'Dora';
-import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/Types';
+import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { getNodeVisualSize } from 'Script/Tools/SceneEditor/SpriteMetrics';
 import { greenAxisColor, gridMajorColor, gridMinorColor, helperColor, redAxisColor, selectionColor, viewportBgColor, viewportFrameColor, viewportGameFrameColor } from 'Script/Tools/SceneEditor/Theme';
 
@@ -58,11 +58,11 @@ function addCornerHandles(node: Node.Type, width: number, height: number, color:
 }
 
 function gameWidthOf(state: EditorState) {
-	return math.max(160, (state as any).gameWidth || 960);
+	return math.max(160, state.gameWidth);
 }
 
 function gameHeightOf(state: EditorState) {
-	return math.max(120, (state as any).gameHeight || 540);
+	return math.max(120, state.gameHeight);
 }
 
 function selectionSize(state: EditorState, item: SceneNodeData): [number, number] {

@@ -1,5 +1,5 @@
 import { App, ClipNode, Color, Content, Director, DrawNode, Label, Node, Path, Sprite, Vec2 } from 'Dora';
-import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/Types';
+import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { okColor, viewportBgColor } from 'Script/Tools/SceneEditor/Theme';
 import { pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 
@@ -144,11 +144,11 @@ export function startPlay(state: EditorState) {
 }
 
 function gameWidthOf(state: EditorState) {
-	return math.max(160, (state as any).gameWidth || 960);
+	return math.max(160, state.gameWidth);
 }
 
 function gameHeightOf(state: EditorState) {
-	return math.max(120, (state as any).gameHeight || 540);
+	return math.max(120, state.gameHeight);
 }
 
 function playScaleForViewport(state: EditorState) {

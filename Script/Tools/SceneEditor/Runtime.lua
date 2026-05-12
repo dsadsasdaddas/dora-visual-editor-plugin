@@ -117,10 +117,10 @@ function addCornerHandles(node, width, height, color) -- 38
 	end -- 56
 end -- 56
 function gameWidthOf(state) -- 60
-	return math.max(160, state.gameWidth or 960) -- 61
+	return math.max(160, state.gameWidth) -- 61
 end -- 61
 function gameHeightOf(state) -- 64
-	return math.max(120, state.gameHeight or 540) -- 65
+	return math.max(120, state.gameHeight) -- 65
 end -- 65
 function selectionSize(state, item) -- 68
 	if item.kind == "Camera" then -- 68

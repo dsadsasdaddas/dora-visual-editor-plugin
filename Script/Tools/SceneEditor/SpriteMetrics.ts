@@ -1,5 +1,5 @@
 import { Texture2D } from 'Dora';
-import { SceneNodeData } from 'Script/Tools/SceneEditor/Types';
+import { SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 
 const textureSizeCache: Record<string, [number, number]> = {};
 

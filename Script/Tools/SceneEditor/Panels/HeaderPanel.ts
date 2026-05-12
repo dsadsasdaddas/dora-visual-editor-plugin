@@ -1,14 +1,11 @@
 import * as ImGui from 'ImGui';
-import { EditorState } from 'Script/Tools/SceneEditor/Types';
+import { EditorState } from 'Script/Tools/SceneEditor/EditorTypes';
 import { okColor, themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { deleteNode, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 import { startPlay, stopPlay } from 'Script/Tools/SceneEditor/Player';
 import { drawAddNodePopup } from 'Script/Tools/SceneEditor/Panels/AddNodePopup';
 
 export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorState) => void) {
-	const editorState = state as any;
-	if (editorState.gameWidth === undefined) editorState.gameWidth = 960;
-	if (editorState.gameHeight === undefined) editorState.gameHeight = 540;
 	ImGui.TextColored(themeColor, '✦ Dora Visual Editor');
 	if (state.isPlaying) {
 		ImGui.SameLine();
@@ -35,12 +32,12 @@ export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorSta
 	ImGui.SameLine();
 	ImGui.PushItemWidth(150, () => {
 		if (state.isPlaying) {
-			ImGui.BeginDisabled(() => ImGui.DragInt2('##game_resolution', editorState.gameWidth, editorState.gameHeight, 1, 160, 8192, '%d'));
+			ImGui.BeginDisabled(() => ImGui.DragInt2('##game_resolution', state.gameWidth, state.gameHeight, 1, 160, 8192, '%d'));
 		} else {
-			const [sizeChanged, width, height] = ImGui.DragInt2('##game_resolution', editorState.gameWidth, editorState.gameHeight, 1, 160, 8192, '%d');
+			const [sizeChanged, width, height] = ImGui.DragInt2('##game_resolution', state.gameWidth, state.gameHeight, 1, 160, 8192, '%d');
 			if (sizeChanged) {
-				editorState.gameWidth = math.max(160, math.min(8192, width));
-				editorState.gameHeight = math.max(120, math.min(8192, height));
+				state.gameWidth = math.max(160, math.min(8192, width));
+				state.gameHeight = math.max(120, math.min(8192, height));
 				state.previewDirty = true;
 				state.playDirty = true;
 			}
@@ -50,8 +47,8 @@ export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorSta
 	if (state.isPlaying) {
 		ImGui.BeginDisabled(() => ImGui.Button('16:9'));
 	} else if (ImGui.Button('16:9')) {
-		editorState.gameWidth = 960;
-		editorState.gameHeight = 540;
+		state.gameWidth = 960;
+		state.gameHeight = 540;
 		state.previewDirty = true;
 		state.playDirty = true;
 	}
@@ -59,8 +56,8 @@ export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorSta
 	if (state.isPlaying) {
 		ImGui.BeginDisabled(() => ImGui.Button('HD'));
 	} else if (ImGui.Button('HD')) {
-		editorState.gameWidth = 1280;
-		editorState.gameHeight = 720;
+		state.gameWidth = 1280;
+		state.gameHeight = 720;
 		state.previewDirty = true;
 		state.playDirty = true;
 	}
