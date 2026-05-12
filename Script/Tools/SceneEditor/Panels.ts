@@ -1,10 +1,9 @@
-import { App, Color, Content, Keyboard, KeyName, Mouse, Path, Vec2, json } from 'Dora';
+import { App, Color, Content, Path, Vec2, json } from 'Dora';
 import * as ImGui from 'ImGui';
 import { SetCond, StyleColor } from 'ImGui';
-import { EditorState, SceneNodeData, ViewportTool } from 'Script/Tools/SceneEditor/Types';
-import { mainWindowFlags, noScrollFlags, okColor, panelBg, themeColor, transparent, warnColor } from 'Script/Tools/SceneEditor/Theme';
+import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/Types';
+import { mainWindowFlags, noScrollFlags, panelBg, transparent, warnColor } from 'Script/Tools/SceneEditor/Theme';
 import { addChildNode, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
-import { updatePreviewRuntime } from 'Script/Tools/SceneEditor/Runtime';
 import { drawGamePreviewWindow } from 'Script/Tools/SceneEditor/Player';
 import { drawHeaderPanel } from 'Script/Tools/SceneEditor/Panels/HeaderPanel';
 import { drawConsolePanel } from 'Script/Tools/SceneEditor/Panels/ConsolePanel';
@@ -12,6 +11,7 @@ import { drawSceneTreePanel } from 'Script/Tools/SceneEditor/Panels/SceneTreePan
 import { drawAssetsPanel } from 'Script/Tools/SceneEditor/Panels/AssetsPanel';
 import { drawInspectorPanel } from 'Script/Tools/SceneEditor/Panels/InspectorPanel';
 import { drawScriptPanel, openScriptForNode } from 'Script/Tools/SceneEditor/Panels/ScriptPanel';
+import { drawViewportPanel } from 'Script/Tools/SceneEditor/Panels/ViewportPanel';
 
 declare function require(path: string): any;
 
@@ -93,198 +93,6 @@ function createSpriteFromTexture(state: EditorState, texture: string) {
 
 function openNodeScriptInEditor(state: EditorState, node: SceneNodeData) {
 	openScriptForNode(state, node, attachScriptToNode);
-}
-
-function viewportScale(state: EditorState) {
-	return math.max(0.25, state.zoom / 100);
-}
-
-function clampZoom(value: number) {
-	return math.max(25, math.min(400, value));
-}
-
-function zoomViewportAt(state: EditorState, delta: number, screenX: number, screenY: number) {
-	if (delta === 0) return;
-	const before = state.zoom;
-	const beforeScale = viewportScale(state);
-	const p = state.preview;
-	const centerX = p.x + p.width / 2;
-	const centerY = p.y + p.height / 2;
-	const sceneX = (screenX - centerX - state.viewportPanX) / beforeScale;
-	const sceneY = (centerY - screenY - state.viewportPanY) / beforeScale;
-	state.zoom = clampZoom(state.zoom + delta);
-	if (state.zoom !== before) {
-		const afterScale = viewportScale(state);
-		state.viewportPanX = screenX - centerX - sceneX * afterScale;
-		state.viewportPanY = centerY - screenY - sceneY * afterScale;
-		state.previewDirty = true;
-	}
-}
-
-function zoomViewportFromCenter(state: EditorState, delta: number) {
-	const p = state.preview;
-	zoomViewportAt(state, delta, p.x + p.width / 2, p.y + p.height / 2);
-}
-
-function screenToScene(state: EditorState, screenX: number, screenY: number): [number, number] {
-	const p = state.preview;
-	const scale = viewportScale(state);
-	const localX = screenX - (p.x + p.width / 2) - state.viewportPanX;
-	const localY = (p.y + p.height / 2) - screenY - state.viewportPanY;
-	return [localX / scale, localY / scale];
-}
-
-function pickNodeAt(state: EditorState, screenX: number, screenY: number) {
-	const [sceneX, sceneY] = screenToScene(state, screenX, screenY);
-	for (let i = state.order.length; i >= 1; i--) {
-		const id = state.order[i - 1];
-		const node = state.nodes[id];
-		if (node !== undefined && id !== 'root' && node.visible) {
-			const dx = sceneX - node.x;
-			const dy = sceneY - node.y;
-			const radius = node.kind === 'Camera' ? 185 : (node.kind === 'Sprite' ? 82 : 54);
-			if ((dx * dx + dy * dy) <= radius * radius) return id;
-		}
-	}
-	return undefined;
-}
-
-function handleViewportMouse(state: EditorState, hovered: boolean) {
-	if (!hovered) return;
-	const spacePressed = Keyboard.isKeyPressed(KeyName.Space);
-	const wheel = Mouse.wheel;
-	const wheelDelta = math.abs(wheel.y) >= math.abs(wheel.x) ? wheel.y : wheel.x;
-	if (wheelDelta !== 0) {
-		const mouse = ImGui.GetMousePos();
-		zoomViewportAt(state, wheelDelta > 0 ? 6 : -6, mouse.x, mouse.y);
-	}
-	if (ImGui.IsMouseClicked(2)) {
-		state.draggingNodeId = undefined;
-		state.draggingViewport = true;
-		ImGui.ResetMouseDragDelta(2);
-	}
-	if (ImGui.IsMouseClicked(0)) {
-		if (spacePressed) {
-			state.draggingNodeId = undefined;
-			state.draggingViewport = true;
-		} else {
-			const mouse = ImGui.GetMousePos();
-			const picked = pickNodeAt(state, mouse.x, mouse.y);
-			if (picked !== undefined) {
-				state.selectedId = picked;
-				state.previewDirty = true;
-				state.draggingNodeId = picked;
-				state.draggingViewport = false;
-			} else {
-				state.draggingNodeId = undefined;
-				state.draggingViewport = true;
-			}
-		}
-		ImGui.ResetMouseDragDelta(0);
-	}
-	if (ImGui.IsMouseReleased(0) || ImGui.IsMouseReleased(2)) {
-		state.draggingNodeId = undefined;
-		state.draggingViewport = false;
-	}
-	if (ImGui.IsMouseDragging(0) || ImGui.IsMouseDragging(2)) {
-		const panButton = ImGui.IsMouseDragging(2) ? 2 : 0;
-		const delta = ImGui.GetMouseDragDelta(panButton);
-		if (delta.x !== 0 || delta.y !== 0) {
-			if (state.draggingNodeId !== undefined && panButton === 0) {
-				const node = state.nodes[state.draggingNodeId];
-				if (node !== undefined) {
-					const scale = viewportScale(state);
-					node.x += delta.x / scale;
-					node.y -= delta.y / scale;
-					if (state.snapEnabled) {
-						const step = 16;
-						node.x = math.floor(node.x / step + 0.5) * step;
-						node.y = math.floor(node.y / step + 0.5) * step;
-					}
-				}
-			} else if (state.draggingViewport) {
-				state.viewportPanX += delta.x;
-				state.viewportPanY -= delta.y;
-			}
-			ImGui.ResetMouseDragDelta(panButton);
-		}
-	}
-}
-
-function drawViewportToolButton(state: EditorState, tool: ViewportTool, label: string) {
-	const active = state.viewportTool === tool;
-	if (active) {
-		ImGui.PushStyleColor(StyleColor.Button, Color(0xff303642), () => {
-			ImGui.PushStyleColor(StyleColor.Text, themeColor, () => {
-				if (ImGui.Button(label)) state.viewportTool = tool;
-			});
-		});
-	} else if (ImGui.Button(label)) {
-		state.viewportTool = tool;
-	}
-}
-
-function drawViewport(state: EditorState) {
-	ImGui.TextColored(themeColor, zh ? '场景' : 'Scene');
-	ImGui.SameLine();
-	drawViewportToolButton(state, 'Select', 'Select');
-	ImGui.SameLine();
-	drawViewportToolButton(state, 'Move', 'Move');
-	ImGui.SameLine();
-	drawViewportToolButton(state, 'Rotate', 'Rotate');
-	ImGui.SameLine();
-	drawViewportToolButton(state, 'Scale', 'Scale');
-	ImGui.SameLine();
-	ImGui.TextDisabled('|');
-	ImGui.SameLine();
-	const [snapChanged, snap] = ImGui.Checkbox(zh ? '吸附' : 'Snap', state.snapEnabled);
-	if (snapChanged) state.snapEnabled = snap;
-	ImGui.SameLine();
-	const [gridChanged, grid] = ImGui.Checkbox(zh ? '网格' : 'Grid', state.showGrid);
-	if (gridChanged) { state.showGrid = grid; state.previewDirty = true; }
-	ImGui.SameLine();
-	if (ImGui.Button(zh ? '居中' : 'Center')) {
-		state.viewportPanX = 0;
-		state.viewportPanY = 0;
-		state.zoom = 100;
-		state.previewDirty = true;
-	}
-	ImGui.SameLine();
-	ImGui.TextDisabled(zh ? '当前场景：Main' : 'Scene: Main');
-	ImGui.Separator();
-	const cursor = ImGui.GetCursorScreenPos();
-	const avail = ImGui.GetContentRegionAvail();
-	const viewportWidth = math.max(360, avail.x - 8);
-	const viewportHeight = math.max(300, avail.y - 38);
-	if (math.abs(state.preview.width - viewportWidth) > 1 || math.abs(state.preview.height - viewportHeight) > 1) {
-		state.previewDirty = true;
-	}
-	state.preview.x = cursor.x;
-	state.preview.y = cursor.y;
-	state.preview.width = viewportWidth;
-	state.preview.height = viewportHeight;
-	updatePreviewRuntime(state);
-	ImGui.Dummy(Vec2(viewportWidth, viewportHeight));
-	const hovered = ImGui.IsItemHovered();
-	handleViewportMouse(state, hovered);
-	ImGui.SetCursorScreenPos(Vec2(cursor.x + viewportWidth - 142, cursor.y + 8));
-	if (ImGui.SmallButton('-##viewport_zoom_out')) zoomViewportFromCenter(state, -10);
-	ImGui.SameLine();
-	ImGui.PushStyleColor(StyleColor.Text, themeColor, () => {
-		if (ImGui.SmallButton(tostring(math.floor(state.zoom)) + '%')) {
-			state.zoom = 100;
-			state.viewportPanX = 0;
-			state.viewportPanY = 0;
-			state.previewDirty = true;
-		}
-	});
-	ImGui.SameLine();
-	if (ImGui.SmallButton('+##viewport_zoom_in')) zoomViewportFromCenter(state, 10);
-	ImGui.SetCursorScreenPos(Vec2(cursor.x, cursor.y + viewportHeight + 4));
-	ImGui.Separator();
-	ImGui.TextColored(okColor, zh ? '场景视口' : 'Scene Viewport');
-	ImGui.SameLine();
-	ImGui.TextDisabled(zh ? '滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。' : 'Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.');
 }
 
 function drawVerticalSplitter(id: string, height: number, onDrag: (deltaX: number) => void) {
@@ -375,7 +183,7 @@ export function drawEditor(state: EditorState) {
 		ImGui.SameLine(0, 0);
 		ImGui.PushStyleColor(StyleColor.ChildBg, transparent, () => {
 			ImGui.BeginChild('CenterDock', Vec2(centerWidth, mainHeight), [], noScrollFlags, () => {
-				if (state.mode === 'Script') drawScriptPanel(state, attachScriptToNode); else drawViewport(state);
+				if (state.mode === 'Script') drawScriptPanel(state, attachScriptToNode); else drawViewportPanel(state);
 			});
 		});
 		ImGui.SameLine(0, 0);
