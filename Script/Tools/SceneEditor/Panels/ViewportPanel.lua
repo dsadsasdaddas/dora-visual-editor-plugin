@@ -130,110 +130,112 @@ local function handleViewportMouse(state, hovered) -- 63
 						node.x = math.floor(node.x / step + 0.5) * step -- 112
 						node.y = math.floor(node.y / step + 0.5) * step -- 113
 					end -- 113
-				end -- 113
-			elseif state.draggingViewport then -- 113
-				state.viewportPanX = state.viewportPanX + delta.x -- 117
-				state.viewportPanY = state.viewportPanY - delta.y -- 118
-			end -- 118
-			ImGui.ResetMouseDragDelta(panButton) -- 120
-		end -- 120
-	end -- 120
+					state.previewDirty = true -- 115
+					state.playDirty = true -- 116
+				end -- 116
+			elseif state.draggingViewport then -- 116
+				state.viewportPanX = state.viewportPanX + delta.x -- 119
+				state.viewportPanY = state.viewportPanY - delta.y -- 120
+			end -- 120
+			ImGui.ResetMouseDragDelta(panButton) -- 122
+		end -- 122
+	end -- 122
 end -- 63
-local function drawViewportToolButton(state, tool, label) -- 125
-	local active = state.viewportTool == tool -- 126
-	if active then -- 126
-		ImGui.PushStyleColor( -- 128
-			"Button", -- 128
-			Color(4281349698), -- 128
-			function() -- 128
-				ImGui.PushStyleColor( -- 129
-					"Text", -- 129
-					themeColor, -- 129
-					function() -- 129
-						if ImGui.Button(label) then -- 129
-							state.viewportTool = tool -- 130
-						end -- 130
-					end -- 129
-				) -- 129
-			end -- 128
-		) -- 128
-	elseif ImGui.Button(label) then -- 128
-		state.viewportTool = tool -- 134
-	end -- 134
-end -- 125
-function ____exports.drawViewportPanel(state) -- 138
-	ImGui.TextColored(themeColor, zh and "场景" or "Scene") -- 139
-	ImGui.SameLine() -- 140
-	drawViewportToolButton(state, "Select", "Select") -- 141
+local function drawViewportToolButton(state, tool, label) -- 127
+	local active = state.viewportTool == tool -- 128
+	if active then -- 128
+		ImGui.PushStyleColor( -- 130
+			"Button", -- 130
+			Color(4281349698), -- 130
+			function() -- 130
+				ImGui.PushStyleColor( -- 131
+					"Text", -- 131
+					themeColor, -- 131
+					function() -- 131
+						if ImGui.Button(label) then -- 131
+							state.viewportTool = tool -- 132
+						end -- 132
+					end -- 131
+				) -- 131
+			end -- 130
+		) -- 130
+	elseif ImGui.Button(label) then -- 130
+		state.viewportTool = tool -- 136
+	end -- 136
+end -- 127
+function ____exports.drawViewportPanel(state) -- 140
+	ImGui.TextColored(themeColor, zh and "场景" or "Scene") -- 141
 	ImGui.SameLine() -- 142
-	drawViewportToolButton(state, "Move", "Move") -- 143
+	drawViewportToolButton(state, "Select", "Select") -- 143
 	ImGui.SameLine() -- 144
-	drawViewportToolButton(state, "Rotate", "Rotate") -- 145
+	drawViewportToolButton(state, "Move", "Move") -- 145
 	ImGui.SameLine() -- 146
-	drawViewportToolButton(state, "Scale", "Scale") -- 147
+	drawViewportToolButton(state, "Rotate", "Rotate") -- 147
 	ImGui.SameLine() -- 148
-	ImGui.TextDisabled("|") -- 149
+	drawViewportToolButton(state, "Scale", "Scale") -- 149
 	ImGui.SameLine() -- 150
-	local snapChanged, snap = ImGui.Checkbox(zh and "吸附" or "Snap", state.snapEnabled) -- 151
-	if snapChanged then -- 151
-		state.snapEnabled = snap -- 152
-	end -- 152
-	ImGui.SameLine() -- 153
-	local gridChanged, grid = ImGui.Checkbox(zh and "网格" or "Grid", state.showGrid) -- 154
-	if gridChanged then -- 154
-		state.showGrid = grid -- 155
-		state.previewDirty = true -- 155
-	end -- 155
-	ImGui.SameLine() -- 156
-	if ImGui.Button(zh and "居中" or "Center") then -- 156
-		state.viewportPanX = 0 -- 158
-		state.viewportPanY = 0 -- 159
-		state.zoom = 100 -- 160
-		state.previewDirty = true -- 161
-	end -- 161
-	ImGui.SameLine() -- 163
-	ImGui.TextDisabled(zh and "当前场景：Main" or "Scene: Main") -- 164
-	ImGui.Separator() -- 165
-	local cursor = ImGui.GetCursorScreenPos() -- 166
-	local avail = ImGui.GetContentRegionAvail() -- 167
-	local viewportWidth = math.max(360, avail.x - 8) -- 168
-	local viewportHeight = math.max(300, avail.y - 38) -- 169
-	if math.abs(state.preview.width - viewportWidth) > 1 or math.abs(state.preview.height - viewportHeight) > 1 then -- 169
-		state.previewDirty = true -- 171
-	end -- 171
-	state.preview.x = cursor.x -- 173
-	state.preview.y = cursor.y -- 174
-	state.preview.width = viewportWidth -- 175
-	state.preview.height = viewportHeight -- 176
-	updatePreviewRuntime(state) -- 177
-	ImGui.Dummy(Vec2(viewportWidth, viewportHeight)) -- 178
-	local hovered = ImGui.IsItemHovered() -- 179
-	handleViewportMouse(state, hovered) -- 180
-	ImGui.SetCursorScreenPos(Vec2(cursor.x + viewportWidth - 142, cursor.y + 8)) -- 181
-	if ImGui.SmallButton("-##viewport_zoom_out") then -- 181
-		zoomViewportFromCenter(state, -10) -- 182
-	end -- 182
-	ImGui.SameLine() -- 183
-	ImGui.PushStyleColor( -- 184
-		"Text", -- 184
-		themeColor, -- 184
-		function() -- 184
-			if ImGui.SmallButton(tostring(math.floor(state.zoom)) .. "%") then -- 184
-				state.zoom = 100 -- 186
-				state.viewportPanX = 0 -- 187
-				state.viewportPanY = 0 -- 188
-				state.previewDirty = true -- 189
-			end -- 189
-		end -- 184
-	) -- 184
-	ImGui.SameLine() -- 192
-	if ImGui.SmallButton("+##viewport_zoom_in") then -- 192
-		zoomViewportFromCenter(state, 10) -- 193
-	end -- 193
-	ImGui.SetCursorScreenPos(Vec2(cursor.x, cursor.y + viewportHeight + 4)) -- 194
-	ImGui.Separator() -- 195
-	ImGui.TextColored(okColor, zh and "场景视口" or "Scene Viewport") -- 196
-	ImGui.SameLine() -- 197
-	ImGui.TextDisabled(zh and "滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。" or "Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.") -- 198
-end -- 138
-return ____exports -- 138
+	ImGui.TextDisabled("|") -- 151
+	ImGui.SameLine() -- 152
+	local snapChanged, snap = ImGui.Checkbox(zh and "吸附" or "Snap", state.snapEnabled) -- 153
+	if snapChanged then -- 153
+		state.snapEnabled = snap -- 154
+	end -- 154
+	ImGui.SameLine() -- 155
+	local gridChanged, grid = ImGui.Checkbox(zh and "网格" or "Grid", state.showGrid) -- 156
+	if gridChanged then -- 156
+		state.showGrid = grid -- 157
+		state.previewDirty = true -- 157
+	end -- 157
+	ImGui.SameLine() -- 158
+	if ImGui.Button(zh and "居中" or "Center") then -- 158
+		state.viewportPanX = 0 -- 160
+		state.viewportPanY = 0 -- 161
+		state.zoom = 100 -- 162
+		state.previewDirty = true -- 163
+	end -- 163
+	ImGui.SameLine() -- 165
+	ImGui.TextDisabled(zh and "当前场景：Main" or "Scene: Main") -- 166
+	ImGui.Separator() -- 167
+	local cursor = ImGui.GetCursorScreenPos() -- 168
+	local avail = ImGui.GetContentRegionAvail() -- 169
+	local viewportWidth = math.max(360, avail.x - 8) -- 170
+	local viewportHeight = math.max(300, avail.y - 38) -- 171
+	if math.abs(state.preview.width - viewportWidth) > 1 or math.abs(state.preview.height - viewportHeight) > 1 then -- 171
+		state.previewDirty = true -- 173
+	end -- 173
+	state.preview.x = cursor.x -- 175
+	state.preview.y = cursor.y -- 176
+	state.preview.width = viewportWidth -- 177
+	state.preview.height = viewportHeight -- 178
+	updatePreviewRuntime(state) -- 179
+	ImGui.Dummy(Vec2(viewportWidth, viewportHeight)) -- 180
+	local hovered = ImGui.IsItemHovered() -- 181
+	handleViewportMouse(state, hovered) -- 182
+	ImGui.SetCursorScreenPos(Vec2(cursor.x + viewportWidth - 142, cursor.y + 8)) -- 183
+	if ImGui.SmallButton("-##viewport_zoom_out") then -- 183
+		zoomViewportFromCenter(state, -10) -- 184
+	end -- 184
+	ImGui.SameLine() -- 185
+	ImGui.PushStyleColor( -- 186
+		"Text", -- 186
+		themeColor, -- 186
+		function() -- 186
+			if ImGui.SmallButton(tostring(math.floor(state.zoom)) .. "%") then -- 186
+				state.zoom = 100 -- 188
+				state.viewportPanX = 0 -- 189
+				state.viewportPanY = 0 -- 190
+				state.previewDirty = true -- 191
+			end -- 191
+		end -- 186
+	) -- 186
+	ImGui.SameLine() -- 194
+	if ImGui.SmallButton("+##viewport_zoom_in") then -- 194
+		zoomViewportFromCenter(state, 10) -- 195
+	end -- 195
+	ImGui.SetCursorScreenPos(Vec2(cursor.x, cursor.y + viewportHeight + 4)) -- 196
+	ImGui.Separator() -- 197
+	ImGui.TextColored(okColor, zh and "场景视口" or "Scene Viewport") -- 198
+	ImGui.SameLine() -- 199
+	ImGui.TextDisabled(zh and "滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。" or "Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.") -- 200
+end -- 140
+return ____exports -- 140

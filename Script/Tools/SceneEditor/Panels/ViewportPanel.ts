@@ -112,6 +112,8 @@ function handleViewportMouse(state: EditorState, hovered: boolean) {
 						node.x = math.floor(node.x / step + 0.5) * step;
 						node.y = math.floor(node.y / step + 0.5) * step;
 					}
+					state.previewDirty = true;
+					state.playDirty = true;
 				}
 			} else if (state.draggingViewport) {
 				state.viewportPanX += delta.x;

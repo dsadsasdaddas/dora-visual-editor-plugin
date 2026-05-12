@@ -65,6 +65,8 @@ function attachScriptToNode(state: EditorState, node: SceneNodeData, scriptPath:
 	node.script = scriptPath;
 	node.scriptBuffer.text = scriptPath;
 	state.activeScriptNodeId = node.id;
+	state.previewDirty = true;
+	state.playDirty = true;
 	const sceneFile = writeSceneFile(state);
 	if (sceneFile === undefined) {
 		state.status = zh ? '脚本已挂载，但场景保存失败' : 'Script attached, but scene save failed';
@@ -79,6 +81,7 @@ function bindTextureToSprite(state: EditorState, node: SceneNodeData, texture: s
 	node.textureBuffer.text = texture;
 	state.selectedAsset = texture;
 	state.previewDirty = true;
+	state.playDirty = true;
 	state.status = (zh ? '已绑定贴图：' : 'Texture assigned: ') + texture;
 	pushConsole(state, state.status);
 }

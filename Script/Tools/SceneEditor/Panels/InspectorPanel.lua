@@ -11,97 +11,108 @@ local addAssetPath = ____Model.addAssetPath -- 5
 local iconFor = ____Model.iconFor -- 5
 local isTextureAsset = ____Model.isTextureAsset -- 5
 local zh = ____Model.zh -- 5
-function ____exports.drawInspectorPanel(state, bindTextureToSprite, openScriptForNode) -- 10
-	ImGui.TextColored(themeColor, zh and "属性检查器" or "Inspector") -- 15
-	ImGui.Separator() -- 16
-	local node = state.nodes[state.selectedId] -- 17
-	if node == nil then -- 17
-		ImGui.TextDisabled(zh and "没有选中节点" or "No node selected") -- 19
-		return -- 20
-	end -- 20
-	ImGui.Text((iconFor(node.kind) .. "  ") .. node.kind) -- 22
-	if ImGui.InputText("Name", node.nameBuffer, inputTextFlags) then -- 22
-		node.name = node.nameBuffer.text -- 23
-	end -- 23
-	local changed, x, y = ImGui.DragFloat2( -- 24
-		"Position", -- 24
-		node.x, -- 24
-		node.y, -- 24
-		1, -- 24
-		-10000, -- 24
-		10000, -- 24
-		"%.1f" -- 24
-	) -- 24
-	if changed then -- 24
-		node.x = x -- 25
-		node.y = y -- 25
-	end -- 25
-	changed, x, y = ImGui.DragFloat2( -- 26
-		"Scale", -- 26
-		node.scaleX, -- 26
-		node.scaleY, -- 26
-		0.01, -- 26
-		-100, -- 26
-		100, -- 26
-		"%.2f" -- 26
-	) -- 26
-	if changed then -- 26
-		node.scaleX = x -- 27
-		node.scaleY = y -- 27
-	end -- 27
-	local angleChanged, angle = ImGui.DragFloat( -- 28
-		"Rotation", -- 28
-		node.rotation, -- 28
-		1, -- 28
-		-360, -- 28
-		360, -- 28
-		"%.1f" -- 28
-	) -- 28
-	if angleChanged then -- 28
-		node.rotation = angle -- 29
-	end -- 29
-	local visibleChanged, visible = ImGui.Checkbox("Visible", node.visible) -- 30
-	if visibleChanged then -- 30
-		node.visible = visible -- 31
-	end -- 31
-	ImGui.Separator() -- 32
-	if ImGui.InputText("Script", node.scriptBuffer, inputTextFlags) then -- 32
-		node.script = node.scriptBuffer.text -- 33
-	end -- 33
-	if ImGui.Button(zh and "打开脚本" or "Open Script") then -- 33
-		openScriptForNode(state, node) -- 34
-	end -- 34
-	if node.kind == "Sprite" then -- 34
-		ImGui.Separator() -- 36
-		if ImGui.InputText("Texture", node.textureBuffer, inputTextFlags) then -- 36
-			node.texture = node.textureBuffer.text -- 38
-			state.previewDirty = true -- 39
-		end -- 39
-		if ImGui.Button(zh and "导入并绑定贴图" or "Import Texture") then -- 39
-			App:openFileDialog( -- 42
-				false, -- 42
-				function(path) -- 42
-					local asset = addAssetPath(state, path) -- 43
-					if asset ~= nil and isTextureAsset(asset) then -- 43
-						bindTextureToSprite(state, node, asset) -- 44
-					end -- 44
-				end -- 42
-			) -- 42
-		end -- 42
-		ImGui.SameLine() -- 47
-		if ImGui.Button(zh and "绑定选中贴图" or "Use Selected") then -- 47
-			if state.selectedAsset ~= "" and isTextureAsset(state.selectedAsset) then -- 47
-				bindTextureToSprite(state, node, state.selectedAsset) -- 49
-			end -- 49
-		end -- 49
-	elseif node.kind == "Label" then -- 49
-		ImGui.Separator() -- 52
-		if ImGui.InputText("Text", node.textBuffer, inputTextFlags) then -- 52
-			node.text = node.textBuffer.text -- 53
-		end -- 53
-	elseif node.kind == "Camera" then -- 53
-		ImGui.Separator() -- 55
-		ImGui.TextDisabled(zh and "Camera 显示真实取景框。" or "Camera shows a real frame in viewport.") -- 56
-	end -- 56
+local function markSceneChanged(state) -- 10
+	state.previewDirty = true -- 11
+	state.playDirty = true -- 12
 end -- 10
-return ____exports -- 10
+function ____exports.drawInspectorPanel(state, bindTextureToSprite, openScriptForNode) -- 15
+	ImGui.TextColored(themeColor, zh and "属性检查器" or "Inspector") -- 20
+	ImGui.Separator() -- 21
+	local node = state.nodes[state.selectedId] -- 22
+	if node == nil then -- 22
+		ImGui.TextDisabled(zh and "没有选中节点" or "No node selected") -- 24
+		return -- 25
+	end -- 25
+	ImGui.Text((iconFor(node.kind) .. "  ") .. node.kind) -- 27
+	if ImGui.InputText("Name", node.nameBuffer, inputTextFlags) then -- 27
+		node.name = node.nameBuffer.text -- 28
+		markSceneChanged(state) -- 28
+	end -- 28
+	local changed, x, y = ImGui.DragFloat2( -- 29
+		"Position", -- 29
+		node.x, -- 29
+		node.y, -- 29
+		1, -- 29
+		-10000, -- 29
+		10000, -- 29
+		"%.1f" -- 29
+	) -- 29
+	if changed then -- 29
+		node.x = x -- 30
+		node.y = y -- 30
+		markSceneChanged(state) -- 30
+	end -- 30
+	changed, x, y = ImGui.DragFloat2( -- 31
+		"Scale", -- 31
+		node.scaleX, -- 31
+		node.scaleY, -- 31
+		0.01, -- 31
+		-100, -- 31
+		100, -- 31
+		"%.2f" -- 31
+	) -- 31
+	if changed then -- 31
+		node.scaleX = x -- 32
+		node.scaleY = y -- 32
+		markSceneChanged(state) -- 32
+	end -- 32
+	local angleChanged, angle = ImGui.DragFloat( -- 33
+		"Rotation", -- 33
+		node.rotation, -- 33
+		1, -- 33
+		-360, -- 33
+		360, -- 33
+		"%.1f" -- 33
+	) -- 33
+	if angleChanged then -- 33
+		node.rotation = angle -- 34
+		markSceneChanged(state) -- 34
+	end -- 34
+	local visibleChanged, visible = ImGui.Checkbox("Visible", node.visible) -- 35
+	if visibleChanged then -- 35
+		node.visible = visible -- 36
+		markSceneChanged(state) -- 36
+	end -- 36
+	ImGui.Separator() -- 37
+	if ImGui.InputText("Script", node.scriptBuffer, inputTextFlags) then -- 37
+		node.script = node.scriptBuffer.text -- 38
+		markSceneChanged(state) -- 38
+	end -- 38
+	if ImGui.Button(zh and "打开脚本" or "Open Script") then -- 38
+		openScriptForNode(state, node) -- 39
+	end -- 39
+	if node.kind == "Sprite" then -- 39
+		ImGui.Separator() -- 41
+		if ImGui.InputText("Texture", node.textureBuffer, inputTextFlags) then -- 41
+			node.texture = node.textureBuffer.text -- 43
+			markSceneChanged(state) -- 44
+		end -- 44
+		if ImGui.Button(zh and "导入并绑定贴图" or "Import Texture") then -- 44
+			App:openFileDialog( -- 47
+				false, -- 47
+				function(path) -- 47
+					local asset = addAssetPath(state, path) -- 48
+					if asset ~= nil and isTextureAsset(asset) then -- 48
+						bindTextureToSprite(state, node, asset) -- 49
+					end -- 49
+				end -- 47
+			) -- 47
+		end -- 47
+		ImGui.SameLine() -- 52
+		if ImGui.Button(zh and "绑定选中贴图" or "Use Selected") then -- 52
+			if state.selectedAsset ~= "" and isTextureAsset(state.selectedAsset) then -- 52
+				bindTextureToSprite(state, node, state.selectedAsset) -- 54
+			end -- 54
+		end -- 54
+	elseif node.kind == "Label" then -- 54
+		ImGui.Separator() -- 57
+		if ImGui.InputText("Text", node.textBuffer, inputTextFlags) then -- 57
+			node.text = node.textBuffer.text -- 58
+			markSceneChanged(state) -- 58
+		end -- 58
+	elseif node.kind == "Camera" then -- 58
+		ImGui.Separator() -- 60
+		ImGui.TextDisabled(zh and "Camera 显示真实取景框。" or "Camera shows a real frame in viewport.") -- 61
+	end -- 61
+end -- 15
+return ____exports -- 15

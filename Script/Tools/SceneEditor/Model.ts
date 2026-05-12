@@ -429,6 +429,7 @@ export function deleteNode(state: EditorState, id: string) {
 	state.selectedId = 'root';
 	state.draggingNodeId = undefined;
 	state.previewDirty = true;
+	state.playDirty = true;
 	state.status = zh ? '已删除节点' : 'Node deleted';
 	pushConsole(state, state.status);
 }
@@ -439,6 +440,7 @@ export function addChildNode(state: EditorState, kind: SceneNodeKind) {
 	const node = addNode(state, kind, kind + tostring(state.nextId + 1), parentId);
 	state.selectedId = node.id;
 	state.previewDirty = true;
+	state.playDirty = true;
 	state.status = (zh ? '已添加 ' : 'Added ') + node.name;
 	pushConsole(state, state.status);
 }

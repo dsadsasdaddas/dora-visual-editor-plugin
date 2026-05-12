@@ -7,6 +7,11 @@ import { addAssetPath, iconFor, isTextureAsset, zh } from 'Script/Tools/SceneEdi
 type BindTextureToSprite = (state: EditorState, node: SceneNodeData, texture: string) => void;
 type OpenScriptForNode = (state: EditorState, node: SceneNodeData) => void;
 
+function markSceneChanged(state: EditorState) {
+	state.previewDirty = true;
+	state.playDirty = true;
+}
+
 export function drawInspectorPanel(
 	state: EditorState,
 	bindTextureToSprite: BindTextureToSprite,
@@ -20,23 +25,23 @@ export function drawInspectorPanel(
 		return;
 	}
 	ImGui.Text(iconFor(node.kind) + '  ' + node.kind);
-	if (ImGui.InputText('Name', node.nameBuffer, inputTextFlags)) node.name = node.nameBuffer.text;
+	if (ImGui.InputText('Name', node.nameBuffer, inputTextFlags)) { node.name = node.nameBuffer.text; markSceneChanged(state); }
 	let [changed, x, y] = ImGui.DragFloat2('Position', node.x, node.y, 1, -10000, 10000, '%.1f');
-	if (changed) { node.x = x; node.y = y; }
+	if (changed) { node.x = x; node.y = y; markSceneChanged(state); }
 	[changed, x, y] = ImGui.DragFloat2('Scale', node.scaleX, node.scaleY, 0.01, -100, 100, '%.2f');
-	if (changed) { node.scaleX = x; node.scaleY = y; }
+	if (changed) { node.scaleX = x; node.scaleY = y; markSceneChanged(state); }
 	const [angleChanged, angle] = ImGui.DragFloat('Rotation', node.rotation, 1, -360, 360, '%.1f');
-	if (angleChanged) node.rotation = angle;
+	if (angleChanged) { node.rotation = angle; markSceneChanged(state); }
 	const [visibleChanged, visible] = ImGui.Checkbox('Visible', node.visible);
-	if (visibleChanged) node.visible = visible;
+	if (visibleChanged) { node.visible = visible; markSceneChanged(state); }
 	ImGui.Separator();
-	if (ImGui.InputText('Script', node.scriptBuffer, inputTextFlags)) node.script = node.scriptBuffer.text;
+	if (ImGui.InputText('Script', node.scriptBuffer, inputTextFlags)) { node.script = node.scriptBuffer.text; markSceneChanged(state); }
 	if (ImGui.Button(zh ? '打开脚本' : 'Open Script')) openScriptForNode(state, node);
 	if (node.kind === 'Sprite') {
 		ImGui.Separator();
 		if (ImGui.InputText('Texture', node.textureBuffer, inputTextFlags)) {
 			node.texture = node.textureBuffer.text;
-			state.previewDirty = true;
+			markSceneChanged(state);
 		}
 		if (ImGui.Button(zh ? '导入并绑定贴图' : 'Import Texture')) {
 			App.openFileDialog(false, function(this: void, path: string) {
@@ -50,7 +55,7 @@ export function drawInspectorPanel(
 		}
 	} else if (node.kind === 'Label') {
 		ImGui.Separator();
-		if (ImGui.InputText('Text', node.textBuffer, inputTextFlags)) node.text = node.textBuffer.text;
+		if (ImGui.InputText('Text', node.textBuffer, inputTextFlags)) { node.text = node.textBuffer.text; markSceneChanged(state); }
 	} else if (node.kind === 'Camera') {
 		ImGui.Separator();
 		ImGui.TextDisabled(zh ? 'Camera 显示真实取景框。' : 'Camera shows a real frame in viewport.');
