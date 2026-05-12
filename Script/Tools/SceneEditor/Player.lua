@@ -285,7 +285,7 @@ function ____exports.drawGamePreviewWindow(state) -- 211
 		), -- 214
 		"FirstUseEver" -- 214
 	) -- 214
-	ImGui.SetNextWindowBgAlpha(0.16) -- 215
+	ImGui.SetNextWindowBgAlpha(0.94) -- 215
 	ImGui.Begin( -- 216
 		"Game Preview", -- 216
 		{"NoSavedSettings"}, -- 216
@@ -311,8 +311,8 @@ function ____exports.drawGamePreviewWindow(state) -- 211
 			ImGui.TextDisabled(zh and "这是独立 Game 预览，不是编辑视口。" or "Independent game preview, not the editor viewport.") -- 229
 			ImGui.Separator() -- 230
 			local avail = ImGui.GetContentRegionAvail() -- 231
-			local width = math.max(320, avail.x - 8) -- 232
-			local height = math.max(240, avail.y - 8) -- 233
+			local width = math.max(320, avail.x) -- 232
+			local height = math.max(240, avail.y) -- 233
 			ImGui.Dummy(Vec2(width, height)) -- 234
 			local rectMin = ImGui.GetItemRectMin() -- 235
 			local rectMax = ImGui.GetItemRectMax() -- 236

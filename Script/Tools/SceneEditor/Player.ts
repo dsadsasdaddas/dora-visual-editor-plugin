@@ -212,7 +212,7 @@ export function drawGamePreviewWindow(state: EditorState) {
 	if (!state.gameWindowOpen) return;
 	const appSize = App.visualSize;
 	ImGui.SetNextWindowSize(Vec2(math.min(960, appSize.width - 80), math.min(620, appSize.height - 80)), SetCond.FirstUseEver);
-	ImGui.SetNextWindowBgAlpha(0.16);
+	ImGui.SetNextWindowBgAlpha(0.94);
 	ImGui.Begin('Game Preview', [WindowFlag.NoSavedSettings], () => {
 		if (state.isPlaying) {
 			ImGui.TextColored(okColor, zh ? '运行中' : 'Running');
@@ -229,8 +229,8 @@ export function drawGamePreviewWindow(state: EditorState) {
 		ImGui.TextDisabled(zh ? '这是独立 Game 预览，不是编辑视口。' : 'Independent game preview, not the editor viewport.');
 		ImGui.Separator();
 		const avail = ImGui.GetContentRegionAvail();
-		const width = math.max(320, avail.x - 8);
-		const height = math.max(240, avail.y - 8);
+		const width = math.max(320, avail.x);
+		const height = math.max(240, avail.y);
 		ImGui.Dummy(Vec2(width, height));
 		const rectMin = ImGui.GetItemRectMin();
 		const rectMax = ImGui.GetItemRectMax();
