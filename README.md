@@ -1,37 +1,57 @@
 # Dora Visual Editor Plugin
 
-Downloadable Dora SSR 2D Visual Editor package.
+Native ImGui-based 2D visual editor plugin for Dora SSR.
 
-This repository is a static ResourceDownloader-compatible plugin registry:
+## Features
 
-- `api/v1/package-list-version` — cache bust version metadata.
-- `api/v1/packages` — package list consumed by Dora ResourceDownloader.
-- `assets/repos.json` — title/description/category metadata.
-- `assets/<package>/banner.jpg` — preview image.
-- GitHub Releases — stores the downloadable zip package.
+- Scene tree editing (Node/Sprite/Label/Camera)
+- 2D viewport (zoom/pan/select/move nodes)
+- Asset management (import images/scripts/audio/etc.)
+- Inspector property editing
+- Script editing with Web IDE integration
+- Game preview
 
-## Use in Dora SSR
-
-Open Dora SSR → Download / ResourceDownloader, then set the resource URL to this repository's raw/static host URL.
-
-Recommended raw base URL:
+## Project Structure
 
 ```text
-https://raw.githubusercontent.com/dsadsasdaddas/dora-visual-editor-plugin/main
+init.lua                              # Entry point
+Script/Tools/
+├── SceneImGuiEditor.lua/.ts          # Editor entry
+└── SceneEditor/
+    ├── Model.lua/.ts                 # Data model (nodes/assets/scene)
+    ├── Panels.lua/.ts                # Panel module
+    ├── Panels/                       # Sub-panels
+    │   ├── HeaderPanel.lua/.ts       #   Top toolbar
+    │   ├── SceneTreePanel.lua/.ts    #   Scene tree
+    │   ├── AssetsPanel.lua/.ts       #   Asset panel
+    │   ├── InspectorPanel.lua/.ts    #   Inspector
+    │   ├── ConsolePanel.lua/.ts      #   Console
+    │   └── AddNodePopup.lua/.ts      #   Add node popup
+    ├── Runtime.lua/.ts               # Viewport rendering
+    ├── Player.lua/.ts                # Game preview
+    ├── Theme.lua/.ts                 # Theme config
+    └── Types.lua/.ts                 # Type definitions
 ```
 
-The package will be extracted to:
+## Usage
 
-```text
-<Content.writablePath>/Download/dora-visual-editor
-```
+### Download as Plugin
 
-Then ResourceDownloader can run `init.lua`.
+1. Open Dora SSR → Download / ResourceDownloader
+2. Set resource URL to this repository
+3. Download and run
 
-## Build package locally
+### Run Directly
 
-```bash
-python3 scripts/build_package.py /path/to/Dora-SSR
-```
+Copy `Script/` directory into your Dora project, then run `init.lua`.
 
-This copies runtime Lua/TS source files from Dora SSR into `src/`, creates `dist/dora-visual-editor-<version>.zip`, and updates static manifest files.
+## Development
+
+Source code is in `Script/Tools/`, maintained in both Lua and TypeScript.
+
+**TSTL Note**: Do not use `null` — Lua has no null concept. Use `undefined` in TypeScript.
+
+## Related Repositories
+
+- Main repo: https://github.com/IppClub/Dora-SSR
+- Web IDE: `Dora-SSR/Tools/dora-dora/`
