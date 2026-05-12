@@ -5,6 +5,7 @@ import { EditorState, ViewportTool } from 'Script/Tools/SceneEditor/Types';
 import { okColor, themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { zh } from 'Script/Tools/SceneEditor/Model';
 import { updatePreviewRuntime } from 'Script/Tools/SceneEditor/Runtime';
+import { isScenePointInsideNode } from 'Script/Tools/SceneEditor/SpriteMetrics';
 
 function viewportScale(state: EditorState) {
 	return math.max(0.25, state.zoom / 100);
@@ -51,10 +52,7 @@ function pickNodeAt(state: EditorState, screenX: number, screenY: number) {
 		const id = state.order[i - 1];
 		const node = state.nodes[id];
 		if (node !== undefined && id !== 'root' && node.visible) {
-			const dx = sceneX - node.x;
-			const dy = sceneY - node.y;
-			const radius = node.kind === 'Camera' ? 185 : (node.kind === 'Sprite' ? 82 : 54);
-			if ((dx * dx + dy * dy) <= radius * radius) return id;
+			if (isScenePointInsideNode(node, sceneX, sceneY)) return id;
 		}
 	}
 	return undefined;

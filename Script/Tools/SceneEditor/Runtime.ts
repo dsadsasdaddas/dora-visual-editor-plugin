@@ -1,5 +1,6 @@
 import { App, ClipNode, Color, Director, DrawNode, Label, Line, Node, Sprite, Vec2 } from 'Dora';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/Types';
+import { getNodeVisualSize } from 'Script/Tools/SceneEditor/SpriteMetrics';
 import { greenAxisColor, gridMajorColor, gridMinorColor, helperColor, redAxisColor, selectionColor, viewportBgColor, viewportFrameColor, viewportGameFrameColor } from 'Script/Tools/SceneEditor/Theme';
 
 function worldPointFromScreen(screenX: number, screenY: number): [number, number] {
@@ -57,10 +58,7 @@ function addCornerHandles(node: Node.Type, width: number, height: number, color:
 }
 
 function selectionSize(item: SceneNodeData): [number, number] {
-	if (item.kind === 'Camera') return [320, 180];
-	if (item.kind === 'Sprite') return [128, 96];
-	if (item.kind === 'Label') return [180, 56];
-	return [72, 72];
+	return getNodeVisualSize(item);
 }
 
 function addSelectionOverlay(state: EditorState, item: SceneNodeData, node: Node.Type) {
@@ -144,12 +142,14 @@ function makeAxisLine(width: number, height: number) {
 	return axis;
 }
 
-function makeSpritePlaceholder() {
+function makeSpritePlaceholder(width: number, height: number) {
 	const node = Node();
-	node.addChild(makeSegmentRect(128, 96, helperColor, 1.1));
+	node.addChild(makeSegmentRect(width, height, helperColor, 1.1));
 	const cross = DrawNode();
-	cross.drawSegment(Vec2(-64, -48), Vec2(64, 48), 0.6, helperColor);
-	cross.drawSegment(Vec2(-64, 48), Vec2(64, -48), 0.6, helperColor);
+	const hw = width / 2;
+	const hh = height / 2;
+	cross.drawSegment(Vec2(-hw, -hh), Vec2(hw, hh), 0.6, helperColor);
+	cross.drawSegment(Vec2(-hw, hh), Vec2(hw, -hh), 0.6, helperColor);
 	node.addChild(cross);
 	return node;
 }
@@ -167,7 +167,8 @@ function createRuntimeVisual(state: EditorState, item: SceneNodeData) {
 		if (item.texture !== '') {
 			visual = Sprite(item.texture);
 		}
-		wrapper.addChild(visual !== undefined ? visual : makeSpritePlaceholder());
+		const [width, height] = selectionSize(item);
+		wrapper.addChild(visual !== undefined ? visual : makeSpritePlaceholder(width, height));
 		addSelectionOverlay(state, item, wrapper);
 	} else if (item.kind === 'Label') {
 		const label = Label('sarasa-mono-sc-regular', 32);
