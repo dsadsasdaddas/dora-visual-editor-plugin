@@ -44,6 +44,11 @@ function drawAssetRow(
 	}
 	if (ImGui.Selectable(assetIcon(asset) + '  ' + asset, state.selectedAsset === asset)) {
 		state.selectedAsset = asset;
+		if (state.isPlaying) {
+			state.status = zh ? '运行中资源只允许选择，不会改场景。点 Stop 后再绑定。' : 'Play Mode: asset selection is read-only. Stop to bind assets.';
+			pushConsole(state, state.status);
+			return;
+		}
 		const node = state.nodes[state.selectedId];
 		if (node !== undefined && node.kind === 'Sprite' && isTextureAsset(asset)) {
 			bindTextureToSprite(state, node, asset);
@@ -94,10 +99,18 @@ export function drawAssetsPanel(
 		const [ok] = pcall(() => ImGui.Image(state.selectedAsset, Vec2(160, 120)));
 		if (!ok) ImGui.TextDisabled(zh ? '无法预览该贴图；但仍可尝试绑定到 Sprite。' : 'Unable to preview; still can bind to Sprite.');
 		const selectedNode = state.nodes[state.selectedId];
-		if (selectedNode !== undefined && selectedNode.kind === 'Sprite') {
-			if (ImGui.Button(zh ? '绑定到当前 Sprite' : 'Bind To Sprite')) bindTextureToSprite(state, selectedNode, state.selectedAsset);
-			ImGui.SameLine();
+		if (state.isPlaying) {
+			ImGui.BeginDisabled(() => {
+				ImGui.Button(zh ? '绑定到当前 Sprite' : 'Bind To Sprite');
+				ImGui.SameLine();
+				ImGui.Button(zh ? '用此贴图创建 Sprite' : 'Create Sprite');
+			});
+		} else {
+			if (selectedNode !== undefined && selectedNode.kind === 'Sprite') {
+				if (ImGui.Button(zh ? '绑定到当前 Sprite' : 'Bind To Sprite')) bindTextureToSprite(state, selectedNode, state.selectedAsset);
+				ImGui.SameLine();
+			}
+			if (ImGui.Button(zh ? '用此贴图创建 Sprite' : 'Create Sprite')) createSpriteFromTexture(state, state.selectedAsset);
 		}
-		if (ImGui.Button(zh ? '用此贴图创建 Sprite' : 'Create Sprite')) createSpriteFromTexture(state, state.selectedAsset);
 	}
 }

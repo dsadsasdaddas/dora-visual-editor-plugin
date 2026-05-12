@@ -21,7 +21,11 @@ function drawNodeRow(state: EditorState, id: string, depth: number) {
 export function drawSceneTreePanel(state: EditorState) {
 	ImGui.TextColored(themeColor, zh ? '场景层级' : 'Scene Hierarchy');
 	ImGui.SameLine();
-	if (ImGui.SmallButton('＋##scene_add')) ImGui.OpenPopup('AddNodePopup');
+	if (state.isPlaying) {
+		ImGui.BeginDisabled(() => ImGui.SmallButton('＋##scene_add'));
+	} else if (ImGui.SmallButton('＋##scene_add')) {
+		ImGui.OpenPopup('AddNodePopup');
+	}
 	drawAddNodePopup(state);
 	ImGui.Separator();
 	drawNodeRow(state, 'root', 0);

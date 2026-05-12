@@ -65,72 +65,85 @@ local function drawAssetRow(state, asset, bindTextureToSprite, attachScriptToNod
 		state.selectedAsset == asset -- 45
 	) then -- 45
 		state.selectedAsset = asset -- 46
-		local node = state.nodes[state.selectedId] -- 47
-		if node ~= nil and node.kind == "Sprite" and isTextureAsset(asset) then -- 47
-			bindTextureToSprite(state, node, asset) -- 49
+		if state.isPlaying then -- 46
+			state.status = zh and "运行中资源只允许选择，不会改场景。点 Stop 后再绑定。" or "Play Mode: asset selection is read-only. Stop to bind assets." -- 48
+			pushConsole(state, state.status) -- 49
 			return -- 50
-		elseif node ~= nil and isScriptAsset(asset) then -- 50
-			attachScriptToNode(state, node, asset, (zh and "已绑定脚本并保存：" or "Script assigned and saved: ") .. asset) -- 52
-			return -- 53
-		else -- 53
-			state.status = zh and "已选择资源；选中 Sprite 可绑定图片，选中节点可绑定脚本" or "Asset selected; select a Sprite for images, or a node for scripts" -- 55
-		end -- 55
-		pushConsole(state, state.status) -- 57
-	end -- 57
+		end -- 50
+		local node = state.nodes[state.selectedId] -- 52
+		if node ~= nil and node.kind == "Sprite" and isTextureAsset(asset) then -- 52
+			bindTextureToSprite(state, node, asset) -- 54
+			return -- 55
+		elseif node ~= nil and isScriptAsset(asset) then -- 55
+			attachScriptToNode(state, node, asset, (zh and "已绑定脚本并保存：" or "Script assigned and saved: ") .. asset) -- 57
+			return -- 58
+		else -- 58
+			state.status = zh and "已选择资源；选中 Sprite 可绑定图片，选中节点可绑定脚本" or "Asset selected; select a Sprite for images, or a node for scripts" -- 60
+		end -- 60
+		pushConsole(state, state.status) -- 62
+	end -- 62
 end -- 29
-function ____exports.drawAssetsPanel(state, bindTextureToSprite, createSpriteFromTexture, attachScriptToNode) -- 61
-	ImGui.TextColored(themeColor, zh and "资源" or "Assets") -- 67
-	ImGui.SameLine() -- 68
-	if ImGui.SmallButton(zh and "＋ 文件" or "＋ File") then -- 68
-		importFileDialog(state) -- 69
-	end -- 69
-	ImGui.SameLine() -- 70
-	if ImGui.SmallButton(zh and "＋ 文件夹" or "＋ Folder") then -- 70
-		importFolderDialog(state) -- 71
-	end -- 71
-	ImGui.Separator() -- 72
-	ImGui.TextDisabled(zh and "支持 png/jpg/webp/lua/ts/json/音频/字体/模型等；文件夹会递归导入。" or "Supports images, scripts, json, audio, fonts, models; folders import recursively.") -- 73
-	ImGui.Separator() -- 74
-	if #state.assets == 0 then -- 74
-		ImGui.TextDisabled(zh and "点击 + File 或 + Folder 导入资源。" or "Click + File or + Folder to import assets.") -- 76
-		return -- 77
-	end -- 77
-	for ____, asset in ipairs(state.assets) do -- 79
-		if isFolderAsset(asset) then -- 79
-			drawAssetRow(state, asset, bindTextureToSprite, attachScriptToNode) -- 81
-		end -- 81
-	end -- 81
+function ____exports.drawAssetsPanel(state, bindTextureToSprite, createSpriteFromTexture, attachScriptToNode) -- 66
+	ImGui.TextColored(themeColor, zh and "资源" or "Assets") -- 72
+	ImGui.SameLine() -- 73
+	if ImGui.SmallButton(zh and "＋ 文件" or "＋ File") then -- 73
+		importFileDialog(state) -- 74
+	end -- 74
+	ImGui.SameLine() -- 75
+	if ImGui.SmallButton(zh and "＋ 文件夹" or "＋ Folder") then -- 75
+		importFolderDialog(state) -- 76
+	end -- 76
+	ImGui.Separator() -- 77
+	ImGui.TextDisabled(zh and "支持 png/jpg/webp/lua/ts/json/音频/字体/模型等；文件夹会递归导入。" or "Supports images, scripts, json, audio, fonts, models; folders import recursively.") -- 78
+	ImGui.Separator() -- 79
+	if #state.assets == 0 then -- 79
+		ImGui.TextDisabled(zh and "点击 + File 或 + Folder 导入资源。" or "Click + File or + Folder to import assets.") -- 81
+		return -- 82
+	end -- 82
 	for ____, asset in ipairs(state.assets) do -- 84
-		local insideFolder = false -- 85
-		for ____, folder in ipairs(state.assets) do -- 86
-			if isFolderAsset(folder) and startsWith(asset, folder) then -- 86
-				insideFolder = true -- 87
-			end -- 87
-		end -- 87
-		if not insideFolder and not isFolderAsset(asset) then -- 87
-			drawAssetRow(state, asset, bindTextureToSprite, attachScriptToNode) -- 89
-		end -- 89
-	end -- 89
-	if state.selectedAsset ~= "" and isTextureAsset(state.selectedAsset) then -- 89
-		ImGui.Separator() -- 92
-		ImGui.TextColored(themeColor, zh and "贴图预览" or "Texture Preview") -- 93
-		local ok = pcall(function() return ImGui.Image( -- 94
-			state.selectedAsset, -- 94
-			Vec2(160, 120) -- 94
-		) end) -- 94
-		if not ok then -- 94
-			ImGui.TextDisabled(zh and "无法预览该贴图；但仍可尝试绑定到 Sprite。" or "Unable to preview; still can bind to Sprite.") -- 95
-		end -- 95
-		local selectedNode = state.nodes[state.selectedId] -- 96
-		if selectedNode ~= nil and selectedNode.kind == "Sprite" then -- 96
-			if ImGui.Button(zh and "绑定到当前 Sprite" or "Bind To Sprite") then -- 96
-				bindTextureToSprite(state, selectedNode, state.selectedAsset) -- 98
-			end -- 98
-			ImGui.SameLine() -- 99
-		end -- 99
-		if ImGui.Button(zh and "用此贴图创建 Sprite" or "Create Sprite") then -- 99
-			createSpriteFromTexture(state, state.selectedAsset) -- 101
-		end -- 101
-	end -- 101
-end -- 61
-return ____exports -- 61
+		if isFolderAsset(asset) then -- 84
+			drawAssetRow(state, asset, bindTextureToSprite, attachScriptToNode) -- 86
+		end -- 86
+	end -- 86
+	for ____, asset in ipairs(state.assets) do -- 89
+		local insideFolder = false -- 90
+		for ____, folder in ipairs(state.assets) do -- 91
+			if isFolderAsset(folder) and startsWith(asset, folder) then -- 91
+				insideFolder = true -- 92
+			end -- 92
+		end -- 92
+		if not insideFolder and not isFolderAsset(asset) then -- 92
+			drawAssetRow(state, asset, bindTextureToSprite, attachScriptToNode) -- 94
+		end -- 94
+	end -- 94
+	if state.selectedAsset ~= "" and isTextureAsset(state.selectedAsset) then -- 94
+		ImGui.Separator() -- 97
+		ImGui.TextColored(themeColor, zh and "贴图预览" or "Texture Preview") -- 98
+		local ok = pcall(function() return ImGui.Image( -- 99
+			state.selectedAsset, -- 99
+			Vec2(160, 120) -- 99
+		) end) -- 99
+		if not ok then -- 99
+			ImGui.TextDisabled(zh and "无法预览该贴图；但仍可尝试绑定到 Sprite。" or "Unable to preview; still can bind to Sprite.") -- 100
+		end -- 100
+		local selectedNode = state.nodes[state.selectedId] -- 101
+		if state.isPlaying then -- 101
+			ImGui.BeginDisabled(function() -- 103
+				ImGui.Button(zh and "绑定到当前 Sprite" or "Bind To Sprite") -- 104
+				ImGui.SameLine() -- 105
+				ImGui.Button(zh and "用此贴图创建 Sprite" or "Create Sprite") -- 106
+			end) -- 103
+		else -- 103
+			if selectedNode ~= nil and selectedNode.kind == "Sprite" then -- 103
+				if ImGui.Button(zh and "绑定到当前 Sprite" or "Bind To Sprite") then -- 103
+					bindTextureToSprite(state, selectedNode, state.selectedAsset) -- 110
+				end -- 110
+				ImGui.SameLine() -- 111
+			end -- 111
+			if ImGui.Button(zh and "用此贴图创建 Sprite" or "Create Sprite") then -- 111
+				createSpriteFromTexture(state, state.selectedAsset) -- 113
+			end -- 113
+		end -- 113
+	end -- 113
+end -- 66
+return ____exports -- 66

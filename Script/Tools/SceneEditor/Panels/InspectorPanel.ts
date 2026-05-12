@@ -25,6 +25,18 @@ export function drawInspectorPanel(
 		return;
 	}
 	ImGui.Text(iconFor(node.kind) + '  ' + node.kind);
+	if (state.isPlaying) {
+		ImGui.TextDisabled(zh ? '运行中属性锁定；点 Stop 后再编辑节点。' : 'Properties are locked in Play Mode. Stop to edit nodes.');
+		ImGui.Separator();
+		ImGui.TextDisabled('Name: ' + node.name);
+		ImGui.TextDisabled('Position: ' + tostring(node.x) + ', ' + tostring(node.y));
+		ImGui.TextDisabled('Scale: ' + tostring(node.scaleX) + ', ' + tostring(node.scaleY));
+		ImGui.TextDisabled('Rotation: ' + tostring(node.rotation));
+		ImGui.TextDisabled('Script: ' + node.script);
+		if (node.kind === 'Sprite') ImGui.TextDisabled('Texture: ' + node.texture);
+		if (node.kind === 'Label') ImGui.TextDisabled('Text: ' + node.text);
+		return;
+	}
 	if (ImGui.InputText('Name', node.nameBuffer, inputTextFlags)) { node.name = node.nameBuffer.text; markSceneChanged(state); }
 	let [changed, x, y] = ImGui.DragFloat2('Position', node.x, node.y, 1, -10000, 10000, '%.1f');
 	if (changed) { node.x = x; node.y = y; markSceneChanged(state); }

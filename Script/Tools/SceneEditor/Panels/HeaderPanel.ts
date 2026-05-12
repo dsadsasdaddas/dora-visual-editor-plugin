@@ -29,9 +29,17 @@ export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorSta
 	ImGui.SameLine();
 	ImGui.TextDisabled('|');
 	ImGui.SameLine();
-	if (ImGui.Button(zh ? '＋ 添加' : '＋ Add')) ImGui.OpenPopup('AddNodePopup');
+	if (state.isPlaying) {
+		ImGui.BeginDisabled(() => ImGui.Button(zh ? '＋ 添加' : '＋ Add'));
+	} else if (ImGui.Button(zh ? '＋ 添加' : '＋ Add')) {
+		ImGui.OpenPopup('AddNodePopup');
+	}
 	drawAddNodePopup(state);
 	ImGui.SameLine();
-	if (ImGui.Button(zh ? '删除' : 'Delete')) deleteNode(state, state.selectedId);
+	if (state.isPlaying) {
+		ImGui.BeginDisabled(() => ImGui.Button(zh ? '删除' : 'Delete'));
+	} else if (ImGui.Button(zh ? '删除' : 'Delete')) {
+		deleteNode(state, state.selectedId);
+	}
 	ImGui.Separator();
 }

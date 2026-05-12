@@ -44,14 +44,18 @@ function ____exports.drawHeaderPanel(state, saveScene) -- 8
 	ImGui.SameLine() -- 29
 	ImGui.TextDisabled("|") -- 30
 	ImGui.SameLine() -- 31
-	if ImGui.Button(zh and "＋ 添加" or "＋ Add") then -- 31
-		ImGui.OpenPopup("AddNodePopup") -- 32
-	end -- 32
-	drawAddNodePopup(state) -- 33
-	ImGui.SameLine() -- 34
-	if ImGui.Button(zh and "删除" or "Delete") then -- 34
-		deleteNode(state, state.selectedId) -- 35
+	if state.isPlaying then -- 31
+		ImGui.BeginDisabled(function() return ImGui.Button(zh and "＋ 添加" or "＋ Add") end) -- 33
+	elseif ImGui.Button(zh and "＋ 添加" or "＋ Add") then -- 33
+		ImGui.OpenPopup("AddNodePopup") -- 35
 	end -- 35
-	ImGui.Separator() -- 36
+	drawAddNodePopup(state) -- 37
+	ImGui.SameLine() -- 38
+	if state.isPlaying then -- 38
+		ImGui.BeginDisabled(function() return ImGui.Button(zh and "删除" or "Delete") end) -- 40
+	elseif ImGui.Button(zh and "删除" or "Delete") then -- 40
+		deleteNode(state, state.selectedId) -- 42
+	end -- 42
+	ImGui.Separator() -- 44
 end -- 8
 return ____exports -- 8

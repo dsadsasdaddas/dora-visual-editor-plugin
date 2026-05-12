@@ -26,13 +26,15 @@ end -- 7
 function ____exports.drawSceneTreePanel(state) -- 21
 	ImGui.TextColored(themeColor, zh and "场景层级" or "Scene Hierarchy") -- 22
 	ImGui.SameLine() -- 23
-	if ImGui.SmallButton("＋##scene_add") then -- 23
-		ImGui.OpenPopup("AddNodePopup") -- 24
-	end -- 24
-	drawAddNodePopup(state) -- 25
-	ImGui.Separator() -- 26
-	drawNodeRow(state, "root", 0) -- 27
-	ImGui.Separator() -- 28
-	ImGui.TextDisabled(zh and "＋ 添加到当前选中节点下" or "+ adds under selected node") -- 29
+	if state.isPlaying then -- 23
+		ImGui.BeginDisabled(function() return ImGui.SmallButton("＋##scene_add") end) -- 25
+	elseif ImGui.SmallButton("＋##scene_add") then -- 25
+		ImGui.OpenPopup("AddNodePopup") -- 27
+	end -- 27
+	drawAddNodePopup(state) -- 29
+	ImGui.Separator() -- 30
+	drawNodeRow(state, "root", 0) -- 31
+	ImGui.Separator() -- 32
+	ImGui.TextDisabled(zh and "＋ 添加到当前选中节点下" or "+ adds under selected node") -- 33
 end -- 21
 return ____exports -- 21

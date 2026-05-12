@@ -61,6 +61,11 @@ function pickNodeAt(state: EditorState, screenX: number, screenY: number) {
 }
 
 function handleViewportMouse(state: EditorState, hovered: boolean) {
+	if (state.isPlaying) {
+		state.draggingNodeId = undefined;
+		state.draggingViewport = false;
+		return;
+	}
 	if (!hovered) return;
 	const spacePressed = Keyboard.isKeyPressed(KeyName.Space);
 	const wheel = Mouse.wheel;
@@ -125,6 +130,10 @@ function handleViewportMouse(state: EditorState, hovered: boolean) {
 }
 
 function drawViewportToolButton(state: EditorState, tool: ViewportTool, label: string) {
+	if (state.isPlaying) {
+		ImGui.BeginDisabled(() => ImGui.Button(label));
+		return;
+	}
 	const active = state.viewportTool === tool;
 	if (active) {
 		ImGui.PushStyleColor(StyleColor.Button, Color(0xff303642), () => {
@@ -150,13 +159,35 @@ export function drawViewportPanel(state: EditorState) {
 	ImGui.SameLine();
 	ImGui.TextDisabled('|');
 	ImGui.SameLine();
-	const [snapChanged, snap] = ImGui.Checkbox(zh ? '吸附' : 'Snap', state.snapEnabled);
-	if (snapChanged) state.snapEnabled = snap;
+	let snapChanged = false;
+	let snap = state.snapEnabled;
+	if (state.isPlaying) {
+		ImGui.BeginDisabled(() => {
+			const [changed, value] = ImGui.Checkbox(zh ? '吸附' : 'Snap', state.snapEnabled);
+			snapChanged = changed;
+			snap = value;
+		});
+	} else {
+		[snapChanged, snap] = ImGui.Checkbox(zh ? '吸附' : 'Snap', state.snapEnabled);
+	}
+	if (!state.isPlaying && snapChanged) state.snapEnabled = snap;
 	ImGui.SameLine();
-	const [gridChanged, grid] = ImGui.Checkbox(zh ? '网格' : 'Grid', state.showGrid);
-	if (gridChanged) { state.showGrid = grid; state.previewDirty = true; }
+	let gridChanged = false;
+	let grid = state.showGrid;
+	if (state.isPlaying) {
+		ImGui.BeginDisabled(() => {
+			const [changed, value] = ImGui.Checkbox(zh ? '网格' : 'Grid', state.showGrid);
+			gridChanged = changed;
+			grid = value;
+		});
+	} else {
+		[gridChanged, grid] = ImGui.Checkbox(zh ? '网格' : 'Grid', state.showGrid);
+	}
+	if (!state.isPlaying && gridChanged) { state.showGrid = grid; state.previewDirty = true; }
 	ImGui.SameLine();
-	if (ImGui.Button(zh ? '居中' : 'Center')) {
+	if (state.isPlaying) {
+		ImGui.BeginDisabled(() => ImGui.Button(zh ? '居中' : 'Center'));
+	} else if (ImGui.Button(zh ? '居中' : 'Center')) {
 		state.viewportPanX = 0;
 		state.viewportPanY = 0;
 		state.zoom = 100;
@@ -181,21 +212,35 @@ export function drawViewportPanel(state: EditorState) {
 	const hovered = ImGui.IsItemHovered();
 	handleViewportMouse(state, hovered);
 	ImGui.SetCursorScreenPos(Vec2(cursor.x + viewportWidth - 142, cursor.y + 8));
-	if (ImGui.SmallButton('-##viewport_zoom_out')) zoomViewportFromCenter(state, -10);
-	ImGui.SameLine();
-	ImGui.PushStyleColor(StyleColor.Text, themeColor, () => {
-		if (ImGui.SmallButton(tostring(math.floor(state.zoom)) + '%')) {
-			state.zoom = 100;
-			state.viewportPanX = 0;
-			state.viewportPanY = 0;
-			state.previewDirty = true;
-		}
-	});
-	ImGui.SameLine();
-	if (ImGui.SmallButton('+##viewport_zoom_in')) zoomViewportFromCenter(state, 10);
+	if (state.isPlaying) {
+		ImGui.BeginDisabled(() => {
+			ImGui.SmallButton('-##viewport_zoom_out');
+			ImGui.SameLine();
+			ImGui.SmallButton(tostring(math.floor(state.zoom)) + '%');
+			ImGui.SameLine();
+			ImGui.SmallButton('+##viewport_zoom_in');
+		});
+	} else {
+		if (ImGui.SmallButton('-##viewport_zoom_out')) zoomViewportFromCenter(state, -10);
+		ImGui.SameLine();
+		ImGui.PushStyleColor(StyleColor.Text, themeColor, () => {
+			if (ImGui.SmallButton(tostring(math.floor(state.zoom)) + '%')) {
+				state.zoom = 100;
+				state.viewportPanX = 0;
+				state.viewportPanY = 0;
+				state.previewDirty = true;
+			}
+		});
+		ImGui.SameLine();
+		if (ImGui.SmallButton('+##viewport_zoom_in')) zoomViewportFromCenter(state, 10);
+	}
 	ImGui.SetCursorScreenPos(Vec2(cursor.x, cursor.y + viewportHeight + 4));
 	ImGui.Separator();
 	ImGui.TextColored(okColor, zh ? '场景视口' : 'Scene Viewport');
 	ImGui.SameLine();
-	ImGui.TextDisabled(zh ? '滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。' : 'Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.');
+	if (state.isPlaying) {
+		ImGui.TextDisabled(zh ? '运行中：编辑器已锁定；只能由游戏脚本/输入改变运行画面。点 Stop 返回编辑。' : 'Play Mode: editor is locked; only game scripts/input can change the runtime view. Stop to edit.');
+	} else {
+		ImGui.TextDisabled(zh ? '滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。' : 'Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.');
+	}
 }
