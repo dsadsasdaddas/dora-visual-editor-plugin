@@ -6,6 +6,9 @@ import { startPlay, stopPlay } from 'Script/Tools/SceneEditor/Player';
 import { drawAddNodePopup } from 'Script/Tools/SceneEditor/Panels/AddNodePopup';
 
 export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorState) => void) {
+	const editorState = state as any;
+	if (editorState.gameWidth === undefined) editorState.gameWidth = 960;
+	if (editorState.gameHeight === undefined) editorState.gameHeight = 540;
 	ImGui.TextColored(themeColor, '✦ Dora Visual Editor');
 	if (state.isPlaying) {
 		ImGui.SameLine();
@@ -27,6 +30,40 @@ export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorSta
 	}
 	ImGui.SameLine();
 	if (ImGui.Button(zh ? '▣ 保存' : '▣ Save')) saveScene(state);
+	ImGui.SameLine();
+	ImGui.TextDisabled(zh ? '游戏窗口' : 'Game');
+	ImGui.SameLine();
+	ImGui.PushItemWidth(150, () => {
+		if (state.isPlaying) {
+			ImGui.BeginDisabled(() => ImGui.DragInt2('##game_resolution', editorState.gameWidth, editorState.gameHeight, 1, 160, 8192, '%d'));
+		} else {
+			const [sizeChanged, width, height] = ImGui.DragInt2('##game_resolution', editorState.gameWidth, editorState.gameHeight, 1, 160, 8192, '%d');
+			if (sizeChanged) {
+				editorState.gameWidth = math.max(160, math.min(8192, width));
+				editorState.gameHeight = math.max(120, math.min(8192, height));
+				state.previewDirty = true;
+				state.playDirty = true;
+			}
+		}
+	});
+	ImGui.SameLine();
+	if (state.isPlaying) {
+		ImGui.BeginDisabled(() => ImGui.Button('16:9'));
+	} else if (ImGui.Button('16:9')) {
+		editorState.gameWidth = 960;
+		editorState.gameHeight = 540;
+		state.previewDirty = true;
+		state.playDirty = true;
+	}
+	ImGui.SameLine();
+	if (state.isPlaying) {
+		ImGui.BeginDisabled(() => ImGui.Button('HD'));
+	} else if (ImGui.Button('HD')) {
+		editorState.gameWidth = 1280;
+		editorState.gameHeight = 720;
+		state.previewDirty = true;
+		state.playDirty = true;
+	}
 	ImGui.SameLine();
 	if (ImGui.Button(zh ? '◇ 构建' : '◇ Build')) {
 		state.status = zh ? 'Build 会在代码生成稳定后接入' : 'Build will be wired after codegen is stable';

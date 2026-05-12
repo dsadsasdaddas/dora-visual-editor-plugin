@@ -24,7 +24,12 @@ function sceneSaveFile() {
 
 function writeSceneFile(state: EditorState) {
 	Content.mkdir(workspacePath('.dora'));
-	const data = { version: 1, nodes: [] as object[] };
+	const data = {
+		version: 1,
+		gameWidth: math.floor((state as any).gameWidth || 960),
+		gameHeight: math.floor((state as any).gameHeight || 540),
+		nodes: [] as object[],
+	};
 	for (const id of state.order) {
 		const node = state.nodes[id];
 		if (node !== undefined) {

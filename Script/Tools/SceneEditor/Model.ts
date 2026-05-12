@@ -84,6 +84,8 @@ export function createEditorState(): EditorState {
 		viewportPanY: 0,
 		draggingViewport: false,
 	};
+	(state as any).gameWidth = 960;
+	(state as any).gameHeight = 540;
 	refreshImportedAssets(state);
 	return state;
 }
@@ -338,6 +340,8 @@ export function loadSceneFromFile(state: EditorState, file: string) {
 	if (data === undefined) return false;
 	const rawNodes = (data as any).nodes as any[] | undefined;
 	if (rawNodes === undefined) return false;
+	(state as any).gameWidth = math.max(160, math.min(8192, numberValue((data as any).gameWidth, (state as any).gameWidth || 960)));
+	(state as any).gameHeight = math.max(120, math.min(8192, numberValue((data as any).gameHeight, (state as any).gameHeight || 540)));
 
 	state.nodes = {};
 	state.order = [];

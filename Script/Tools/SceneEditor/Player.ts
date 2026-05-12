@@ -143,6 +143,21 @@ export function startPlay(state: EditorState) {
 	pushConsole(state, state.status);
 }
 
+function gameWidthOf(state: EditorState) {
+	return math.max(160, (state as any).gameWidth || 960);
+}
+
+function gameHeightOf(state: EditorState) {
+	return math.max(120, (state as any).gameHeight || 540);
+}
+
+function playScaleForViewport(state: EditorState) {
+	const renderScale = App.devicePixelRatio || 1;
+	const designWidth = gameWidthOf(state);
+	const designHeight = gameHeightOf(state);
+	return math.min(state.playViewport.width * renderScale / designWidth, state.playViewport.height * renderScale / designHeight);
+}
+
 function rebuildPlayRuntime(state: EditorState) {
 	if (state.playRoot === undefined) {
 		state.playRoot = Node();
@@ -153,9 +168,8 @@ function rebuildPlayRuntime(state: EditorState) {
 	state.playRuntimeNodes = {};
 	state.playRuntimeLabels = {};
 
-	const renderScale = App.devicePixelRatio || 1;
-	const width = math.max(160, state.playViewport.width * renderScale);
-	const height = math.max(120, state.playViewport.height * renderScale);
+	const width = gameWidthOf(state);
+	const height = gameHeightOf(state);
 	const clip = ClipNode(makeClipStencil(width, height));
 	clip.alphaThreshold = 0.01;
 	state.playRoot.addChild(clip);
@@ -203,8 +217,11 @@ function updatePlayRuntime(state: EditorState) {
 	const p = state.playViewport;
 	const [cx, cy] = worldPointFromScreen(p.x + p.width / 2, p.y + p.height / 2);
 	if (state.playRoot !== undefined) {
+		const scale = playScaleForViewport(state);
 		state.playRoot.x = cx;
 		state.playRoot.y = cy;
+		state.playRoot.scaleX = scale;
+		state.playRoot.scaleY = scale;
 	}
 }
 
@@ -212,12 +229,20 @@ function updatePlayRuntime(state: EditorState) {
 export function drawGamePreviewWindow(state: EditorState) {
 	if (!state.isPlaying) return;
 	const p = state.preview;
-	if (math.abs(state.playViewport.x - p.x) > 1 || math.abs(state.playViewport.y - p.y) > 1
-		|| math.abs(state.playViewport.width - p.width) > 1 || math.abs(state.playViewport.height - p.height) > 1) {
-		state.playViewport.x = p.x;
-		state.playViewport.y = p.y;
-		state.playViewport.width = p.width;
-		state.playViewport.height = p.height;
+	const renderScale = App.devicePixelRatio || 1;
+	const designWidth = gameWidthOf(state);
+	const designHeight = gameHeightOf(state);
+	const fitScale = math.min(p.width * renderScale / designWidth, p.height * renderScale / designHeight);
+	const displayWidth = designWidth * fitScale / renderScale;
+	const displayHeight = designHeight * fitScale / renderScale;
+	const nextX = p.x + (p.width - displayWidth) / 2;
+	const nextY = p.y + (p.height - displayHeight) / 2;
+	if (math.abs(state.playViewport.x - nextX) > 1 || math.abs(state.playViewport.y - nextY) > 1
+		|| math.abs(state.playViewport.width - displayWidth) > 1 || math.abs(state.playViewport.height - displayHeight) > 1) {
+		state.playViewport.x = nextX;
+		state.playViewport.y = nextY;
+		state.playViewport.width = displayWidth;
+		state.playViewport.height = displayHeight;
 		state.playDirty = true;
 	}
 	updatePlayRuntime(state);

@@ -202,87 +202,109 @@ function ____exports.startPlay(state) -- 137
 	state.status = zh and "游戏预览运行中" or "Game preview running" -- 142
 	pushConsole(state, state.status) -- 143
 end -- 137
-local function rebuildPlayRuntime(state) -- 146
-	if state.playRoot == nil then -- 146
-		state.playRoot = Node() -- 148
-		state.playRoot.tag = "__DoraImGuiGamePreview__" -- 149
-		Director.entry:addChild(state.playRoot) -- 150
-	end -- 150
-	state.playRoot:removeAllChildren(true) -- 152
-	state.playRuntimeNodes = {} -- 153
-	state.playRuntimeLabels = {} -- 154
-	local renderScale = App.devicePixelRatio or 1 -- 156
-	local width = math.max(160, state.playViewport.width * renderScale) -- 157
-	local height = math.max(120, state.playViewport.height * renderScale) -- 158
-	local clip = ClipNode(makeClipStencil(width, height)) -- 159
-	clip.alphaThreshold = 0.01 -- 160
-	state.playRoot:addChild(clip) -- 161
-	clip:addChild(makeGameBackground(width, height)) -- 162
-	local world = Node() -- 164
-	state.playWorld = world -- 165
-	clip:addChild(world) -- 166
-	local content = Node() -- 167
-	state.playContent = content -- 168
-	world:addChild(content) -- 169
-	state.playRuntimeNodes.root = content -- 170
-	local camera = firstCamera(state) -- 172
-	if camera ~= nil then -- 172
-		world.x = -camera.x -- 174
-		world.y = -camera.y -- 175
-		world.angle = -camera.rotation -- 176
-	end -- 176
-	for ____, id in ipairs(state.order) do -- 179
-		local item = state.nodes[id] -- 180
-		if item ~= nil and id ~= "root" and item.kind ~= "Camera" then -- 180
-			local runtime = createPlayVisual(item) -- 182
-			applyTransform(runtime, item) -- 183
-			state.playRuntimeNodes[id] = runtime -- 184
-			if item.kind == "Label" then -- 184
-				state.playRuntimeLabels[id] = runtime -- 185
-			end -- 185
-			local parent = state.playRuntimeNodes[item.parentId or "root"] or content -- 186
-			parent:addChild(runtime) -- 187
-		end -- 187
-	end -- 187
-	for ____, id in ipairs(state.order) do -- 190
-		local item = state.nodes[id] -- 191
-		local runtime = state.playRuntimeNodes[id] -- 192
-		if item ~= nil and runtime ~= nil then -- 192
-			runNodeScript(state, item, runtime) -- 194
-		end -- 194
-	end -- 194
-	state.playDirty = false -- 197
+local function gameWidthOf(state) -- 146
+	return math.max(160, state.gameWidth or 960) -- 147
 end -- 146
-local function updatePlayRuntime(state) -- 200
-	if not state.isPlaying then -- 200
-		return -- 201
+local function gameHeightOf(state) -- 150
+	return math.max(120, state.gameHeight or 540) -- 151
+end -- 150
+local function playScaleForViewport(state) -- 154
+	local renderScale = App.devicePixelRatio or 1 -- 155
+	local designWidth = gameWidthOf(state) -- 156
+	local designHeight = gameHeightOf(state) -- 157
+	return math.min(state.playViewport.width * renderScale / designWidth, state.playViewport.height * renderScale / designHeight) -- 158
+end -- 154
+local function rebuildPlayRuntime(state) -- 161
+	if state.playRoot == nil then -- 161
+		state.playRoot = Node() -- 163
+		state.playRoot.tag = "__DoraImGuiGamePreview__" -- 164
+		Director.entry:addChild(state.playRoot) -- 165
+	end -- 165
+	state.playRoot:removeAllChildren(true) -- 167
+	state.playRuntimeNodes = {} -- 168
+	state.playRuntimeLabels = {} -- 169
+	local width = gameWidthOf(state) -- 171
+	local height = gameHeightOf(state) -- 172
+	local clip = ClipNode(makeClipStencil(width, height)) -- 173
+	clip.alphaThreshold = 0.01 -- 174
+	state.playRoot:addChild(clip) -- 175
+	clip:addChild(makeGameBackground(width, height)) -- 176
+	local world = Node() -- 178
+	state.playWorld = world -- 179
+	clip:addChild(world) -- 180
+	local content = Node() -- 181
+	state.playContent = content -- 182
+	world:addChild(content) -- 183
+	state.playRuntimeNodes.root = content -- 184
+	local camera = firstCamera(state) -- 186
+	if camera ~= nil then -- 186
+		world.x = -camera.x -- 188
+		world.y = -camera.y -- 189
+		world.angle = -camera.rotation -- 190
+	end -- 190
+	for ____, id in ipairs(state.order) do -- 193
+		local item = state.nodes[id] -- 194
+		if item ~= nil and id ~= "root" and item.kind ~= "Camera" then -- 194
+			local runtime = createPlayVisual(item) -- 196
+			applyTransform(runtime, item) -- 197
+			state.playRuntimeNodes[id] = runtime -- 198
+			if item.kind == "Label" then -- 198
+				state.playRuntimeLabels[id] = runtime -- 199
+			end -- 199
+			local parent = state.playRuntimeNodes[item.parentId or "root"] or content -- 200
+			parent:addChild(runtime) -- 201
+		end -- 201
 	end -- 201
-	if state.playDirty or state.playRoot == nil then -- 201
-		rebuildPlayRuntime(state) -- 202
-	end -- 202
-	local p = state.playViewport -- 203
-	local cx, cy = table.unpack( -- 204
-		worldPointFromScreen(p.x + p.width / 2, p.y + p.height / 2), -- 204
-		1, -- 204
-		2 -- 204
-	) -- 204
-	if state.playRoot ~= nil then -- 204
-		state.playRoot.x = cx -- 206
-		state.playRoot.y = cy -- 207
-	end -- 207
-end -- 200
-function ____exports.drawGamePreviewWindow(state) -- 212
-	if not state.isPlaying then -- 212
-		return -- 213
-	end -- 213
-	local p = state.preview -- 214
-	if math.abs(state.playViewport.x - p.x) > 1 or math.abs(state.playViewport.y - p.y) > 1 or math.abs(state.playViewport.width - p.width) > 1 or math.abs(state.playViewport.height - p.height) > 1 then -- 214
-		state.playViewport.x = p.x -- 217
-		state.playViewport.y = p.y -- 218
-		state.playViewport.width = p.width -- 219
-		state.playViewport.height = p.height -- 220
-		state.playDirty = true -- 221
-	end -- 221
-	updatePlayRuntime(state) -- 223
-end -- 212
-return ____exports -- 212
+	for ____, id in ipairs(state.order) do -- 204
+		local item = state.nodes[id] -- 205
+		local runtime = state.playRuntimeNodes[id] -- 206
+		if item ~= nil and runtime ~= nil then -- 206
+			runNodeScript(state, item, runtime) -- 208
+		end -- 208
+	end -- 208
+	state.playDirty = false -- 211
+end -- 161
+local function updatePlayRuntime(state) -- 214
+	if not state.isPlaying then -- 214
+		return -- 215
+	end -- 215
+	if state.playDirty or state.playRoot == nil then -- 215
+		rebuildPlayRuntime(state) -- 216
+	end -- 216
+	local p = state.playViewport -- 217
+	local cx, cy = table.unpack( -- 218
+		worldPointFromScreen(p.x + p.width / 2, p.y + p.height / 2), -- 218
+		1, -- 218
+		2 -- 218
+	) -- 218
+	if state.playRoot ~= nil then -- 218
+		local scale = playScaleForViewport(state) -- 220
+		state.playRoot.x = cx -- 221
+		state.playRoot.y = cy -- 222
+		state.playRoot.scaleX = scale -- 223
+		state.playRoot.scaleY = scale -- 224
+	end -- 224
+end -- 214
+function ____exports.drawGamePreviewWindow(state) -- 229
+	if not state.isPlaying then -- 229
+		return -- 230
+	end -- 230
+	local p = state.preview -- 231
+	local renderScale = App.devicePixelRatio or 1 -- 232
+	local designWidth = gameWidthOf(state) -- 233
+	local designHeight = gameHeightOf(state) -- 234
+	local fitScale = math.min(p.width * renderScale / designWidth, p.height * renderScale / designHeight) -- 235
+	local displayWidth = designWidth * fitScale / renderScale -- 236
+	local displayHeight = designHeight * fitScale / renderScale -- 237
+	local nextX = p.x + (p.width - displayWidth) / 2 -- 238
+	local nextY = p.y + (p.height - displayHeight) / 2 -- 239
+	if math.abs(state.playViewport.x - nextX) > 1 or math.abs(state.playViewport.y - nextY) > 1 or math.abs(state.playViewport.width - displayWidth) > 1 or math.abs(state.playViewport.height - displayHeight) > 1 then -- 239
+		state.playViewport.x = nextX -- 242
+		state.playViewport.y = nextY -- 243
+		state.playViewport.width = displayWidth -- 244
+		state.playViewport.height = displayHeight -- 245
+		state.playDirty = true -- 246
+	end -- 246
+	updatePlayRuntime(state) -- 248
+end -- 229
+return ____exports -- 229

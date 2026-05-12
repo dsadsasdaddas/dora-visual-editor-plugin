@@ -26,9 +26,12 @@ function ____exports.getTextureSize(texture) -- 11
 	textureSizeCache[texture] = size -- 18
 	return size -- 19
 end -- 11
-function ____exports.getNodeVisualSize(item) -- 22
+function ____exports.getNodeVisualSize(item, gameWidth, gameHeight) -- 22
 	if item.kind == "Camera" then -- 22
-		return {320, 180} -- 23
+		return { -- 23
+			math.max(160, gameWidth or 960), -- 23
+			math.max(120, gameHeight or 540) -- 23
+		} -- 23
 	end -- 23
 	if item.kind == "Sprite" then -- 23
 		local size = ____exports.getTextureSize(item.texture) -- 25
@@ -42,9 +45,9 @@ function ____exports.getNodeVisualSize(item) -- 22
 	end -- 29
 	return {72, 72} -- 30
 end -- 22
-function ____exports.isScenePointInsideNode(item, sceneX, sceneY) -- 33
+function ____exports.isScenePointInsideNode(item, sceneX, sceneY, gameWidth, gameHeight) -- 33
 	local width, height = table.unpack( -- 34
-		____exports.getNodeVisualSize(item), -- 34
+		____exports.getNodeVisualSize(item, gameWidth, gameHeight), -- 34
 		1, -- 34
 		2 -- 34
 	) -- 34

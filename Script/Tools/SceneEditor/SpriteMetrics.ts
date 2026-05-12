@@ -19,8 +19,8 @@ export function getTextureSize(texture: string): [number, number] | undefined {
 	return size;
 }
 
-export function getNodeVisualSize(item: SceneNodeData): [number, number] {
-	if (item.kind === 'Camera') return [320, 180];
+export function getNodeVisualSize(item: SceneNodeData, gameWidth?: number, gameHeight?: number): [number, number] {
+	if (item.kind === 'Camera') return [math.max(160, gameWidth || 960), math.max(120, gameHeight || 540)];
 	if (item.kind === 'Sprite') {
 		const size = getTextureSize(item.texture);
 		if (size !== undefined) return size;
@@ -30,8 +30,8 @@ export function getNodeVisualSize(item: SceneNodeData): [number, number] {
 	return [72, 72];
 }
 
-export function isScenePointInsideNode(item: SceneNodeData, sceneX: number, sceneY: number) {
-	const [width, height] = getNodeVisualSize(item);
+export function isScenePointInsideNode(item: SceneNodeData, sceneX: number, sceneY: number, gameWidth?: number, gameHeight?: number) {
+	const [width, height] = getNodeVisualSize(item, gameWidth, gameHeight);
 	const dx = sceneX - item.x;
 	const dy = sceneY - item.y;
 	const radians = -item.rotation * math.pi / 180;

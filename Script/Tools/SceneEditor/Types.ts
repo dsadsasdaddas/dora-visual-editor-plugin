@@ -43,6 +43,8 @@ export interface EditorState {
 	leftWidth: number;
 	rightWidth: number;
 	bottomHeight: number;
+	gameWidth?: number;
+	gameHeight?: number;
 	status: string;
 	console: string[];
 	nodes: Record<string, SceneNodeData>;

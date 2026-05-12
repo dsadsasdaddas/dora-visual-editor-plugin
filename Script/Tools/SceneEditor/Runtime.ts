@@ -57,12 +57,21 @@ function addCornerHandles(node: Node.Type, width: number, height: number, color:
 	}
 }
 
-function selectionSize(item: SceneNodeData): [number, number] {
+function gameWidthOf(state: EditorState) {
+	return math.max(160, (state as any).gameWidth || 960);
+}
+
+function gameHeightOf(state: EditorState) {
+	return math.max(120, (state as any).gameHeight || 540);
+}
+
+function selectionSize(state: EditorState, item: SceneNodeData): [number, number] {
+	if (item.kind === 'Camera') return [gameWidthOf(state), gameHeightOf(state)];
 	return getNodeVisualSize(item);
 }
 
 function addSelectionOverlay(state: EditorState, item: SceneNodeData, node: Node.Type) {
-	const [width, height] = selectionSize(item);
+	const [width, height] = selectionSize(state, item);
 	const color = item.id === state.selectedId ? selectionColor : helperColor;
 	node.addChild(makeSegmentRect(width, height, color, item.id === state.selectedId ? 1.6 : 0.8));
 	if (item.id === state.selectedId) addCornerHandles(node, width, height, color);
@@ -154,9 +163,9 @@ function makeSpritePlaceholder(width: number, height: number) {
 	return node;
 }
 
-function makeCameraShape() {
+function makeCameraShape(state: EditorState) {
 	const node = Node();
-	node.addChild(makeSegmentRect(320, 180, viewportGameFrameColor, 1.1));
+	node.addChild(makeSegmentRect(gameWidthOf(state), gameHeightOf(state), viewportGameFrameColor, 1.1));
 	return node;
 }
 
@@ -167,7 +176,7 @@ function createRuntimeVisual(state: EditorState, item: SceneNodeData) {
 		if (item.texture !== '') {
 			visual = Sprite(item.texture);
 		}
-		const [width, height] = selectionSize(item);
+		const [width, height] = selectionSize(state, item);
 		wrapper.addChild(visual !== undefined ? visual : makeSpritePlaceholder(width, height));
 		addSelectionOverlay(state, item, wrapper);
 	} else if (item.kind === 'Label') {
@@ -181,7 +190,7 @@ function createRuntimeVisual(state: EditorState, item: SceneNodeData) {
 		}
 		addSelectionOverlay(state, item, wrapper);
 	} else if (item.kind === 'Camera') {
-		wrapper.addChild(makeCameraShape());
+		wrapper.addChild(makeCameraShape(state));
 		addSelectionOverlay(state, item, wrapper);
 	} else {
 		wrapper.addChild(makeThickLine(Vec2(-20, 0), Vec2(20, 0), helperColor, true));
@@ -216,6 +225,7 @@ function runtimeVisualKey(state: EditorState, item: SceneNodeData) {
 		item.text || '',
 		item.name || '',
 		item.id === state.selectedId ? 'selected' : 'normal',
+		item.kind === 'Camera' ? tostring(gameWidthOf(state)) + 'x' + tostring(gameHeightOf(state)) : '',
 	].join('|');
 }
 
