@@ -211,6 +211,12 @@ export function drawViewportPanel(state: EditorState) {
 	ImGui.Dummy(Vec2(viewportWidth, viewportHeight));
 	const hovered = ImGui.IsItemHovered();
 	handleViewportMouse(state, hovered);
+	if (state.isPlaying) {
+		ImGui.SetCursorScreenPos(Vec2(cursor.x + 12, cursor.y + 10));
+		ImGui.TextColored(okColor, zh ? '▶ 运行模式' : '▶ PLAY MODE');
+		ImGui.SameLine();
+		ImGui.TextDisabled(zh ? 'Stop 后才能编辑场景' : 'Stop to edit the scene');
+	}
 	ImGui.SetCursorScreenPos(Vec2(cursor.x + viewportWidth - 142, cursor.y + 8));
 	if (state.isPlaying) {
 		ImGui.BeginDisabled(() => {

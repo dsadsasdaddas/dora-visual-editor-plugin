@@ -13,8 +13,8 @@ local Path = ____Dora.Path -- 1
 local Sprite = ____Dora.Sprite -- 1
 local Vec2 = ____Dora.Vec2 -- 1
 local ____Theme = require("Script.Tools.SceneEditor.Theme") -- 3
+local okColor = ____Theme.okColor -- 3
 local viewportBgColor = ____Theme.viewportBgColor -- 3
-local viewportFrameColor = ____Theme.viewportFrameColor -- 3
 local ____Model = require("Script.Tools.SceneEditor.Model") -- 4
 local pushConsole = ____Model.pushConsole -- 4
 local zh = ____Model.zh -- 4
@@ -51,8 +51,8 @@ local function makeGameBackground(width, height) -- 29
 			Vec2(-hw, hh) -- 37
 		}, -- 37
 		viewportBgColor, -- 38
-		1, -- 38
-		viewportFrameColor -- 38
+		1.4, -- 38
+		okColor -- 38
 	) -- 38
 	return bg -- 39
 end -- 29

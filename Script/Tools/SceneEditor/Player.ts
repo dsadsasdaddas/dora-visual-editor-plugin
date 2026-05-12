@@ -1,6 +1,6 @@
 import { App, ClipNode, Color, Content, Director, DrawNode, Label, Node, Path, Sprite, Vec2 } from 'Dora';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/Types';
-import { viewportBgColor, viewportFrameColor } from 'Script/Tools/SceneEditor/Theme';
+import { okColor, viewportBgColor } from 'Script/Tools/SceneEditor/Theme';
 import { pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 
 declare function load(code: string, chunkname?: string): LuaMultiReturn<[(() => unknown) | undefined, string | undefined]>;
@@ -35,7 +35,7 @@ function makeGameBackground(width: number, height: number) {
 		Vec2(hw, -hh),
 		Vec2(hw, hh),
 		Vec2(-hw, hh),
-	], viewportBgColor, 1, viewportFrameColor);
+	], viewportBgColor, 1.4, okColor);
 	return bg;
 }
 

@@ -242,45 +242,51 @@ function ____exports.drawViewportPanel(state) -- 149
 	ImGui.Dummy(Vec2(viewportWidth, viewportHeight)) -- 211
 	local hovered = ImGui.IsItemHovered() -- 212
 	handleViewportMouse(state, hovered) -- 213
-	ImGui.SetCursorScreenPos(Vec2(cursor.x + viewportWidth - 142, cursor.y + 8)) -- 214
-	if state.isPlaying then -- 214
-		ImGui.BeginDisabled(function() -- 216
-			ImGui.SmallButton("-##viewport_zoom_out") -- 217
-			ImGui.SameLine() -- 218
-			ImGui.SmallButton(tostring(math.floor(state.zoom)) .. "%") -- 219
-			ImGui.SameLine() -- 220
-			ImGui.SmallButton("+##viewport_zoom_in") -- 221
-		end) -- 216
-	else -- 216
-		if ImGui.SmallButton("-##viewport_zoom_out") then -- 216
-			zoomViewportFromCenter(state, -10) -- 224
-		end -- 224
-		ImGui.SameLine() -- 225
-		ImGui.PushStyleColor( -- 226
-			"Text", -- 226
-			themeColor, -- 226
-			function() -- 226
-				if ImGui.SmallButton(tostring(math.floor(state.zoom)) .. "%") then -- 226
-					state.zoom = 100 -- 228
-					state.viewportPanX = 0 -- 229
-					state.viewportPanY = 0 -- 230
-					state.previewDirty = true -- 231
-				end -- 231
-			end -- 226
-		) -- 226
-		ImGui.SameLine() -- 234
-		if ImGui.SmallButton("+##viewport_zoom_in") then -- 234
-			zoomViewportFromCenter(state, 10) -- 235
-		end -- 235
-	end -- 235
-	ImGui.SetCursorScreenPos(Vec2(cursor.x, cursor.y + viewportHeight + 4)) -- 237
-	ImGui.Separator() -- 238
-	ImGui.TextColored(okColor, zh and "场景视口" or "Scene Viewport") -- 239
-	ImGui.SameLine() -- 240
-	if state.isPlaying then -- 240
-		ImGui.TextDisabled(zh and "运行中：编辑器已锁定；只能由游戏脚本/输入改变运行画面。点 Stop 返回编辑。" or "Play Mode: editor is locked; only game scripts/input can change the runtime view. Stop to edit.") -- 242
-	else -- 242
-		ImGui.TextDisabled(zh and "滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。" or "Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.") -- 244
-	end -- 244
+	if state.isPlaying then -- 213
+		ImGui.SetCursorScreenPos(Vec2(cursor.x + 12, cursor.y + 10)) -- 215
+		ImGui.TextColored(okColor, zh and "▶ 运行模式" or "▶ PLAY MODE") -- 216
+		ImGui.SameLine() -- 217
+		ImGui.TextDisabled(zh and "Stop 后才能编辑场景" or "Stop to edit the scene") -- 218
+	end -- 218
+	ImGui.SetCursorScreenPos(Vec2(cursor.x + viewportWidth - 142, cursor.y + 8)) -- 220
+	if state.isPlaying then -- 220
+		ImGui.BeginDisabled(function() -- 222
+			ImGui.SmallButton("-##viewport_zoom_out") -- 223
+			ImGui.SameLine() -- 224
+			ImGui.SmallButton(tostring(math.floor(state.zoom)) .. "%") -- 225
+			ImGui.SameLine() -- 226
+			ImGui.SmallButton("+##viewport_zoom_in") -- 227
+		end) -- 222
+	else -- 222
+		if ImGui.SmallButton("-##viewport_zoom_out") then -- 222
+			zoomViewportFromCenter(state, -10) -- 230
+		end -- 230
+		ImGui.SameLine() -- 231
+		ImGui.PushStyleColor( -- 232
+			"Text", -- 232
+			themeColor, -- 232
+			function() -- 232
+				if ImGui.SmallButton(tostring(math.floor(state.zoom)) .. "%") then -- 232
+					state.zoom = 100 -- 234
+					state.viewportPanX = 0 -- 235
+					state.viewportPanY = 0 -- 236
+					state.previewDirty = true -- 237
+				end -- 237
+			end -- 232
+		) -- 232
+		ImGui.SameLine() -- 240
+		if ImGui.SmallButton("+##viewport_zoom_in") then -- 240
+			zoomViewportFromCenter(state, 10) -- 241
+		end -- 241
+	end -- 241
+	ImGui.SetCursorScreenPos(Vec2(cursor.x, cursor.y + viewportHeight + 4)) -- 243
+	ImGui.Separator() -- 244
+	ImGui.TextColored(okColor, zh and "场景视口" or "Scene Viewport") -- 245
+	ImGui.SameLine() -- 246
+	if state.isPlaying then -- 246
+		ImGui.TextDisabled(zh and "运行中：编辑器已锁定；只能由游戏脚本/输入改变运行画面。点 Stop 返回编辑。" or "Play Mode: editor is locked; only game scripts/input can change the runtime view. Stop to edit.") -- 248
+	else -- 248
+		ImGui.TextDisabled(zh and "滚轮缩放；中键/Space+拖动平移；触控板双指滚动等价滚轮。" or "Wheel zoom; MMB or Space+drag pans; trackpad two-finger scroll is wheel.") -- 250
+	end -- 250
 end -- 149
 return ____exports -- 149

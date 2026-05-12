@@ -1,12 +1,18 @@
 import * as ImGui from 'ImGui';
 import { EditorState } from 'Script/Tools/SceneEditor/Types';
-import { themeColor } from 'Script/Tools/SceneEditor/Theme';
+import { okColor, themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { deleteNode, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 import { startPlay, stopPlay } from 'Script/Tools/SceneEditor/Player';
 import { drawAddNodePopup } from 'Script/Tools/SceneEditor/Panels/AddNodePopup';
 
 export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorState) => void) {
 	ImGui.TextColored(themeColor, '✦ Dora Visual Editor');
+	if (state.isPlaying) {
+		ImGui.SameLine();
+		ImGui.TextColored(okColor, zh ? '● 运行模式' : '● PLAY MODE');
+		ImGui.SameLine();
+		ImGui.TextDisabled(zh ? '点 Stop 返回编辑' : 'Stop to edit');
+	}
 	ImGui.SameLine();
 	if (ImGui.Button(zh ? '场景' : 'Scene')) state.mode = '2D';
 	ImGui.SameLine();

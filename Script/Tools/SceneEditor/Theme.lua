@@ -27,6 +27,6 @@ ____exports.mainWindowFlags = { -- 20
 	"NoBringToFrontOnFocus", -- 27
 	"NoScrollbar" -- 28
 } -- 28
-____exports.noScrollFlags = {"NoScrollbar", "NoScrollWithMouse"} -- 29
-____exports.inputTextFlags = {"AutoSelectAll"} -- 34
-return ____exports -- 34
+____exports.noScrollFlags = {"NoScrollbar", "NoScrollWithMouse"} -- 31
+____exports.inputTextFlags = {"AutoSelectAll"} -- 36
+return ____exports -- 36
