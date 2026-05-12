@@ -1,31 +1,12 @@
 import { App, ClipNode, Color, Content, Director, DrawNode, Label, Node, Path, Sprite, Vec2 } from 'Dora';
-import * as ImGui from 'ImGui';
-import { SetCond, WindowFlag } from 'ImGui';
-import { EditorState, SceneNodeData, ViewportState } from 'Script/Tools/SceneEditor/Types';
-import { okColor, panelBg, themeColor, viewportBgColor, viewportFrameColor, warnColor } from 'Script/Tools/SceneEditor/Theme';
+import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/Types';
+import { viewportBgColor, viewportFrameColor } from 'Script/Tools/SceneEditor/Theme';
 import { pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 
 declare function load(code: string, chunkname?: string): LuaMultiReturn<[(() => unknown) | undefined, string | undefined]>;
 declare function pcall(fn: () => unknown): LuaMultiReturn<[boolean, unknown]>;
 declare function type(value: unknown): string;
 
-
-type PlayEditorState = EditorState & {
-	playWindow?: ViewportState;
-	playWindowBackground?: Node.Type;
-};
-
-function playStateOf(state: EditorState) {
-	return state as PlayEditorState;
-}
-
-function ensurePlayWindowState(state: EditorState) {
-	const playState = playStateOf(state);
-	if (playState.playWindow === undefined) {
-		playState.playWindow = { x: 0, y: 0, width: 960, height: 620 };
-	}
-	return playState.playWindow;
-}
 
 function worldPointFromScreen(screenX: number, screenY: number): [number, number] {
 	const size = App.visualSize;
@@ -55,19 +36,6 @@ function makeGameBackground(width: number, height: number) {
 		Vec2(hw, hh),
 		Vec2(-hw, hh),
 	], viewportBgColor, 1, viewportFrameColor);
-	return bg;
-}
-
-function makeWindowBackground(width: number, height: number) {
-	const hw = width / 2;
-	const hh = height / 2;
-	const bg = DrawNode();
-	bg.drawPolygon([
-		Vec2(-hw, -hh),
-		Vec2(hw, -hh),
-		Vec2(hw, hh),
-		Vec2(-hw, hh),
-	], panelBg, 1, viewportFrameColor);
 	return bg;
 }
 
@@ -152,7 +120,6 @@ function clearPlayRuntime(state: EditorState) {
 		state.playRoot.removeFromParent(true);
 		state.playRoot = undefined;
 	}
-	playStateOf(state).playWindowBackground = undefined;
 	state.playWorld = undefined;
 	state.playContent = undefined;
 	state.playRuntimeNodes = {};
@@ -186,15 +153,9 @@ function rebuildPlayRuntime(state: EditorState) {
 	state.playRuntimeNodes = {};
 	state.playRuntimeLabels = {};
 
-	const playWindow = ensurePlayWindowState(state);
-	const windowWidth = math.max(320, playWindow.width);
-	const windowHeight = math.max(260, playWindow.height);
-	const playState = playStateOf(state);
-	playState.playWindowBackground = makeWindowBackground(windowWidth, windowHeight);
-	state.playRoot.addChild(playState.playWindowBackground);
-
-	const width = math.max(160, state.playViewport.width);
-	const height = math.max(120, state.playViewport.height);
+	const renderScale = App.devicePixelRatio || 1;
+	const width = math.max(160, state.playViewport.width * renderScale);
+	const height = math.max(120, state.playViewport.height * renderScale);
 	const clip = ClipNode(makeClipStencil(width, height));
 	clip.alphaThreshold = 0.01;
 	state.playRoot.addChild(clip);
@@ -236,20 +197,6 @@ function rebuildPlayRuntime(state: EditorState) {
 	state.playDirty = false;
 }
 
-function updatePlayWindowBackground(state: EditorState) {
-	const playState = playStateOf(state);
-	const bg = playState.playWindowBackground;
-	if (bg === undefined) return;
-	const p = state.playViewport;
-	const w = ensurePlayWindowState(state);
-	const contentCenterX = p.x + p.width / 2;
-	const contentCenterY = p.y + p.height / 2;
-	const windowCenterX = w.x + w.width / 2;
-	const windowCenterY = w.y + w.height / 2;
-	bg.x = windowCenterX - contentCenterX;
-	bg.y = contentCenterY - windowCenterY;
-}
-
 function updatePlayRuntime(state: EditorState) {
 	if (!state.isPlaying) return;
 	if (state.playDirty || state.playRoot === undefined) rebuildPlayRuntime(state);
@@ -259,52 +206,19 @@ function updatePlayRuntime(state: EditorState) {
 		state.playRoot.x = cx;
 		state.playRoot.y = cy;
 	}
-	updatePlayWindowBackground(state);
 }
 
-export function drawGamePreviewWindow(state: EditorState) {
-	if (!state.gameWindowOpen) return;
-	const appSize = App.visualSize;
-	ImGui.SetNextWindowSize(Vec2(math.min(960, appSize.width - 80), math.min(620, appSize.height - 80)), SetCond.FirstUseEver);
-	ImGui.SetNextWindowBgAlpha(0.02);
-	ImGui.Begin('Game Preview', [WindowFlag.NoSavedSettings], () => {
-		if (state.isPlaying) {
-			ImGui.TextColored(okColor, zh ? '运行中' : 'Running');
-			ImGui.SameLine();
-			if (ImGui.Button('■ Stop')) stopPlay(state);
-			ImGui.SameLine();
-			if (ImGui.Button('↻ Restart')) startPlay(state);
-		} else {
-			ImGui.TextColored(warnColor, zh ? '已停止' : 'Stopped');
-			ImGui.SameLine();
-			if (ImGui.Button('▶ Run')) startPlay(state);
-		}
-		ImGui.SameLine();
-		ImGui.TextDisabled(zh ? '这是独立 Game 预览，不是编辑视口。' : 'Independent game preview, not the editor viewport.');
-		ImGui.Separator();
-		const windowPos = ImGui.GetWindowPos();
-		const windowSize = ImGui.GetWindowSize();
-		const playWindow = ensurePlayWindowState(state);
-		if (math.abs(playWindow.width - windowSize.x) > 1 || math.abs(playWindow.height - windowSize.y) > 1) {
-			state.playDirty = true;
-		}
-		playWindow.x = windowPos.x;
-		playWindow.y = windowPos.y;
-		playWindow.width = windowSize.x;
-		playWindow.height = windowSize.y;
 
-		const cursor = ImGui.GetCursorScreenPos();
-		const avail = ImGui.GetContentRegionAvail();
-		const width = math.max(320, avail.x);
-		const height = math.max(240, avail.y);
-		if (math.abs(state.playViewport.width - width) > 1 || math.abs(state.playViewport.height - height) > 1) {
-			state.playDirty = true;
-		}
-		state.playViewport.x = cursor.x;
-		state.playViewport.y = cursor.y;
-		state.playViewport.width = width;
-		state.playViewport.height = height;
-		updatePlayRuntime(state);
-		ImGui.Dummy(Vec2(width, height));
-	});
+export function drawGamePreviewWindow(state: EditorState) {
+	if (!state.isPlaying) return;
+	const p = state.preview;
+	if (math.abs(state.playViewport.x - p.x) > 1 || math.abs(state.playViewport.y - p.y) > 1
+		|| math.abs(state.playViewport.width - p.width) > 1 || math.abs(state.playViewport.height - p.height) > 1) {
+		state.playViewport.x = p.x;
+		state.playViewport.y = p.y;
+		state.playViewport.width = p.width;
+		state.playViewport.height = p.height;
+		state.playDirty = true;
+	}
+	updatePlayRuntime(state);
 }

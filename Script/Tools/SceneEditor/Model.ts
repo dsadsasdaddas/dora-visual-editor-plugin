@@ -84,7 +84,6 @@ export function createEditorState(): EditorState {
 		viewportPanY: 0,
 		draggingViewport: false,
 	};
-	(state as any).playWindow = { x: 0, y: 0, width: 960, height: 620 };
 	refreshImportedAssets(state);
 	return state;
 }

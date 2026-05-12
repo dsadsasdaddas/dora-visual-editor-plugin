@@ -57,10 +57,8 @@ export interface EditorState {
 	isPlaying: boolean;
 	gameWindowOpen: boolean;
 	playViewport: ViewportState;
-	playWindow: ViewportState;
 	playDirty: boolean;
 	playRoot?: Node.Type;
-	playWindowBackground?: Node.Type;
 	playWorld?: Node.Type;
 	playContent?: Node.Type;
 	playRuntimeNodes: Record<string, Node.Type>;

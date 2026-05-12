@@ -126,7 +126,9 @@ export function drawEditor(state: EditorState) {
 	const windowHeight = math.max(260, size.height - margin * 2 - nativeFooterSafeArea);
 	ImGui.SetNextWindowPos(Vec2(margin, margin), SetCond.Always);
 	ImGui.SetNextWindowSize(Vec2(windowWidth, windowHeight), SetCond.Always);
-	ImGui.SetNextWindowBgAlpha(state.mode === 'Script' ? 0.96 : 0.10);
+	// Scene mode keeps the main ImGui window transparent so the real Dora viewport
+	// underneath is not dimmed or color-shifted. Dock panels draw their own bg.
+	ImGui.SetNextWindowBgAlpha(state.mode === 'Script' ? 0.96 : 0.0);
 	ImGui.Begin('Dora Visual Editor', mainWindowFlags, () => {
 		drawHeaderPanel(state, saveScene);
 		const avail = ImGui.GetContentRegionAvail();
@@ -177,9 +179,11 @@ export function drawEditor(state: EditorState) {
 			}
 		};
 
-		ImGui.BeginChild('LeftDock', Vec2(state.leftWidth, mainHeight), [], noScrollFlags, () => {
-			ImGui.BeginChild('SceneDock', Vec2(0, leftTopHeight), [], noScrollFlags, () => drawSceneTreePanel(state));
-			ImGui.BeginChild('AssetDock', Vec2(0, leftBottomHeight), [], noScrollFlags, () => drawAssetsPanel(state, bindTextureToSprite, createSpriteFromTexture, attachScriptToNode));
+		ImGui.PushStyleColor(StyleColor.ChildBg, panelBg, () => {
+			ImGui.BeginChild('LeftDock', Vec2(state.leftWidth, mainHeight), [], noScrollFlags, () => {
+				ImGui.BeginChild('SceneDock', Vec2(0, leftTopHeight), [], noScrollFlags, () => drawSceneTreePanel(state));
+				ImGui.BeginChild('AssetDock', Vec2(0, leftBottomHeight), [], noScrollFlags, () => drawAssetsPanel(state, bindTextureToSprite, createSpriteFromTexture, attachScriptToNode));
+			});
 		});
 		ImGui.SameLine(0, 0);
 		drawVerticalSplitter('LeftSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'left'));
@@ -192,8 +196,12 @@ export function drawEditor(state: EditorState) {
 		ImGui.SameLine(0, 0);
 		drawVerticalSplitter('RightSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'right'));
 		ImGui.SameLine(0, 0);
-		ImGui.BeginChild('RightDock', Vec2(state.rightWidth, mainHeight), [], noScrollFlags, () => drawInspectorPanel(state, bindTextureToSprite, openNodeScriptInEditor));
-		ImGui.BeginChild('BottomConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsolePanel(state));
+		ImGui.PushStyleColor(StyleColor.ChildBg, panelBg, () => {
+			ImGui.BeginChild('RightDock', Vec2(state.rightWidth, mainHeight), [], noScrollFlags, () => drawInspectorPanel(state, bindTextureToSprite, openNodeScriptInEditor));
+		});
+		ImGui.PushStyleColor(StyleColor.ChildBg, panelBg, () => {
+			ImGui.BeginChild('BottomConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsolePanel(state));
+		});
 	});
 	drawGamePreviewWindow(state);
 }

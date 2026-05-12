@@ -163,184 +163,202 @@ function ____exports.drawEditor(state) -- 121
 		Vec2(windowWidth, windowHeight), -- 128
 		"Always" -- 128
 	) -- 128
-	ImGui.SetNextWindowBgAlpha(state.mode == "Script" and 0.96 or 0.1) -- 129
-	ImGui.Begin( -- 130
-		"Dora Visual Editor", -- 130
-		mainWindowFlags, -- 130
-		function() -- 130
-			drawHeaderPanel(state, saveScene) -- 131
-			local avail = ImGui.GetContentRegionAvail() -- 132
-			local bottomHeight = math.max( -- 133
-				72, -- 133
-				math.min( -- 133
-					state.bottomHeight, -- 133
-					math.floor(avail.y * 0.28) -- 133
-				) -- 133
-			) -- 133
-			if state.mode == "Script" then -- 133
-				local scriptHeight = math.max(180, avail.y - bottomHeight - 8) -- 135
-				ImGui.PushStyleColor( -- 136
-					"ChildBg", -- 136
-					panelBg, -- 136
-					function() -- 136
-						ImGui.BeginChild( -- 137
-							"ScriptWorkspaceRoot", -- 137
-							Vec2(0, scriptHeight), -- 137
-							{}, -- 137
-							noScrollFlags, -- 137
-							function() return drawScriptPanel(state, attachScriptToNode) end -- 137
-						) -- 137
-					end -- 136
-				) -- 136
-				ImGui.BeginChild( -- 139
-					"ScriptConsoleDock", -- 139
-					Vec2(0, bottomHeight), -- 139
-					{}, -- 139
-					noScrollFlags, -- 139
-					function() return drawConsolePanel(state) end -- 139
-				) -- 139
-				return -- 140
-			end -- 140
-			local mainHeight = math.max(160, avail.y - bottomHeight - 10) -- 142
-			local availableWidth = math.max(320, avail.x) -- 143
-			local splitterWidth = 8 -- 144
-			local compactLayout = availableWidth < 760 -- 145
-			local minLeftWidth = compactLayout and 110 or 170 -- 146
-			local minRightWidth = compactLayout and 130 or 220 -- 147
-			local minCenterWidth = compactLayout and 80 or 180 -- 148
-			local sideBudget = math.max(0, availableWidth - splitterWidth * 2 - minCenterWidth) -- 149
-			if sideBudget <= minLeftWidth + minRightWidth then -- 149
-				state.leftWidth = math.max( -- 151
-					1, -- 151
-					math.floor(sideBudget * 0.45) -- 151
-				) -- 151
-				state.rightWidth = math.max(1, sideBudget - state.leftWidth) -- 152
-			else -- 152
-				state.leftWidth = math.max(minLeftWidth, state.leftWidth) -- 154
-				state.rightWidth = math.max(minRightWidth, state.rightWidth) -- 155
-				if state.leftWidth + state.rightWidth > sideBudget then -- 155
-					local ratio = state.leftWidth / math.max(1, state.leftWidth + state.rightWidth) -- 157
-					state.leftWidth = math.max( -- 158
-						minLeftWidth, -- 158
-						math.floor(sideBudget * ratio) -- 158
-					) -- 158
-					state.rightWidth = math.max(minRightWidth, sideBudget - state.leftWidth) -- 159
-				end -- 159
-				state.leftWidth = math.min(state.leftWidth, sideBudget - minRightWidth) -- 161
-				state.rightWidth = math.min(state.rightWidth, sideBudget - state.leftWidth) -- 162
-			end -- 162
-			local centerWidth = math.max(1, availableWidth - state.leftWidth - state.rightWidth - splitterWidth * 2) -- 164
-			local leftTopHeight = math.floor(mainHeight * 0.58) -- 165
-			local leftBottomHeight = mainHeight - leftTopHeight - 8 -- 166
-			local function clampPanelWidth(value, minValue, maxValue) -- 167
-				local safeMax = math.max(1, maxValue) -- 168
-				local safeMin = math.min(minValue, safeMax) -- 169
-				return math.max( -- 170
-					safeMin, -- 170
-					math.min(value, safeMax) -- 170
-				) -- 170
-			end -- 167
-			local function resizeSidePanels(deltaX, side) -- 172
-				if side == "left" then -- 172
-					state.leftWidth = clampPanelWidth(state.leftWidth + deltaX, minLeftWidth, availableWidth - state.rightWidth - splitterWidth * 2 - minCenterWidth) -- 174
-				else -- 174
-					state.rightWidth = clampPanelWidth(state.rightWidth - deltaX, minRightWidth, availableWidth - state.leftWidth - splitterWidth * 2 - minCenterWidth) -- 176
-				end -- 176
-			end -- 172
-			ImGui.BeginChild( -- 180
-				"LeftDock", -- 180
-				Vec2(state.leftWidth, mainHeight), -- 180
-				{}, -- 180
-				noScrollFlags, -- 180
-				function() -- 180
-					ImGui.BeginChild( -- 181
-						"SceneDock", -- 181
-						Vec2(0, leftTopHeight), -- 181
-						{}, -- 181
-						noScrollFlags, -- 181
-						function() return drawSceneTreePanel(state) end -- 181
-					) -- 181
-					ImGui.BeginChild( -- 182
-						"AssetDock", -- 182
-						Vec2(0, leftBottomHeight), -- 182
-						{}, -- 182
-						noScrollFlags, -- 182
-						function() return drawAssetsPanel(state, bindTextureToSprite, createSpriteFromTexture, attachScriptToNode) end -- 182
-					) -- 182
-				end -- 180
-			) -- 180
-			ImGui.SameLine(0, 0) -- 184
-			drawVerticalSplitter( -- 185
-				"LeftSplitter", -- 185
-				mainHeight, -- 185
-				function(deltaX) return resizeSidePanels(deltaX, "left") end -- 185
-			) -- 185
-			ImGui.SameLine(0, 0) -- 186
-			ImGui.PushStyleColor( -- 187
-				"ChildBg", -- 187
-				transparent, -- 187
-				function() -- 187
-					ImGui.BeginChild( -- 188
-						"CenterDock", -- 188
-						Vec2(centerWidth, mainHeight), -- 188
-						{}, -- 188
-						noScrollFlags, -- 188
-						function() -- 188
-							if state.mode == "Script" then -- 188
-								drawScriptPanel(state, attachScriptToNode) -- 189
-							else -- 189
-								drawViewportPanel(state) -- 189
-							end -- 189
-						end -- 188
-					) -- 188
-				end -- 187
-			) -- 187
-			ImGui.SameLine(0, 0) -- 192
-			drawVerticalSplitter( -- 193
-				"RightSplitter", -- 193
-				mainHeight, -- 193
-				function(deltaX) return resizeSidePanels(deltaX, "right") end -- 193
-			) -- 193
-			ImGui.SameLine(0, 0) -- 194
-			ImGui.BeginChild( -- 195
-				"RightDock", -- 195
-				Vec2(state.rightWidth, mainHeight), -- 195
-				{}, -- 195
-				noScrollFlags, -- 195
-				function() return drawInspectorPanel(state, bindTextureToSprite, openNodeScriptInEditor) end -- 195
-			) -- 195
-			ImGui.BeginChild( -- 196
-				"BottomConsoleDock", -- 196
-				Vec2(0, bottomHeight), -- 196
-				{}, -- 196
-				noScrollFlags, -- 196
-				function() return drawConsolePanel(state) end -- 196
-			) -- 196
-		end -- 130
-	) -- 130
-	drawGamePreviewWindow(state) -- 198
+	ImGui.SetNextWindowBgAlpha(state.mode == "Script" and 0.96 or 0) -- 131
+	ImGui.Begin( -- 132
+		"Dora Visual Editor", -- 132
+		mainWindowFlags, -- 132
+		function() -- 132
+			drawHeaderPanel(state, saveScene) -- 133
+			local avail = ImGui.GetContentRegionAvail() -- 134
+			local bottomHeight = math.max( -- 135
+				72, -- 135
+				math.min( -- 135
+					state.bottomHeight, -- 135
+					math.floor(avail.y * 0.28) -- 135
+				) -- 135
+			) -- 135
+			if state.mode == "Script" then -- 135
+				local scriptHeight = math.max(180, avail.y - bottomHeight - 8) -- 137
+				ImGui.PushStyleColor( -- 138
+					"ChildBg", -- 138
+					panelBg, -- 138
+					function() -- 138
+						ImGui.BeginChild( -- 139
+							"ScriptWorkspaceRoot", -- 139
+							Vec2(0, scriptHeight), -- 139
+							{}, -- 139
+							noScrollFlags, -- 139
+							function() return drawScriptPanel(state, attachScriptToNode) end -- 139
+						) -- 139
+					end -- 138
+				) -- 138
+				ImGui.BeginChild( -- 141
+					"ScriptConsoleDock", -- 141
+					Vec2(0, bottomHeight), -- 141
+					{}, -- 141
+					noScrollFlags, -- 141
+					function() return drawConsolePanel(state) end -- 141
+				) -- 141
+				return -- 142
+			end -- 142
+			local mainHeight = math.max(160, avail.y - bottomHeight - 10) -- 144
+			local availableWidth = math.max(320, avail.x) -- 145
+			local splitterWidth = 8 -- 146
+			local compactLayout = availableWidth < 760 -- 147
+			local minLeftWidth = compactLayout and 110 or 170 -- 148
+			local minRightWidth = compactLayout and 130 or 220 -- 149
+			local minCenterWidth = compactLayout and 80 or 180 -- 150
+			local sideBudget = math.max(0, availableWidth - splitterWidth * 2 - minCenterWidth) -- 151
+			if sideBudget <= minLeftWidth + minRightWidth then -- 151
+				state.leftWidth = math.max( -- 153
+					1, -- 153
+					math.floor(sideBudget * 0.45) -- 153
+				) -- 153
+				state.rightWidth = math.max(1, sideBudget - state.leftWidth) -- 154
+			else -- 154
+				state.leftWidth = math.max(minLeftWidth, state.leftWidth) -- 156
+				state.rightWidth = math.max(minRightWidth, state.rightWidth) -- 157
+				if state.leftWidth + state.rightWidth > sideBudget then -- 157
+					local ratio = state.leftWidth / math.max(1, state.leftWidth + state.rightWidth) -- 159
+					state.leftWidth = math.max( -- 160
+						minLeftWidth, -- 160
+						math.floor(sideBudget * ratio) -- 160
+					) -- 160
+					state.rightWidth = math.max(minRightWidth, sideBudget - state.leftWidth) -- 161
+				end -- 161
+				state.leftWidth = math.min(state.leftWidth, sideBudget - minRightWidth) -- 163
+				state.rightWidth = math.min(state.rightWidth, sideBudget - state.leftWidth) -- 164
+			end -- 164
+			local centerWidth = math.max(1, availableWidth - state.leftWidth - state.rightWidth - splitterWidth * 2) -- 166
+			local leftTopHeight = math.floor(mainHeight * 0.58) -- 167
+			local leftBottomHeight = mainHeight - leftTopHeight - 8 -- 168
+			local function clampPanelWidth(value, minValue, maxValue) -- 169
+				local safeMax = math.max(1, maxValue) -- 170
+				local safeMin = math.min(minValue, safeMax) -- 171
+				return math.max( -- 172
+					safeMin, -- 172
+					math.min(value, safeMax) -- 172
+				) -- 172
+			end -- 169
+			local function resizeSidePanels(deltaX, side) -- 174
+				if side == "left" then -- 174
+					state.leftWidth = clampPanelWidth(state.leftWidth + deltaX, minLeftWidth, availableWidth - state.rightWidth - splitterWidth * 2 - minCenterWidth) -- 176
+				else -- 176
+					state.rightWidth = clampPanelWidth(state.rightWidth - deltaX, minRightWidth, availableWidth - state.leftWidth - splitterWidth * 2 - minCenterWidth) -- 178
+				end -- 178
+			end -- 174
+			ImGui.PushStyleColor( -- 182
+				"ChildBg", -- 182
+				panelBg, -- 182
+				function() -- 182
+					ImGui.BeginChild( -- 183
+						"LeftDock", -- 183
+						Vec2(state.leftWidth, mainHeight), -- 183
+						{}, -- 183
+						noScrollFlags, -- 183
+						function() -- 183
+							ImGui.BeginChild( -- 184
+								"SceneDock", -- 184
+								Vec2(0, leftTopHeight), -- 184
+								{}, -- 184
+								noScrollFlags, -- 184
+								function() return drawSceneTreePanel(state) end -- 184
+							) -- 184
+							ImGui.BeginChild( -- 185
+								"AssetDock", -- 185
+								Vec2(0, leftBottomHeight), -- 185
+								{}, -- 185
+								noScrollFlags, -- 185
+								function() return drawAssetsPanel(state, bindTextureToSprite, createSpriteFromTexture, attachScriptToNode) end -- 185
+							) -- 185
+						end -- 183
+					) -- 183
+				end -- 182
+			) -- 182
+			ImGui.SameLine(0, 0) -- 188
+			drawVerticalSplitter( -- 189
+				"LeftSplitter", -- 189
+				mainHeight, -- 189
+				function(deltaX) return resizeSidePanels(deltaX, "left") end -- 189
+			) -- 189
+			ImGui.SameLine(0, 0) -- 190
+			ImGui.PushStyleColor( -- 191
+				"ChildBg", -- 191
+				transparent, -- 191
+				function() -- 191
+					ImGui.BeginChild( -- 192
+						"CenterDock", -- 192
+						Vec2(centerWidth, mainHeight), -- 192
+						{}, -- 192
+						noScrollFlags, -- 192
+						function() -- 192
+							if state.mode == "Script" then -- 192
+								drawScriptPanel(state, attachScriptToNode) -- 193
+							else -- 193
+								drawViewportPanel(state) -- 193
+							end -- 193
+						end -- 192
+					) -- 192
+				end -- 191
+			) -- 191
+			ImGui.SameLine(0, 0) -- 196
+			drawVerticalSplitter( -- 197
+				"RightSplitter", -- 197
+				mainHeight, -- 197
+				function(deltaX) return resizeSidePanels(deltaX, "right") end -- 197
+			) -- 197
+			ImGui.SameLine(0, 0) -- 198
+			ImGui.PushStyleColor( -- 199
+				"ChildBg", -- 199
+				panelBg, -- 199
+				function() -- 199
+					ImGui.BeginChild( -- 200
+						"RightDock", -- 200
+						Vec2(state.rightWidth, mainHeight), -- 200
+						{}, -- 200
+						noScrollFlags, -- 200
+						function() return drawInspectorPanel(state, bindTextureToSprite, openNodeScriptInEditor) end -- 200
+					) -- 200
+				end -- 199
+			) -- 199
+			ImGui.PushStyleColor( -- 202
+				"ChildBg", -- 202
+				panelBg, -- 202
+				function() -- 202
+					ImGui.BeginChild( -- 203
+						"BottomConsoleDock", -- 203
+						Vec2(0, bottomHeight), -- 203
+						{}, -- 203
+						noScrollFlags, -- 203
+						function() return drawConsolePanel(state) end -- 203
+					) -- 203
+				end -- 202
+			) -- 202
+		end -- 132
+	) -- 132
+	drawGamePreviewWindow(state) -- 206
 end -- 121
-function ____exports.drawRuntimeError(message) -- 201
-	local size = App.visualSize -- 202
-	ImGui.SetNextWindowPos( -- 203
-		Vec2(10, 10), -- 203
-		"Always" -- 203
-	) -- 203
-	ImGui.SetNextWindowSize( -- 204
-		Vec2( -- 204
-			math.max(320, size.width - 20), -- 204
-			math.max(220, size.height - 20) -- 204
-		), -- 204
-		"Always" -- 204
-	) -- 204
-	ImGui.Begin( -- 205
-		"Dora Visual Editor Error", -- 205
-		mainWindowFlags, -- 205
-		function() -- 205
-			ImGui.TextColored(warnColor, zh and "Dora Visual Editor 运行时错误" or "Dora Visual Editor Runtime Error") -- 206
-			ImGui.Separator() -- 207
-			ImGui.TextWrapped(message or "unknown error") -- 208
-		end -- 205
-	) -- 205
-end -- 201
-return ____exports -- 201
+function ____exports.drawRuntimeError(message) -- 209
+	local size = App.visualSize -- 210
+	ImGui.SetNextWindowPos( -- 211
+		Vec2(10, 10), -- 211
+		"Always" -- 211
+	) -- 211
+	ImGui.SetNextWindowSize( -- 212
+		Vec2( -- 212
+			math.max(320, size.width - 20), -- 212
+			math.max(220, size.height - 20) -- 212
+		), -- 212
+		"Always" -- 212
+	) -- 212
+	ImGui.Begin( -- 213
+		"Dora Visual Editor Error", -- 213
+		mainWindowFlags, -- 213
+		function() -- 213
+			ImGui.TextColored(warnColor, zh and "Dora Visual Editor 运行时错误" or "Dora Visual Editor Runtime Error") -- 214
+			ImGui.Separator() -- 215
+			ImGui.TextWrapped(message or "unknown error") -- 216
+		end -- 213
+	) -- 213
+end -- 209
+return ____exports -- 209

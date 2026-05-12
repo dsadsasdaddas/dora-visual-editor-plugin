@@ -12,379 +12,277 @@ local Node = ____Dora.Node -- 1
 local Path = ____Dora.Path -- 1
 local Sprite = ____Dora.Sprite -- 1
 local Vec2 = ____Dora.Vec2 -- 1
-local ImGui = require("ImGui") -- 2
-local ____Theme = require("Script.Tools.SceneEditor.Theme") -- 5
-local okColor = ____Theme.okColor -- 5
-local panelBg = ____Theme.panelBg -- 5
-local viewportBgColor = ____Theme.viewportBgColor -- 5
-local viewportFrameColor = ____Theme.viewportFrameColor -- 5
-local warnColor = ____Theme.warnColor -- 5
-local ____Model = require("Script.Tools.SceneEditor.Model") -- 6
-local pushConsole = ____Model.pushConsole -- 6
-local zh = ____Model.zh -- 6
-local function playStateOf(state) -- 18
-	return state -- 19
-end -- 18
-local function ensurePlayWindowState(state) -- 22
-	local playState = playStateOf(state) -- 23
-	if playState.playWindow == nil then -- 23
-		playState.playWindow = {x = 0, y = 0, width = 960, height = 620} -- 25
-	end -- 25
-	return playState.playWindow -- 27
-end -- 22
-local function worldPointFromScreen(screenX, screenY) -- 30
-	local size = App.visualSize -- 31
-	return {screenX - size.width / 2, size.height / 2 - screenY} -- 32
-end -- 30
-local function makeClipStencil(width, height) -- 35
-	local hw = width / 2 -- 36
-	local hh = height / 2 -- 37
-	local stencil = DrawNode() -- 38
-	stencil:drawPolygon( -- 39
-		{ -- 39
-			Vec2(-hw, -hh), -- 40
-			Vec2(hw, -hh), -- 41
-			Vec2(hw, hh), -- 42
-			Vec2(-hw, hh) -- 43
-		}, -- 43
-		Color(4294967295), -- 44
-		0, -- 44
-		Color() -- 44
-	) -- 44
-	return stencil -- 45
-end -- 35
-local function makeGameBackground(width, height) -- 48
-	local hw = width / 2 -- 49
-	local hh = height / 2 -- 50
-	local bg = DrawNode() -- 51
-	bg:drawPolygon( -- 52
-		{ -- 52
-			Vec2(-hw, -hh), -- 53
-			Vec2(hw, -hh), -- 54
-			Vec2(hw, hh), -- 55
-			Vec2(-hw, hh) -- 56
-		}, -- 56
-		viewportBgColor, -- 57
-		1, -- 57
-		viewportFrameColor -- 57
-	) -- 57
-	return bg -- 58
-end -- 48
-local function makeWindowBackground(width, height) -- 61
-	local hw = width / 2 -- 62
-	local hh = height / 2 -- 63
-	local bg = DrawNode() -- 64
-	bg:drawPolygon( -- 65
-		{ -- 65
-			Vec2(-hw, -hh), -- 66
-			Vec2(hw, -hh), -- 67
-			Vec2(hw, hh), -- 68
-			Vec2(-hw, hh) -- 69
-		}, -- 69
-		panelBg, -- 70
-		1, -- 70
-		viewportFrameColor -- 70
-	) -- 70
-	return bg -- 71
-end -- 61
-local function makeFallbackRect(width, height, color) -- 74
-	local hw = width / 2 -- 75
-	local hh = height / 2 -- 76
-	local rect = DrawNode() -- 77
-	rect:drawSegment( -- 78
-		Vec2(-hw, -hh), -- 78
-		Vec2(hw, -hh), -- 78
-		1, -- 78
-		color -- 78
-	) -- 78
-	rect:drawSegment( -- 79
-		Vec2(hw, -hh), -- 79
-		Vec2(hw, hh), -- 79
-		1, -- 79
-		color -- 79
-	) -- 79
-	rect:drawSegment( -- 80
-		Vec2(hw, hh), -- 80
-		Vec2(-hw, hh), -- 80
-		1, -- 80
-		color -- 80
-	) -- 80
-	rect:drawSegment( -- 81
-		Vec2(-hw, hh), -- 81
-		Vec2(-hw, -hh), -- 81
-		1, -- 81
-		color -- 81
-	) -- 81
-	return rect -- 82
-end -- 74
-local function createPlayVisual(item) -- 85
-	if item.kind == "Sprite" then -- 85
-		if item.texture ~= "" then -- 85
-			local sprite = Sprite(item.texture) -- 88
-			if sprite ~= nil then -- 88
-				return sprite -- 89
-			end -- 89
-		end -- 89
-		return makeFallbackRect( -- 91
-			128, -- 91
-			96, -- 91
-			Color(2859640520) -- 91
-		) -- 91
+local ____Theme = require("Script.Tools.SceneEditor.Theme") -- 3
+local viewportBgColor = ____Theme.viewportBgColor -- 3
+local viewportFrameColor = ____Theme.viewportFrameColor -- 3
+local ____Model = require("Script.Tools.SceneEditor.Model") -- 4
+local pushConsole = ____Model.pushConsole -- 4
+local zh = ____Model.zh -- 4
+local function worldPointFromScreen(screenX, screenY) -- 11
+	local size = App.visualSize -- 12
+	return {screenX - size.width / 2, size.height / 2 - screenY} -- 13
+end -- 11
+local function makeClipStencil(width, height) -- 16
+	local hw = width / 2 -- 17
+	local hh = height / 2 -- 18
+	local stencil = DrawNode() -- 19
+	stencil:drawPolygon( -- 20
+		{ -- 20
+			Vec2(-hw, -hh), -- 21
+			Vec2(hw, -hh), -- 22
+			Vec2(hw, hh), -- 23
+			Vec2(-hw, hh) -- 24
+		}, -- 24
+		Color(4294967295), -- 25
+		0, -- 25
+		Color() -- 25
+	) -- 25
+	return stencil -- 26
+end -- 16
+local function makeGameBackground(width, height) -- 29
+	local hw = width / 2 -- 30
+	local hh = height / 2 -- 31
+	local bg = DrawNode() -- 32
+	bg:drawPolygon( -- 33
+		{ -- 33
+			Vec2(-hw, -hh), -- 34
+			Vec2(hw, -hh), -- 35
+			Vec2(hw, hh), -- 36
+			Vec2(-hw, hh) -- 37
+		}, -- 37
+		viewportBgColor, -- 38
+		1, -- 38
+		viewportFrameColor -- 38
+	) -- 38
+	return bg -- 39
+end -- 29
+local function makeFallbackRect(width, height, color) -- 42
+	local hw = width / 2 -- 43
+	local hh = height / 2 -- 44
+	local rect = DrawNode() -- 45
+	rect:drawSegment( -- 46
+		Vec2(-hw, -hh), -- 46
+		Vec2(hw, -hh), -- 46
+		1, -- 46
+		color -- 46
+	) -- 46
+	rect:drawSegment( -- 47
+		Vec2(hw, -hh), -- 47
+		Vec2(hw, hh), -- 47
+		1, -- 47
+		color -- 47
+	) -- 47
+	rect:drawSegment( -- 48
+		Vec2(hw, hh), -- 48
+		Vec2(-hw, hh), -- 48
+		1, -- 48
+		color -- 48
+	) -- 48
+	rect:drawSegment( -- 49
+		Vec2(-hw, hh), -- 49
+		Vec2(-hw, -hh), -- 49
+		1, -- 49
+		color -- 49
+	) -- 49
+	return rect -- 50
+end -- 42
+local function createPlayVisual(item) -- 53
+	if item.kind == "Sprite" then -- 53
+		if item.texture ~= "" then -- 53
+			local sprite = Sprite(item.texture) -- 56
+			if sprite ~= nil then -- 56
+				return sprite -- 57
+			end -- 57
+		end -- 57
+		return makeFallbackRect( -- 59
+			128, -- 59
+			96, -- 59
+			Color(2859640520) -- 59
+		) -- 59
+	end -- 59
+	if item.kind == "Label" then -- 59
+		local label = Label("sarasa-mono-sc-regular", 32) -- 62
+		if label ~= nil then -- 62
+			label.text = item.text or "Label" -- 64
+			return label -- 65
+		end -- 65
+		return makeFallbackRect( -- 67
+			180, -- 67
+			56, -- 67
+			Color(2866196799) -- 67
+		) -- 67
+	end -- 67
+	return Node() -- 69
+end -- 53
+local function applyTransform(target, item) -- 72
+	target.x = item.x -- 73
+	target.y = item.y -- 74
+	target.scaleX = item.scaleX -- 75
+	target.scaleY = item.scaleY -- 76
+	target.angle = item.rotation -- 77
+	target.visible = item.visible -- 78
+	target.tag = item.name -- 79
+end -- 72
+local function firstCamera(state) -- 82
+	for ____, id in ipairs(state.order) do -- 83
+		local item = state.nodes[id] -- 84
+		if item ~= nil and item.kind == "Camera" and item.visible then -- 84
+			return item -- 85
+		end -- 85
+	end -- 85
+	return nil -- 87
+end -- 82
+local function loadNodeScript(item) -- 90
+	if item.script == "" then -- 90
+		return "" -- 91
 	end -- 91
-	if item.kind == "Label" then -- 91
-		local label = Label("sarasa-mono-sc-regular", 32) -- 94
-		if label ~= nil then -- 94
-			label.text = item.text or "Label" -- 96
-			return label -- 97
-		end -- 97
-		return makeFallbackRect( -- 99
-			180, -- 99
-			56, -- 99
-			Color(2866196799) -- 99
-		) -- 99
-	end -- 99
-	return Node() -- 101
-end -- 85
-local function applyTransform(target, item) -- 104
-	target.x = item.x -- 105
-	target.y = item.y -- 106
-	target.scaleX = item.scaleX -- 107
-	target.scaleY = item.scaleY -- 108
-	target.angle = item.rotation -- 109
-	target.visible = item.visible -- 110
-	target.tag = item.name -- 111
-end -- 104
-local function firstCamera(state) -- 114
-	for ____, id in ipairs(state.order) do -- 115
-		local item = state.nodes[id] -- 116
-		if item ~= nil and item.kind == "Camera" and item.visible then -- 116
-			return item -- 117
-		end -- 117
-	end -- 117
-	return nil -- 119
-end -- 114
-local function loadNodeScript(item) -- 122
-	if item.script == "" then -- 122
-		return "" -- 123
-	end -- 123
-	local writablePath = Path(Content.writablePath, item.script) -- 124
-	if Content:exist(writablePath) then -- 124
-		return Content:load(writablePath) or "" -- 125
-	end -- 125
-	if Content:exist(item.script) then -- 125
-		return Content:load(item.script) or "" -- 126
-	end -- 126
-	return "" -- 127
-end -- 122
-local function runNodeScript(state, item, runtimeNode) -- 130
-	local scriptText = loadNodeScript(item) -- 131
-	if scriptText == "" then -- 131
-		return -- 132
-	end -- 132
-	local chunk, loadError = load(scriptText, item.script) -- 133
-	if chunk == nil then -- 133
-		pushConsole( -- 135
-			state, -- 135
-			(((zh and "脚本加载失败：" or "Script load failed: ") .. item.script) .. " ") .. tostring(loadError or "") -- 135
-		) -- 135
-		return -- 136
-	end -- 136
-	local ok, result = pcall(chunk) -- 138
-	if not ok then -- 138
-		pushConsole( -- 140
-			state, -- 140
-			(((zh and "脚本执行失败：" or "Script failed: ") .. item.script) .. " ") .. tostring(result) -- 140
-		) -- 140
-		return -- 141
-	end -- 141
-	if type(result) == "function" then -- 141
-		local behavior = result -- 144
-		local behaviorOk, behaviorError = pcall(function() return behavior(runtimeNode, state.playContent or runtimeNode, state.playRuntimeNodes) end) -- 145
-		if not behaviorOk then -- 145
-			pushConsole( -- 146
-				state, -- 146
-				(((zh and "脚本绑定失败：" or "Script attach failed: ") .. item.script) .. " ") .. tostring(behaviorError) -- 146
-			) -- 146
-		end -- 146
-	end -- 146
-end -- 130
-local function clearPlayRuntime(state) -- 150
-	if state.playRoot ~= nil then -- 150
-		state.playRoot:removeFromParent(true) -- 152
-		state.playRoot = nil -- 153
-	end -- 153
-	playStateOf(state).playWindowBackground = nil -- 155
-	state.playWorld = nil -- 156
-	state.playContent = nil -- 157
-	state.playRuntimeNodes = {} -- 158
-	state.playRuntimeLabels = {} -- 159
-	state.isPlaying = false -- 160
-	state.playDirty = true -- 161
-end -- 150
-function ____exports.stopPlay(state) -- 164
-	clearPlayRuntime(state) -- 165
-	state.status = zh and "游戏预览已停止" or "Game preview stopped" -- 166
-	pushConsole(state, state.status) -- 167
-end -- 164
-function ____exports.startPlay(state) -- 170
-	clearPlayRuntime(state) -- 171
-	state.isPlaying = true -- 172
-	state.gameWindowOpen = true -- 173
-	state.playDirty = true -- 174
-	state.status = zh and "游戏预览运行中" or "Game preview running" -- 175
-	pushConsole(state, state.status) -- 176
-end -- 170
-local function rebuildPlayRuntime(state) -- 179
-	if state.playRoot == nil then -- 179
-		state.playRoot = Node() -- 181
-		state.playRoot.tag = "__DoraImGuiGamePreview__" -- 182
-		Director.entry:addChild(state.playRoot) -- 183
-	end -- 183
-	state.playRoot:removeAllChildren(true) -- 185
-	state.playRuntimeNodes = {} -- 186
-	state.playRuntimeLabels = {} -- 187
-	local playWindow = ensurePlayWindowState(state) -- 189
-	local windowWidth = math.max(320, playWindow.width) -- 190
-	local windowHeight = math.max(260, playWindow.height) -- 191
-	local playState = playStateOf(state) -- 192
-	playState.playWindowBackground = makeWindowBackground(windowWidth, windowHeight) -- 193
-	state.playRoot:addChild(playState.playWindowBackground) -- 194
-	local width = math.max(160, state.playViewport.width) -- 196
-	local height = math.max(120, state.playViewport.height) -- 197
-	local clip = ClipNode(makeClipStencil(width, height)) -- 198
-	clip.alphaThreshold = 0.01 -- 199
-	state.playRoot:addChild(clip) -- 200
-	clip:addChild(makeGameBackground(width, height)) -- 201
-	local world = Node() -- 203
-	state.playWorld = world -- 204
-	clip:addChild(world) -- 205
-	local content = Node() -- 206
-	state.playContent = content -- 207
-	world:addChild(content) -- 208
-	state.playRuntimeNodes.root = content -- 209
-	local camera = firstCamera(state) -- 211
-	if camera ~= nil then -- 211
-		world.x = -camera.x -- 213
-		world.y = -camera.y -- 214
-		world.angle = -camera.rotation -- 215
-	end -- 215
-	for ____, id in ipairs(state.order) do -- 218
-		local item = state.nodes[id] -- 219
-		if item ~= nil and id ~= "root" and item.kind ~= "Camera" then -- 219
-			local runtime = createPlayVisual(item) -- 221
-			applyTransform(runtime, item) -- 222
-			state.playRuntimeNodes[id] = runtime -- 223
-			if item.kind == "Label" then -- 223
-				state.playRuntimeLabels[id] = runtime -- 224
-			end -- 224
-			local parent = state.playRuntimeNodes[item.parentId or "root"] or content -- 225
-			parent:addChild(runtime) -- 226
-		end -- 226
-	end -- 226
-	for ____, id in ipairs(state.order) do -- 229
-		local item = state.nodes[id] -- 230
-		local runtime = state.playRuntimeNodes[id] -- 231
-		if item ~= nil and runtime ~= nil then -- 231
-			runNodeScript(state, item, runtime) -- 233
-		end -- 233
-	end -- 233
-	state.playDirty = false -- 236
-end -- 179
-local function updatePlayWindowBackground(state) -- 239
-	local playState = playStateOf(state) -- 240
-	local bg = playState.playWindowBackground -- 241
-	if bg == nil then -- 241
-		return -- 242
-	end -- 242
-	local p = state.playViewport -- 243
-	local w = ensurePlayWindowState(state) -- 244
-	local contentCenterX = p.x + p.width / 2 -- 245
-	local contentCenterY = p.y + p.height / 2 -- 246
-	local windowCenterX = w.x + w.width / 2 -- 247
-	local windowCenterY = w.y + w.height / 2 -- 248
-	bg.x = windowCenterX - contentCenterX -- 249
-	bg.y = contentCenterY - windowCenterY -- 250
-end -- 239
-local function updatePlayRuntime(state) -- 253
-	if not state.isPlaying then -- 253
-		return -- 254
-	end -- 254
-	if state.playDirty or state.playRoot == nil then -- 254
-		rebuildPlayRuntime(state) -- 255
-	end -- 255
-	local p = state.playViewport -- 256
-	local cx, cy = table.unpack( -- 257
-		worldPointFromScreen(p.x + p.width / 2, p.y + p.height / 2), -- 257
-		1, -- 257
-		2 -- 257
-	) -- 257
-	if state.playRoot ~= nil then -- 257
-		state.playRoot.x = cx -- 259
-		state.playRoot.y = cy -- 260
-	end -- 260
-	updatePlayWindowBackground(state) -- 262
-end -- 253
-function ____exports.drawGamePreviewWindow(state) -- 265
-	if not state.gameWindowOpen then -- 265
-		return -- 266
-	end -- 266
-	local appSize = App.visualSize -- 267
-	ImGui.SetNextWindowSize( -- 268
-		Vec2( -- 268
-			math.min(960, appSize.width - 80), -- 268
-			math.min(620, appSize.height - 80) -- 268
-		), -- 268
-		"FirstUseEver" -- 268
-	) -- 268
-	ImGui.SetNextWindowBgAlpha(0.02) -- 269
-	ImGui.Begin( -- 270
-		"Game Preview", -- 270
-		{"NoSavedSettings"}, -- 270
-		function() -- 270
-			if state.isPlaying then -- 270
-				ImGui.TextColored(okColor, zh and "运行中" or "Running") -- 272
-				ImGui.SameLine() -- 273
-				if ImGui.Button("■ Stop") then -- 273
-					____exports.stopPlay(state) -- 274
-				end -- 274
-				ImGui.SameLine() -- 275
-				if ImGui.Button("↻ Restart") then -- 275
-					____exports.startPlay(state) -- 276
-				end -- 276
-			else -- 276
-				ImGui.TextColored(warnColor, zh and "已停止" or "Stopped") -- 278
-				ImGui.SameLine() -- 279
-				if ImGui.Button("▶ Run") then -- 279
-					____exports.startPlay(state) -- 280
-				end -- 280
-			end -- 280
-			ImGui.SameLine() -- 282
-			ImGui.TextDisabled(zh and "这是独立 Game 预览，不是编辑视口。" or "Independent game preview, not the editor viewport.") -- 283
-			ImGui.Separator() -- 284
-			local windowPos = ImGui.GetWindowPos() -- 285
-			local windowSize = ImGui.GetWindowSize() -- 286
-			local playWindow = ensurePlayWindowState(state) -- 287
-			if math.abs(playWindow.width - windowSize.x) > 1 or math.abs(playWindow.height - windowSize.y) > 1 then -- 287
-				state.playDirty = true -- 289
-			end -- 289
-			playWindow.x = windowPos.x -- 291
-			playWindow.y = windowPos.y -- 292
-			playWindow.width = windowSize.x -- 293
-			playWindow.height = windowSize.y -- 294
-			local cursor = ImGui.GetCursorScreenPos() -- 296
-			local avail = ImGui.GetContentRegionAvail() -- 297
-			local width = math.max(320, avail.x) -- 298
-			local height = math.max(240, avail.y) -- 299
-			if math.abs(state.playViewport.width - width) > 1 or math.abs(state.playViewport.height - height) > 1 then -- 299
-				state.playDirty = true -- 301
-			end -- 301
-			state.playViewport.x = cursor.x -- 303
-			state.playViewport.y = cursor.y -- 304
-			state.playViewport.width = width -- 305
-			state.playViewport.height = height -- 306
-			updatePlayRuntime(state) -- 307
-			ImGui.Dummy(Vec2(width, height)) -- 308
-		end -- 270
-	) -- 270
-end -- 265
-return ____exports -- 265
+	local writablePath = Path(Content.writablePath, item.script) -- 92
+	if Content:exist(writablePath) then -- 92
+		return Content:load(writablePath) or "" -- 93
+	end -- 93
+	if Content:exist(item.script) then -- 93
+		return Content:load(item.script) or "" -- 94
+	end -- 94
+	return "" -- 95
+end -- 90
+local function runNodeScript(state, item, runtimeNode) -- 98
+	local scriptText = loadNodeScript(item) -- 99
+	if scriptText == "" then -- 99
+		return -- 100
+	end -- 100
+	local chunk, loadError = load(scriptText, item.script) -- 101
+	if chunk == nil then -- 101
+		pushConsole( -- 103
+			state, -- 103
+			(((zh and "脚本加载失败：" or "Script load failed: ") .. item.script) .. " ") .. tostring(loadError or "") -- 103
+		) -- 103
+		return -- 104
+	end -- 104
+	local ok, result = pcall(chunk) -- 106
+	if not ok then -- 106
+		pushConsole( -- 108
+			state, -- 108
+			(((zh and "脚本执行失败：" or "Script failed: ") .. item.script) .. " ") .. tostring(result) -- 108
+		) -- 108
+		return -- 109
+	end -- 109
+	if type(result) == "function" then -- 109
+		local behavior = result -- 112
+		local behaviorOk, behaviorError = pcall(function() return behavior(runtimeNode, state.playContent or runtimeNode, state.playRuntimeNodes) end) -- 113
+		if not behaviorOk then -- 113
+			pushConsole( -- 114
+				state, -- 114
+				(((zh and "脚本绑定失败：" or "Script attach failed: ") .. item.script) .. " ") .. tostring(behaviorError) -- 114
+			) -- 114
+		end -- 114
+	end -- 114
+end -- 98
+local function clearPlayRuntime(state) -- 118
+	if state.playRoot ~= nil then -- 118
+		state.playRoot:removeFromParent(true) -- 120
+		state.playRoot = nil -- 121
+	end -- 121
+	state.playWorld = nil -- 123
+	state.playContent = nil -- 124
+	state.playRuntimeNodes = {} -- 125
+	state.playRuntimeLabels = {} -- 126
+	state.isPlaying = false -- 127
+	state.playDirty = true -- 128
+end -- 118
+function ____exports.stopPlay(state) -- 131
+	clearPlayRuntime(state) -- 132
+	state.status = zh and "游戏预览已停止" or "Game preview stopped" -- 133
+	pushConsole(state, state.status) -- 134
+end -- 131
+function ____exports.startPlay(state) -- 137
+	clearPlayRuntime(state) -- 138
+	state.isPlaying = true -- 139
+	state.gameWindowOpen = true -- 140
+	state.playDirty = true -- 141
+	state.status = zh and "游戏预览运行中" or "Game preview running" -- 142
+	pushConsole(state, state.status) -- 143
+end -- 137
+local function rebuildPlayRuntime(state) -- 146
+	if state.playRoot == nil then -- 146
+		state.playRoot = Node() -- 148
+		state.playRoot.tag = "__DoraImGuiGamePreview__" -- 149
+		Director.entry:addChild(state.playRoot) -- 150
+	end -- 150
+	state.playRoot:removeAllChildren(true) -- 152
+	state.playRuntimeNodes = {} -- 153
+	state.playRuntimeLabels = {} -- 154
+	local renderScale = App.devicePixelRatio or 1 -- 156
+	local width = math.max(160, state.playViewport.width * renderScale) -- 157
+	local height = math.max(120, state.playViewport.height * renderScale) -- 158
+	local clip = ClipNode(makeClipStencil(width, height)) -- 159
+	clip.alphaThreshold = 0.01 -- 160
+	state.playRoot:addChild(clip) -- 161
+	clip:addChild(makeGameBackground(width, height)) -- 162
+	local world = Node() -- 164
+	state.playWorld = world -- 165
+	clip:addChild(world) -- 166
+	local content = Node() -- 167
+	state.playContent = content -- 168
+	world:addChild(content) -- 169
+	state.playRuntimeNodes.root = content -- 170
+	local camera = firstCamera(state) -- 172
+	if camera ~= nil then -- 172
+		world.x = -camera.x -- 174
+		world.y = -camera.y -- 175
+		world.angle = -camera.rotation -- 176
+	end -- 176
+	for ____, id in ipairs(state.order) do -- 179
+		local item = state.nodes[id] -- 180
+		if item ~= nil and id ~= "root" and item.kind ~= "Camera" then -- 180
+			local runtime = createPlayVisual(item) -- 182
+			applyTransform(runtime, item) -- 183
+			state.playRuntimeNodes[id] = runtime -- 184
+			if item.kind == "Label" then -- 184
+				state.playRuntimeLabels[id] = runtime -- 185
+			end -- 185
+			local parent = state.playRuntimeNodes[item.parentId or "root"] or content -- 186
+			parent:addChild(runtime) -- 187
+		end -- 187
+	end -- 187
+	for ____, id in ipairs(state.order) do -- 190
+		local item = state.nodes[id] -- 191
+		local runtime = state.playRuntimeNodes[id] -- 192
+		if item ~= nil and runtime ~= nil then -- 192
+			runNodeScript(state, item, runtime) -- 194
+		end -- 194
+	end -- 194
+	state.playDirty = false -- 197
+end -- 146
+local function updatePlayRuntime(state) -- 200
+	if not state.isPlaying then -- 200
+		return -- 201
+	end -- 201
+	if state.playDirty or state.playRoot == nil then -- 201
+		rebuildPlayRuntime(state) -- 202
+	end -- 202
+	local p = state.playViewport -- 203
+	local cx, cy = table.unpack( -- 204
+		worldPointFromScreen(p.x + p.width / 2, p.y + p.height / 2), -- 204
+		1, -- 204
+		2 -- 204
+	) -- 204
+	if state.playRoot ~= nil then -- 204
+		state.playRoot.x = cx -- 206
+		state.playRoot.y = cy -- 207
+	end -- 207
+end -- 200
+function ____exports.drawGamePreviewWindow(state) -- 212
+	if not state.isPlaying then -- 212
+		return -- 213
+	end -- 213
+	local p = state.preview -- 214
+	if math.abs(state.playViewport.x - p.x) > 1 or math.abs(state.playViewport.y - p.y) > 1 or math.abs(state.playViewport.width - p.width) > 1 or math.abs(state.playViewport.height - p.height) > 1 then -- 214
+		state.playViewport.x = p.x -- 217
+		state.playViewport.y = p.y -- 218
+		state.playViewport.width = p.width -- 219
+		state.playViewport.height = p.height -- 220
+		state.playDirty = true -- 221
+	end -- 221
+	updatePlayRuntime(state) -- 223
+end -- 212
+return ____exports -- 212
