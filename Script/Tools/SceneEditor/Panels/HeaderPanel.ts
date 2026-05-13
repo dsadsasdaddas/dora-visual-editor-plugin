@@ -2,16 +2,16 @@ import * as ImGui from 'ImGui';
 import { EditorState } from 'Script/Tools/SceneEditor/EditorTypes';
 import { okColor, themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { deleteNode, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
-import { launchExternalPreview, stopExternalPreview } from 'Script/Tools/SceneEditor/ExternalPreview';
+import { startPlay, stopPlay } from 'Script/Tools/SceneEditor/Player';
 import { drawAddNodePopup } from 'Script/Tools/SceneEditor/Panels/AddNodePopup';
 
 export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorState) => void) {
 	ImGui.TextColored(themeColor, '✦ Dora Visual Editor');
-	if (state.externalPreviewRunning) {
+	if (state.isPlaying) {
 		ImGui.SameLine();
-		ImGui.TextColored(okColor, zh ? '● 外部预览' : '● EXTERNAL PREVIEW');
+		ImGui.TextColored(okColor, zh ? '● 运行模式' : '● PLAY MODE');
 		ImGui.SameLine();
-		ImGui.TextDisabled(zh ? '编辑器仍可继续编辑' : 'Editor remains editable');
+		ImGui.TextDisabled(zh ? 'Game Preview 窗口正在运行' : 'Game Preview is running');
 	}
 	ImGui.SameLine();
 	if (ImGui.Button(zh ? '场景' : 'Scene')) state.mode = '2D';
@@ -20,16 +20,11 @@ export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorSta
 	ImGui.SameLine();
 	ImGui.TextDisabled(zh ? 'Dora 原生 2D 场景编辑器' : 'Dora Native 2D Scene Editor');
 	ImGui.Separator();
-	if (state.externalPreviewRunning) {
-		if (ImGui.Button(zh ? '■ 停止标记' : '■ Stop Mark')) stopExternalPreview(state);
-		ImGui.SameLine();
-		if (ImGui.Button(zh ? '↻ 重新运行' : '↻ Relaunch')) {
-			saveScene(state);
-			launchExternalPreview(state);
-		}
+	if (state.isPlaying) {
+		if (ImGui.Button(zh ? '■ 停止' : '■ Stop')) stopPlay(state);
 	} else if (ImGui.Button(zh ? '▶ 运行' : '▶ Run')) {
 		saveScene(state);
-		launchExternalPreview(state);
+		startPlay(state);
 	}
 	ImGui.SameLine();
 	if (ImGui.Button(zh ? '▣ 保存' : '▣ Save')) saveScene(state);

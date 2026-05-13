@@ -32,6 +32,37 @@ local function scriptTemplate(node) -- 17
 	local name = node ~= nil and node.name or "Script" -- 18
 	return (((((((((("-- " .. name) .. " behavior\n") .. "return function(node, scene, nodes)\n") .. "\tif node == nil then\n") .. "\t\tprint(\"[SceneScript] ") .. name) .. ": node is nil; run the scene/game preview instead of this behavior script directly.\")\n") .. "\t\treturn\n") .. "\tend\n") .. "\t-- write behavior here\n") .. "end\n"
 end -- 17
+local function gameMainTemplate()
+	return "-- Game main script\n" ..
+		"-- This file runs after the scene nodes are created.\n" ..
+		"-- Use A/D or Left/Right to move the first Sprite node.\n" ..
+		"local _ENV = Dora\n\n" ..
+		"return {\n" ..
+		"\tstart = function(scene, nodes, world)\n" ..
+		"\t\tlocal player = nil\n" ..
+		"\t\tfor _, node in pairs(nodes) do\n" ..
+		"\t\t\tlocal tag = tostring(node.tag or \"\")\n" ..
+		"\t\t\tif node ~= scene and player == nil and string.find(tag, \"Camera\") == nil then\n" ..
+		"\t\t\t\tplayer = node\n" ..
+		"\t\t\tend\n" ..
+		"\t\tend\n" ..
+		"\t\tif player == nil then\n" ..
+		"\t\t\tprint(\"[GameMain] no playable node found\")\n" ..
+		"\t\t\treturn\n" ..
+		"\t\tend\n" ..
+		"\t\tscene:schedule(function(deltaTime)\n" ..
+		"\t\t\tlocal speed = 220\n" ..
+		"\t\t\tif Keyboard:isKeyPressed(\"A\") or Keyboard:isKeyPressed(\"Left\") then\n" ..
+		"\t\t\t\tplayer.x = player.x - speed * deltaTime\n" ..
+		"\t\t\tend\n" ..
+		"\t\t\tif Keyboard:isKeyPressed(\"D\") or Keyboard:isKeyPressed(\"Right\") then\n" ..
+		"\t\t\t\tplayer.x = player.x + speed * deltaTime\n" ..
+		"\t\t\tend\n" ..
+		"\t\t\treturn false\n" ..
+		"\t\tend)\n" ..
+		"\tend\n" ..
+		"}\n"
+end
 local function loadScriptIntoEditor(state, node, scriptPath, attachScriptToNode) -- 29
 	if node ~= nil then -- 29
 		attachScriptToNode(state, node, scriptPath) -- 36
@@ -49,6 +80,22 @@ local function loadScriptIntoEditor(state, node, scriptPath, attachScriptToNode)
 	end -- 47
 	state.mode = "Script" -- 49
 end -- 29
+local function loadGameMainIntoEditor(state)
+	state.activeScriptNodeId = "__game_main__"
+	local scriptPath = state.gameScript ~= "" and state.gameScript or "Script/Main.lua"
+	state.gameScript = scriptPath
+	state.gameScriptBuffer.text = scriptPath
+	state.scriptPathBuffer.text = scriptPath
+	local scriptFile = workspacePath(scriptPath)
+	if Content:exist(scriptFile) then
+		state.scriptContentBuffer.text = Content:load(scriptFile) or ""
+	elseif Content:exist(scriptPath) then
+		state.scriptContentBuffer.text = Content:load(scriptPath) or ""
+	else
+		state.scriptContentBuffer.text = gameMainTemplate()
+	end
+	state.mode = "Script"
+end
 function ____exports.openScriptForNode(state, node, attachScriptToNode) -- 52
 	local path = node.script ~= "" and node.script or ("Script/" .. node.name) .. ".lua" -- 53
 	loadScriptIntoEditor(state, node, path, attachScriptToNode) -- 54
@@ -86,6 +133,13 @@ local function saveScriptFile(state, node, attachScriptToNode) -- 57
 		pushConsole(state, state.status) -- 77
 	end -- 77
 end -- 57
+local function useCurrentScriptAsGameMain(state)
+	local path = state.scriptPathBuffer.text ~= "" and state.scriptPathBuffer.text or "Script/Main.lua"
+	state.gameScript = path
+	state.gameScriptBuffer.text = path
+	state.status = (zh and "已设置游戏主脚本：" or "Game main script set: ") .. path
+	pushConsole(state, state.status)
+end
 local function currentScriptPath(state, node) -- 80
 	if state.scriptPathBuffer.text ~= "" then -- 80
 		return state.scriptPathBuffer.text -- 81
@@ -190,6 +244,15 @@ function ____exports.drawScriptPanel(state, attachScriptToNode) -- 179
 		{}, -- 186
 		noScrollFlags, -- 186
 		function() -- 186
+			ImGui.TextColored(themeColor, zh and "游戏入口" or "Game Entry")
+			ImGui.TextDisabled(state.gameScript ~= "" and state.gameScript or "Script/Main.lua")
+			if ImGui.Button(zh and "打开主脚本" or "Open Main") then
+				loadGameMainIntoEditor(state)
+			end
+			if ImGui.Button(zh and "当前脚本设为主入口" or "Use Current As Main") then
+				useCurrentScriptAsGameMain(state)
+			end
+			ImGui.Separator()
 			drawScriptAssetList(state, node, attachScriptToNode) -- 187
 			ImGui.Separator() -- 188
 			if ImGui.Button(zh and "新建脚本" or "New Script") then -- 188
@@ -232,6 +295,10 @@ function ____exports.drawScriptPanel(state, attachScriptToNode) -- 179
 						saveScriptFile(state, node, attachScriptToNode) -- 214
 					end -- 214
 					ImGui.SameLine() -- 215
+					if ImGui.Button(zh and "设为主入口" or "Set Main") then
+						useCurrentScriptAsGameMain(state)
+					end
+					ImGui.SameLine()
 					if ImGui.Button(zh and "Web IDE 打开" or "Open in Web IDE") then -- 215
 						openScriptInWebIDE(state, node, attachScriptToNode) -- 216
 					end -- 216

@@ -1,30 +1,20 @@
-import { App, ClipNode, Color, Content, Director, DrawNode, Label, Node, Path, Sprite, Vec2 } from 'Dora';
+import { Color, Content, Director, DrawNode, Label, Node, Path, RenderTarget, Sprite, Vec2 } from 'Dora';
+import * as ImGui from 'ImGui';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { okColor, viewportBgColor } from 'Script/Tools/SceneEditor/Theme';
-import { pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
+import { pushConsole, workspacePath, zh } from 'Script/Tools/SceneEditor/Model';
 
 declare function load(code: string, chunkname?: string): LuaMultiReturn<[(() => unknown) | undefined, string | undefined]>;
 declare function pcall(fn: () => unknown): LuaMultiReturn<[boolean, unknown]>;
 declare function type(value: unknown): string;
 
+type GameMainModule = {
+	start?: (scene: Node.Type, nodes: Record<string, Node.Type>, world: Node.Type) => unknown;
+};
 
-function worldPointFromScreen(screenX: number, screenY: number): [number, number] {
-	const size = App.visualSize;
-	return [screenX - size.width / 2, size.height / 2 - screenY];
-}
-
-function makeClipStencil(width: number, height: number) {
-	const hw = width / 2;
-	const hh = height / 2;
-	const stencil = DrawNode();
-	stencil.drawPolygon([
-		Vec2(-hw, -hh),
-		Vec2(hw, -hh),
-		Vec2(hw, hh),
-		Vec2(-hw, hh),
-	], Color(0xffffffff), 0, Color());
-	return stencil;
-}
+let playTarget: any = undefined;
+let playTargetWidth = 0;
+let playTargetHeight = 0;
 
 function makeGameBackground(width: number, height: number) {
 	const hw = width / 2;
@@ -79,24 +69,24 @@ function applyTransform(target: Node.Type, item: SceneNodeData) {
 	target.tag = item.name;
 }
 
-function firstCamera(state: EditorState) {
+function firstCameraId(state: EditorState) {
 	for (const id of state.order) {
 		const item = state.nodes[id];
-		if (item !== undefined && item.kind === 'Camera' && item.visible) return item;
+		if (item !== undefined && item.kind === 'Camera' && item.visible) return id;
 	}
 	return undefined;
 }
 
-function loadNodeScript(item: SceneNodeData) {
-	if (item.script === '') return '';
-	const writablePath = Path(Content.writablePath, item.script);
-	if (Content.exist(writablePath)) return Content.load(writablePath) || '';
-	if (Content.exist(item.script)) return Content.load(item.script) || '';
+function loadScriptText(scriptPath: string) {
+	if (scriptPath === '') return '';
+	const projectPath = workspacePath(scriptPath);
+	if (Content.exist(projectPath)) return Content.load(projectPath) || '';
+	if (Content.exist(scriptPath)) return Content.load(scriptPath) || '';
 	return '';
 }
 
 function runNodeScript(state: EditorState, item: SceneNodeData, runtimeNode: Node.Type) {
-	const scriptText = loadNodeScript(item);
+	const scriptText = loadScriptText(item.script);
 	if (scriptText === '') return;
 	const [chunk, loadError] = load(scriptText, item.script);
 	if (chunk === undefined) {
@@ -112,6 +102,69 @@ function runNodeScript(state: EditorState, item: SceneNodeData, runtimeNode: Nod
 		const behavior = result as (node: Node.Type, scene: Node.Type, nodes: Record<string, Node.Type>) => unknown;
 		const [behaviorOk, behaviorError] = pcall(() => behavior(runtimeNode, state.playContent || runtimeNode, state.playRuntimeNodes));
 		if (!behaviorOk) pushConsole(state, (zh ? '脚本绑定失败：' : 'Script attach failed: ') + item.script + ' ' + tostring(behaviorError));
+	}
+}
+
+function defaultGameMainLua() {
+	return '-- Game main script\n'
+		+ '-- Auto-created by Dora Visual Editor.\n'
+		+ 'local _ENV = Dora\n\n'
+		+ 'return {\n'
+		+ '\tstart = function(scene, nodes, world)\n'
+		+ '\t\tlocal player = nil\n'
+		+ '\t\tfor _, node in pairs(nodes) do\n'
+		+ '\t\t\tlocal tag = tostring(node.tag or "")\n'
+		+ '\t\t\tif node ~= scene and player == nil and string.find(tag, "Camera") == nil then player = node end\n'
+		+ '\t\tend\n'
+		+ '\t\tif player == nil then return end\n'
+		+ '\t\tscene:schedule(function(deltaTime)\n'
+		+ '\t\t\tlocal speed = 220\n'
+		+ '\t\t\tif Keyboard:isKeyPressed("A") or Keyboard:isKeyPressed("Left") then player.x = player.x - speed * deltaTime end\n'
+		+ '\t\t\tif Keyboard:isKeyPressed("D") or Keyboard:isKeyPressed("Right") then player.x = player.x + speed * deltaTime end\n'
+		+ '\t\t\treturn false\n'
+		+ '\t\tend)\n'
+		+ '\tend\n'
+		+ '}\n';
+}
+
+function ensureGameMainScript(state: EditorState) {
+	const scriptPath = state.gameScript !== '' ? state.gameScript : 'Script/Main.lua';
+	state.gameScript = scriptPath;
+	state.gameScriptBuffer.text = scriptPath;
+	const file = workspacePath(scriptPath);
+	if (!Content.exist(file)) {
+		Content.mkdir(Path.getPath(file));
+		Content.save(file, defaultGameMainLua());
+	}
+}
+
+function runGameMain(state: EditorState) {
+	const scriptPath = state.gameScript !== '' ? state.gameScript : 'Script/Main.lua';
+	const scriptText = loadScriptText(scriptPath);
+	if (scriptText === '') return;
+	const [chunk, loadError] = load(scriptText, scriptPath);
+	if (chunk === undefined) {
+		pushConsole(state, (zh ? '主脚本加载失败：' : 'Main script load failed: ') + scriptPath + ' ' + tostring(loadError || ''));
+		return;
+	}
+	const [ok, result] = pcall(chunk);
+	if (!ok) {
+		pushConsole(state, (zh ? '主脚本执行失败：' : 'Main script failed: ') + scriptPath + ' ' + tostring(result));
+		return;
+	}
+	let start: ((scene: Node.Type, nodes: Record<string, Node.Type>, world: Node.Type) => unknown) | undefined = undefined;
+	if (type(result) === 'function') {
+		start = result as (scene: Node.Type, nodes: Record<string, Node.Type>, world: Node.Type) => unknown;
+	} else if (type(result) === 'table') {
+		const module = result as GameMainModule;
+		if (module.start !== undefined) start = module.start;
+	}
+	const scene = state.playContent;
+	const world = state.playWorld;
+	if (start !== undefined && scene !== undefined && world !== undefined) {
+		const entry = start;
+		const [startOk, startError] = pcall(() => entry(scene, state.playRuntimeNodes, world));
+		if (!startOk) pushConsole(state, (zh ? '主脚本启动失败：' : 'Main script start failed: ') + tostring(startError));
 	}
 }
 
@@ -136,6 +189,7 @@ export function stopPlay(state: EditorState) {
 
 export function startPlay(state: EditorState) {
 	clearPlayRuntime(state);
+	ensureGameMainScript(state);
 	state.isPlaying = true;
 	state.gameWindowOpen = true;
 	state.playDirty = true;
@@ -144,55 +198,40 @@ export function startPlay(state: EditorState) {
 }
 
 function gameWidthOf(state: EditorState) {
-	return math.max(160, state.gameWidth);
+	return math.max(160, math.floor(state.gameWidth));
 }
 
 function gameHeightOf(state: EditorState) {
-	return math.max(120, state.gameHeight);
-}
-
-function playScaleForViewport(state: EditorState) {
-	const renderScale = App.devicePixelRatio || 1;
-	const designWidth = gameWidthOf(state);
-	const designHeight = gameHeightOf(state);
-	return math.min(state.playViewport.width * renderScale / designWidth, state.playViewport.height * renderScale / designHeight);
+	return math.max(120, math.floor(state.gameHeight));
 }
 
 function rebuildPlayRuntime(state: EditorState) {
-	if (state.playRoot === undefined) {
-		state.playRoot = Node();
-		state.playRoot.tag = '__DoraImGuiGamePreview__';
-		Director.entry.addChild(state.playRoot);
-	}
-	state.playRoot.removeAllChildren(true);
-	state.playRuntimeNodes = {};
-	state.playRuntimeLabels = {};
-
 	const width = gameWidthOf(state);
 	const height = gameHeightOf(state);
-	const clip = ClipNode(makeClipStencil(width, height));
-	clip.alphaThreshold = 0.01;
-	state.playRoot.addChild(clip);
-	clip.addChild(makeGameBackground(width, height));
+	state.playRoot = Node();
+	state.playRoot.tag = '__DoraImGuiGamePreview__';
+	state.playRoot.visible = false;
+	state.playRuntimeNodes = {};
+	state.playRuntimeLabels = {};
+	Director.entry.addChild(state.playRoot);
 
+	const background = makeGameBackground(width, height);
+	background.x = width / 2;
+	background.y = height / 2;
+	state.playRoot.addChild(background);
 	const world = Node();
 	state.playWorld = world;
-	clip.addChild(world);
+	world.x = width / 2;
+	world.y = height / 2;
+	state.playRoot.addChild(world);
 	const content = Node();
 	state.playContent = content;
 	world.addChild(content);
 	state.playRuntimeNodes.root = content;
 
-	const camera = firstCamera(state);
-	if (camera !== undefined) {
-		world.x = -camera.x;
-		world.y = -camera.y;
-		world.angle = -camera.rotation;
-	}
-
 	for (const id of state.order) {
 		const item = state.nodes[id];
-		if (item !== undefined && id !== 'root' && item.kind !== 'Camera') {
+		if (item !== undefined && id !== 'root') {
 			const runtime = createPlayVisual(item);
 			applyTransform(runtime, item);
 			state.playRuntimeNodes[id] = runtime;
@@ -201,49 +240,78 @@ function rebuildPlayRuntime(state: EditorState) {
 			parent.addChild(runtime);
 		}
 	}
+
+	const cameraId = firstCameraId(state);
+	const cameraNode = cameraId !== undefined ? state.playRuntimeNodes[cameraId] : undefined;
+	const updateCamera = function(this: void) {
+		if (cameraNode !== undefined) {
+			world.x = width / 2;
+			world.y = height / 2;
+			world.angle = -cameraNode.angle;
+			world.scaleX = cameraNode.scaleX !== 0 ? 1 / cameraNode.scaleX : 1;
+			world.scaleY = cameraNode.scaleY !== 0 ? 1 / cameraNode.scaleY : 1;
+			content.x = -cameraNode.x;
+			content.y = -cameraNode.y;
+		} else {
+			world.x = width / 2;
+			world.y = height / 2;
+			world.angle = 0;
+			world.scaleX = 1;
+			world.scaleY = 1;
+			content.x = 0;
+			content.y = 0;
+		}
+	};
+	updateCamera();
+	world.schedule(() => {
+		updateCamera();
+		return false;
+	});
+
 	for (const id of state.order) {
 		const item = state.nodes[id];
 		const runtime = state.playRuntimeNodes[id];
-		if (item !== undefined && runtime !== undefined) {
-			runNodeScript(state, item, runtime);
-		}
+		if (item !== undefined && runtime !== undefined) runNodeScript(state, item, runtime);
 	}
+	runGameMain(state);
 	state.playDirty = false;
 }
 
-function updatePlayRuntime(state: EditorState) {
+function ensurePlayTarget(state: EditorState) {
+	const width = gameWidthOf(state);
+	const height = gameHeightOf(state);
+	if (playTarget === undefined || playTargetWidth !== width || playTargetHeight !== height) {
+		playTarget = RenderTarget(width, height);
+		playTargetWidth = width;
+		playTargetHeight = height;
+	}
+	return playTarget;
+}
+
+function renderPlayTarget(state: EditorState) {
 	if (!state.isPlaying) return;
 	if (state.playDirty || state.playRoot === undefined) rebuildPlayRuntime(state);
-	const p = state.playViewport;
-	const [cx, cy] = worldPointFromScreen(p.x + p.width / 2, p.y + p.height / 2);
+	const target = ensurePlayTarget(state);
 	if (state.playRoot !== undefined) {
-		const scale = playScaleForViewport(state);
-		state.playRoot.x = cx;
-		state.playRoot.y = cy;
-		state.playRoot.scaleX = scale;
-		state.playRoot.scaleY = scale;
+		state.playRoot.visible = true;
+		target.renderWithClear(state.playRoot, Color(0xff15181f));
+		state.playRoot.visible = false;
 	}
 }
 
-
 export function drawGamePreviewWindow(state: EditorState) {
 	if (!state.isPlaying) return;
-	const p = state.preview;
-	const renderScale = App.devicePixelRatio || 1;
-	const designWidth = gameWidthOf(state);
-	const designHeight = gameHeightOf(state);
-	const fitScale = math.min(p.width * renderScale / designWidth, p.height * renderScale / designHeight);
-	const displayWidth = designWidth * fitScale / renderScale;
-	const displayHeight = designHeight * fitScale / renderScale;
-	const nextX = p.x + (p.width - displayWidth) / 2;
-	const nextY = p.y + (p.height - displayHeight) / 2;
-	if (math.abs(state.playViewport.x - nextX) > 1 || math.abs(state.playViewport.y - nextY) > 1
-		|| math.abs(state.playViewport.width - displayWidth) > 1 || math.abs(state.playViewport.height - displayHeight) > 1) {
-		state.playViewport.x = nextX;
-		state.playViewport.y = nextY;
-		state.playViewport.width = displayWidth;
-		state.playViewport.height = displayHeight;
-		state.playDirty = true;
-	}
-	updatePlayRuntime(state);
+	renderPlayTarget(state);
+	if (playTarget === undefined) return;
+	ImGui.SetNextWindowSize(Vec2(720, 480), 'FirstUseEver');
+	ImGui.Begin(zh ? '游戏预览' : 'Game Preview', () => {
+		const avail = ImGui.GetContentRegionAvail();
+		const width = gameWidthOf(state);
+		const height = gameHeightOf(state);
+		const scale = math.max(0.1, math.min(avail.x / width, avail.y / height));
+		const displayWidth = width * scale;
+		const displayHeight = height * scale;
+		ImGui.TextDisabled((zh ? '运行尺寸：' : 'Game Size: ') + tostring(width) + ' x ' + tostring(height));
+		ImGui.ImageTexture(playTarget.texture, Vec2(displayWidth, displayHeight));
+	});
 }

@@ -33,6 +33,8 @@ local drawScriptPanel = ____ScriptPanel.drawScriptPanel -- 12
 local openScriptForNode = ____ScriptPanel.openScriptForNode -- 12
 local ____ViewportPanel = require("Script.Tools.SceneEditor.Panels.ViewportPanel") -- 13
 local drawViewportPanel = ____ViewportPanel.drawViewportPanel -- 13
+local ____Player = require("Script.Tools.SceneEditor.Player")
+local drawGamePreviewWindow = ____Player.drawGamePreviewWindow
 local SceneModel = require("Script.Tools.SceneEditor.Model") -- 17
 local function workspacePath(path) -- 18
 	return SceneModel.workspacePath(path) -- 18
@@ -46,6 +48,7 @@ local function writeSceneFile(state) -- 24
 		version = 1, -- 27
 		gameWidth = math.floor(state.gameWidth), -- 28
 		gameHeight = math.floor(state.gameHeight), -- 29
+		gameScript = state.gameScript,
 		nodes = {} -- 30
 	} -- 30
 	for ____, id in ipairs(state.order) do -- 32
@@ -339,6 +342,7 @@ function ____exports.drawEditor(state) -- 125
 			) -- 206
 		end -- 136
 	) -- 136
+	drawGamePreviewWindow(state)
 end -- 125
 function ____exports.drawRuntimeError(message) -- 212
 	local size = App.visualSize -- 213

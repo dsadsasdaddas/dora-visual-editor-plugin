@@ -63,6 +63,8 @@ export function createEditorState(): EditorState {
 		bottomHeight: 132,
 		gameWidth: 960,
 		gameHeight: 540,
+		gameScript: 'Script/Main.lua',
+		gameScriptBuffer: makeBuffer('Script/Main.lua', 256),
 		status: zh ? 'Dora Visual Editor 已加载' : 'Dora Visual Editor loaded',
 		console: [zh ? '真实 Dora Viewport 已启用。' : 'Real Dora viewport enabled.'],
 		nodes: {},
@@ -71,8 +73,6 @@ export function createEditorState(): EditorState {
 		previewDirty: true,
 		runtimeNodes: {},
 		runtimeLabels: {},
-		externalPreviewRunning: false,
-		externalPreviewRoot: '',
 		isPlaying: false,
 		gameWindowOpen: false,
 		playViewport: { x: 0, y: 0, width: 960, height: 540 },
@@ -344,6 +344,8 @@ export function loadSceneFromFile(state: EditorState, file: string) {
 	if (rawNodes === undefined) return false;
 	state.gameWidth = math.max(160, math.min(8192, numberValue((data as any).gameWidth, state.gameWidth || 960)));
 	state.gameHeight = math.max(120, math.min(8192, numberValue((data as any).gameHeight, state.gameHeight || 540)));
+	state.gameScript = stringValue((data as any).gameScript, state.gameScript || 'Script/Main.lua');
+	state.gameScriptBuffer.text = state.gameScript;
 
 	state.nodes = {};
 	state.order = [];
@@ -440,9 +442,53 @@ export function deleteNode(state: EditorState, id: string) {
 	pushConsole(state, state.status);
 }
 
+function worldPositionOf(state: EditorState, id: string): [number, number] {
+	let x = 0;
+	let y = 0;
+	let cursor = state.nodes[id];
+	while (cursor !== undefined) {
+		x += cursor.x;
+		y += cursor.y;
+		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
+	}
+	return [x, y];
+}
+
+export function reparentNode(state: EditorState, id: string, newParentId: string) {
+	if (id === 'root') return false;
+	const node = state.nodes[id];
+	const newParent = state.nodes[newParentId];
+	if (node === undefined || newParent === undefined || node.parentId === newParentId) return false;
+	const [worldX, worldY] = worldPositionOf(state, id);
+	let cursor = newParent;
+	while (cursor !== undefined) {
+		if (cursor.id === id) return false;
+		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
+	}
+	const oldParent = node.parentId !== undefined ? state.nodes[node.parentId] : undefined;
+	if (oldParent !== undefined) {
+		for (let i = oldParent.children.length; i >= 1; i--) {
+			if (oldParent.children[i - 1] === id) table.remove(oldParent.children, i);
+		}
+	}
+	node.parentId = newParentId;
+	const [parentWorldX, parentWorldY] = worldPositionOf(state, newParentId);
+	node.x = worldX - parentWorldX;
+	node.y = worldY - parentWorldY;
+	newParent.children.push(id);
+	state.previewDirty = true;
+	state.playDirty = true;
+	state.status = (zh ? '已移动节点到：' : 'Moved node under: ') + newParent.name;
+	pushConsole(state, state.status);
+	return true;
+}
+
 export function addChildNode(state: EditorState, kind: SceneNodeKind) {
 	let parentId = state.selectedId || 'root';
 	if (state.nodes[parentId] === undefined) parentId = 'root';
+	if (state.nodes[parentId].kind === 'Camera') {
+		parentId = state.nodes[parentId].parentId || 'root';
+	}
 	const node = addNode(state, kind, kind + tostring(state.nextId + 1), parentId);
 	state.selectedId = node.id;
 	state.previewDirty = true;

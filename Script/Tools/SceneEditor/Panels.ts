@@ -11,6 +11,7 @@ import { drawAssetsPanel } from 'Script/Tools/SceneEditor/Panels/AssetsPanel';
 import { drawInspectorPanel } from 'Script/Tools/SceneEditor/Panels/InspectorPanel';
 import { drawScriptPanel, openScriptForNode } from 'Script/Tools/SceneEditor/Panels/ScriptPanel';
 import { drawViewportPanel } from 'Script/Tools/SceneEditor/Panels/ViewportPanel';
+import { drawGamePreviewWindow } from 'Script/Tools/SceneEditor/Player';
 
 declare function require(path: string): any;
 
@@ -27,6 +28,7 @@ function writeSceneFile(state: EditorState) {
 		version: 1,
 		gameWidth: math.floor(state.gameWidth),
 		gameHeight: math.floor(state.gameHeight),
+		gameScript: state.gameScript,
 		nodes: [] as object[],
 	};
 	for (const id of state.order) {
@@ -207,6 +209,7 @@ export function drawEditor(state: EditorState) {
 			ImGui.BeginChild('BottomConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsolePanel(state));
 		});
 	});
+	drawGamePreviewWindow(state);
 }
 
 export function drawRuntimeError(message: string) {

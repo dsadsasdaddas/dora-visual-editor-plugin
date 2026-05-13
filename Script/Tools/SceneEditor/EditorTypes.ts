@@ -45,6 +45,8 @@ export interface EditorState {
 	bottomHeight: number;
 	gameWidth: number;
 	gameHeight: number;
+	gameScript: string;
+	gameScriptBuffer: Buffer.Type;
 	status: string;
 	console: string[];
 	nodes: Record<string, SceneNodeData>;
@@ -56,8 +58,6 @@ export interface EditorState {
 	previewContent?: Node.Type;
 	runtimeNodes: Record<string, Node.Type>;
 	runtimeLabels: Record<string, unknown>;
-	externalPreviewRunning: boolean;
-	externalPreviewRoot: string;
 	isPlaying: boolean;
 	gameWindowOpen: boolean;
 	playViewport: ViewportState;
@@ -77,4 +77,6 @@ export interface EditorState {
 	viewportPanY: number;
 	draggingNodeId?: string;
 	draggingViewport: boolean;
+	treeDraggingNodeId?: string;
+	treeDropTargetId?: string;
 }

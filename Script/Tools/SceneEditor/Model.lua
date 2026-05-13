@@ -214,6 +214,8 @@ function ____exports.createEditorState() -- 50
 		bottomHeight = 132, -- 63
 		gameWidth = 960, -- 64
 		gameHeight = 540, -- 65
+		gameScript = "Script/Main.lua",
+		gameScriptBuffer = ____exports.makeBuffer("Script/Main.lua", 256),
 		status = ____exports.zh and "Dora Visual Editor 已加载" or "Dora Visual Editor loaded", -- 66
 		console = {____exports.zh and "真实 Dora Viewport 已启用。" or "Real Dora viewport enabled."}, -- 67
 		nodes = {}, -- 68
@@ -222,8 +224,6 @@ function ____exports.createEditorState() -- 50
 		previewDirty = true, -- 71
 		runtimeNodes = {}, -- 72
 		runtimeLabels = {}, -- 73
-		externalPreviewRunning = false, -- 74
-		externalPreviewRoot = "", -- 75
 		isPlaying = false, -- 76
 		gameWindowOpen = false, -- 77
 		playViewport = {x = 0, y = 0, width = 960, height = 540}, -- 78
@@ -404,6 +404,8 @@ function ____exports.loadSceneFromFile(state, file) -- 339
 			numberValue(data.gameHeight, state.gameHeight or 540) -- 346
 		) -- 346
 	) -- 346
+	state.gameScript = stringValue(data.gameScript, state.gameScript or "Script/Main.lua")
+	state.gameScriptBuffer.text = state.gameScript
 	state.nodes = {} -- 348
 	state.order = {} -- 349
 	state.runtimeNodes = {} -- 350
@@ -528,11 +530,63 @@ function ____exports.deleteNode(state, id) -- 417
 	state.status = ____exports.zh and "已删除节点" or "Node deleted" -- 439
 	____exports.pushConsole(state, state.status) -- 440
 end -- 417
+local function worldPositionOf(state, id)
+	local x = 0
+	local y = 0
+	local cursor = state.nodes[id]
+	while cursor ~= nil do
+		x = x + cursor.x
+		y = y + cursor.y
+		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil
+	end
+	return {x, y}
+end
+function ____exports.reparentNode(state, id, newParentId)
+	if id == "root" then
+		return false
+	end
+	local node = state.nodes[id]
+	local newParent = state.nodes[newParentId]
+	if node == nil or newParent == nil or node.parentId == newParentId then
+		return false
+	end
+	local worldX, worldY = table.unpack(worldPositionOf(state, id), 1, 2)
+	local cursor = newParent
+	while cursor ~= nil do
+		if cursor.id == id then
+			return false
+		end
+		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil
+	end
+	local oldParent = node.parentId ~= nil and state.nodes[node.parentId] or nil
+	if oldParent ~= nil then
+		local i = #oldParent.children
+		while i >= 1 do
+			if oldParent.children[i] == id then
+				table.remove(oldParent.children, i)
+			end
+			i = i - 1
+		end
+	end
+	node.parentId = newParentId
+	local parentWorldX, parentWorldY = table.unpack(worldPositionOf(state, newParentId), 1, 2)
+	node.x = worldX - parentWorldX
+	node.y = worldY - parentWorldY
+	newParent.children[#newParent.children + 1] = id
+	state.previewDirty = true
+	state.playDirty = true
+	state.status = (____exports.zh and "已移动节点到：" or "Moved node under: ") .. newParent.name
+	____exports.pushConsole(state, state.status)
+	return true
+end
 function ____exports.addChildNode(state, kind) -- 443
 	local parentId = state.selectedId or "root" -- 444
 	if state.nodes[parentId] == nil then -- 444
 		parentId = "root" -- 445
 	end -- 445
+	if state.nodes[parentId].kind == "Camera" then
+		parentId = state.nodes[parentId].parentId or "root"
+	end
 	local node = ____exports.addNode( -- 446
 		state, -- 446
 		kind, -- 446

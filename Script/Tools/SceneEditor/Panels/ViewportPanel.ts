@@ -51,12 +51,17 @@ function pickNodeAt(state: EditorState, screenX: number, screenY: number) {
 	for (let i = state.order.length; i >= 1; i--) {
 		const id = state.order[i - 1];
 		const node = state.nodes[id];
-		if (node !== undefined && id !== 'root' && node.visible) {
-			if (node.kind === 'Camera') {
-				const width = math.max(160, state.gameWidth);
-				const height = math.max(120, state.gameHeight);
-				if (math.abs(sceneX - node.x) <= width / 2 && math.abs(sceneY - node.y) <= height / 2) return id;
-			} else if (isScenePointInsideNode(node, sceneX, sceneY)) return id;
+		if (node !== undefined && id !== 'root' && node.visible && node.kind !== 'Camera') {
+			if (isScenePointInsideNode(node, sceneX, sceneY)) return id;
+		}
+	}
+	for (let i = state.order.length; i >= 1; i--) {
+		const id = state.order[i - 1];
+		const node = state.nodes[id];
+		if (node !== undefined && id !== 'root' && node.visible && node.kind === 'Camera') {
+			const width = math.max(160, state.gameWidth);
+			const height = math.max(120, state.gameHeight);
+			if (math.abs(sceneX - node.x) <= width / 2 && math.abs(sceneY - node.y) <= height / 2) return id;
 		}
 	}
 	return undefined;

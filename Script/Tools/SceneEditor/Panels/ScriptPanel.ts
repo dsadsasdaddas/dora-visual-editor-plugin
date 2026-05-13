@@ -26,6 +26,38 @@ function scriptTemplate(node?: SceneNodeData) {
 		+ 'end\n';
 }
 
+function gameMainTemplate() {
+	return '-- Game main script\n'
+		+ '-- This file runs after the scene nodes are created.\n'
+		+ '-- Use A/D or Left/Right to move the first Sprite node.\n'
+		+ 'local _ENV = Dora\n\n'
+		+ 'return {\n'
+		+ '\tstart = function(scene, nodes, world)\n'
+		+ '\t\tlocal player = nil\n'
+		+ '\t\tfor _, node in pairs(nodes) do\n'
+		+ '\t\t\tlocal tag = tostring(node.tag or "")\n'
+		+ '\t\t\tif node ~= scene and player == nil and string.find(tag, "Camera") == nil then\n'
+		+ '\t\t\t\tplayer = node\n'
+		+ '\t\t\tend\n'
+		+ '\t\tend\n'
+		+ '\t\tif player == nil then\n'
+		+ '\t\t\tprint("[GameMain] no playable node found")\n'
+		+ '\t\t\treturn\n'
+		+ '\t\tend\n'
+		+ '\t\tscene:schedule(function(deltaTime)\n'
+		+ '\t\t\tlocal speed = 220\n'
+		+ '\t\t\tif Keyboard:isKeyPressed("A") or Keyboard:isKeyPressed("Left") then\n'
+		+ '\t\t\t\tplayer.x = player.x - speed * deltaTime\n'
+		+ '\t\t\tend\n'
+		+ '\t\t\tif Keyboard:isKeyPressed("D") or Keyboard:isKeyPressed("Right") then\n'
+		+ '\t\t\t\tplayer.x = player.x + speed * deltaTime\n'
+		+ '\t\t\tend\n'
+		+ '\t\t\treturn false\n'
+		+ '\t\tend)\n'
+		+ '\tend\n'
+		+ '}\n';
+}
+
 function loadScriptIntoEditor(
 	state: EditorState,
 	node: SceneNodeData | undefined,
@@ -45,6 +77,23 @@ function loadScriptIntoEditor(
 		state.scriptContentBuffer.text = Content.load(scriptPath) || '';
 	} else {
 		state.scriptContentBuffer.text = scriptTemplate(node);
+	}
+	state.mode = 'Script';
+}
+
+function loadGameMainIntoEditor(state: EditorState) {
+	state.activeScriptNodeId = '__game_main__';
+	const scriptPath = state.gameScript !== '' ? state.gameScript : 'Script/Main.lua';
+	state.gameScript = scriptPath;
+	state.gameScriptBuffer.text = scriptPath;
+	state.scriptPathBuffer.text = scriptPath;
+	const scriptFile = workspacePath(scriptPath);
+	if (Content.exist(scriptFile)) {
+		state.scriptContentBuffer.text = Content.load(scriptFile) || '';
+	} else if (Content.exist(scriptPath)) {
+		state.scriptContentBuffer.text = Content.load(scriptPath) || '';
+	} else {
+		state.scriptContentBuffer.text = gameMainTemplate();
 	}
 	state.mode = 'Script';
 }
@@ -75,6 +124,14 @@ function saveScriptFile(state: EditorState, node: SceneNodeData | undefined, att
 		state.status = zh ? '脚本保存失败' : 'Failed to save script';
 	}
 	if (!statusAlreadyLogged) pushConsole(state, state.status);
+}
+
+function useCurrentScriptAsGameMain(state: EditorState) {
+	const path = state.scriptPathBuffer.text !== '' ? state.scriptPathBuffer.text : 'Script/Main.lua';
+	state.gameScript = path;
+	state.gameScriptBuffer.text = path;
+	state.status = (zh ? '已设置游戏主脚本：' : 'Game main script set: ') + path;
+	pushConsole(state, state.status);
 }
 
 function currentScriptPath(state: EditorState, node?: SceneNodeData) {
@@ -184,6 +241,11 @@ export function drawScriptPanel(state: EditorState, attachScriptToNode: AttachSc
 	ImGui.TextDisabled(node !== undefined ? node.name : (zh ? '独立文件模式' : 'File mode'));
 	ImGui.Separator();
 	ImGui.BeginChild('ScriptSidebar', Vec2(220, 0), [], noScrollFlags, () => {
+		ImGui.TextColored(themeColor, zh ? '游戏入口' : 'Game Entry');
+		ImGui.TextDisabled(state.gameScript !== '' ? state.gameScript : 'Script/Main.lua');
+		if (ImGui.Button(zh ? '打开主脚本' : 'Open Main')) loadGameMainIntoEditor(state);
+		if (ImGui.Button(zh ? '当前脚本设为主入口' : 'Use Current As Main')) useCurrentScriptAsGameMain(state);
+		ImGui.Separator();
 		drawScriptAssetList(state, node, attachScriptToNode);
 		ImGui.Separator();
 		if (ImGui.Button(zh ? '新建脚本' : 'New Script')) {
@@ -212,6 +274,8 @@ export function drawScriptPanel(state: EditorState, attachScriptToNode: AttachSc
 			ImGui.InputText('##ScriptPath', state.scriptPathBuffer, inputTextFlags);
 			ImGui.SameLine();
 			if (ImGui.Button(zh ? '保存' : 'Save')) saveScriptFile(state, node, attachScriptToNode);
+			ImGui.SameLine();
+			if (ImGui.Button(zh ? '设为主入口' : 'Set Main')) useCurrentScriptAsGameMain(state);
 			ImGui.SameLine();
 			if (ImGui.Button(zh ? 'Web IDE 打开' : 'Open in Web IDE')) openScriptInWebIDE(state, node, attachScriptToNode);
 			if (node !== undefined) {
