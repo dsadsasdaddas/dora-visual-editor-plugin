@@ -71,6 +71,8 @@ export function createEditorState(): EditorState {
 		previewDirty: true,
 		runtimeNodes: {},
 		runtimeLabels: {},
+		externalPreviewRunning: false,
+		externalPreviewRoot: '',
 		isPlaying: false,
 		gameWindowOpen: false,
 		playViewport: { x: 0, y: 0, width: 960, height: 540 },

@@ -4,7 +4,6 @@ import { SetCond, StyleColor } from 'ImGui';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { mainWindowFlags, noScrollFlags, panelBg, transparent, warnColor } from 'Script/Tools/SceneEditor/Theme';
 import { addChildNode, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
-import { drawGamePreviewWindow } from 'Script/Tools/SceneEditor/Player';
 import { drawHeaderPanel } from 'Script/Tools/SceneEditor/Panels/HeaderPanel';
 import { drawConsolePanel } from 'Script/Tools/SceneEditor/Panels/ConsolePanel';
 import { drawSceneTreePanel } from 'Script/Tools/SceneEditor/Panels/SceneTreePanel';
@@ -208,7 +207,6 @@ export function drawEditor(state: EditorState) {
 			ImGui.BeginChild('BottomConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsolePanel(state));
 		});
 	});
-	drawGamePreviewWindow(state);
 }
 
 export function drawRuntimeError(message: string) {

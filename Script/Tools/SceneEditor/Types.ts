@@ -56,6 +56,8 @@ export interface EditorState {
 	previewContent?: Node.Type;
 	runtimeNodes: Record<string, Node.Type>;
 	runtimeLabels: Record<string, unknown>;
+	externalPreviewRunning: boolean;
+	externalPreviewRoot: string;
 	isPlaying: boolean;
 	gameWindowOpen: boolean;
 	playViewport: ViewportState;

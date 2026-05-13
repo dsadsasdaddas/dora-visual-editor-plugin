@@ -2,16 +2,16 @@ import * as ImGui from 'ImGui';
 import { EditorState } from 'Script/Tools/SceneEditor/EditorTypes';
 import { okColor, themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { deleteNode, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
-import { startPlay, stopPlay } from 'Script/Tools/SceneEditor/Player';
+import { launchExternalPreview, stopExternalPreview } from 'Script/Tools/SceneEditor/ExternalPreview';
 import { drawAddNodePopup } from 'Script/Tools/SceneEditor/Panels/AddNodePopup';
 
 export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorState) => void) {
 	ImGui.TextColored(themeColor, '✦ Dora Visual Editor');
-	if (state.isPlaying) {
+	if (state.externalPreviewRunning) {
 		ImGui.SameLine();
-		ImGui.TextColored(okColor, zh ? '● 运行模式' : '● PLAY MODE');
+		ImGui.TextColored(okColor, zh ? '● 外部预览' : '● EXTERNAL PREVIEW');
 		ImGui.SameLine();
-		ImGui.TextDisabled(zh ? '点 Stop 返回编辑' : 'Stop to edit');
+		ImGui.TextDisabled(zh ? '编辑器仍可继续编辑' : 'Editor remains editable');
 	}
 	ImGui.SameLine();
 	if (ImGui.Button(zh ? '场景' : 'Scene')) state.mode = '2D';
@@ -20,10 +20,16 @@ export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorSta
 	ImGui.SameLine();
 	ImGui.TextDisabled(zh ? 'Dora 原生 2D 场景编辑器' : 'Dora Native 2D Scene Editor');
 	ImGui.Separator();
-	if (state.isPlaying) {
-		if (ImGui.Button(zh ? '■ 停止' : '■ Stop')) stopPlay(state);
+	if (state.externalPreviewRunning) {
+		if (ImGui.Button(zh ? '■ 停止标记' : '■ Stop Mark')) stopExternalPreview(state);
+		ImGui.SameLine();
+		if (ImGui.Button(zh ? '↻ 重新运行' : '↻ Relaunch')) {
+			saveScene(state);
+			launchExternalPreview(state);
+		}
 	} else if (ImGui.Button(zh ? '▶ 运行' : '▶ Run')) {
-		startPlay(state);
+		saveScene(state);
+		launchExternalPreview(state);
 	}
 	ImGui.SameLine();
 	if (ImGui.Button(zh ? '▣ 保存' : '▣ Save')) saveScene(state);
@@ -31,31 +37,23 @@ export function drawHeaderPanel(state: EditorState, saveScene: (state: EditorSta
 	ImGui.TextDisabled(zh ? '游戏窗口' : 'Game');
 	ImGui.SameLine();
 	ImGui.PushItemWidth(150, () => {
-		if (state.isPlaying) {
-			ImGui.BeginDisabled(() => ImGui.DragInt2('##game_resolution', state.gameWidth, state.gameHeight, 1, 160, 8192, '%d'));
-		} else {
-			const [sizeChanged, width, height] = ImGui.DragInt2('##game_resolution', state.gameWidth, state.gameHeight, 1, 160, 8192, '%d');
-			if (sizeChanged) {
-				state.gameWidth = math.max(160, math.min(8192, width));
-				state.gameHeight = math.max(120, math.min(8192, height));
-				state.previewDirty = true;
-				state.playDirty = true;
-			}
+		const [sizeChanged, width, height] = ImGui.DragInt2('##game_resolution', state.gameWidth, state.gameHeight, 1, 160, 8192, '%d');
+		if (sizeChanged) {
+			state.gameWidth = math.max(160, math.min(8192, width));
+			state.gameHeight = math.max(120, math.min(8192, height));
+			state.previewDirty = true;
+			state.playDirty = true;
 		}
 	});
 	ImGui.SameLine();
-	if (state.isPlaying) {
-		ImGui.BeginDisabled(() => ImGui.Button('16:9'));
-	} else if (ImGui.Button('16:9')) {
+	if (ImGui.Button('16:9')) {
 		state.gameWidth = 960;
 		state.gameHeight = 540;
 		state.previewDirty = true;
 		state.playDirty = true;
 	}
 	ImGui.SameLine();
-	if (state.isPlaying) {
-		ImGui.BeginDisabled(() => ImGui.Button('HD'));
-	} else if (ImGui.Button('HD')) {
+	if (ImGui.Button('HD')) {
 		state.gameWidth = 1280;
 		state.gameHeight = 720;
 		state.previewDirty = true;
