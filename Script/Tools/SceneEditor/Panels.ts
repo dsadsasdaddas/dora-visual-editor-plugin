@@ -48,6 +48,9 @@ function writeSceneFile(state: EditorState) {
 				texture: node.texture,
 				text: node.text,
 				script: node.script,
+				followTargetId: node.followTargetId,
+				followOffsetX: node.followOffsetX,
+				followOffsetY: node.followOffsetY,
 			});
 		}
 	}

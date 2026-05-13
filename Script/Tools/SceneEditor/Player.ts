@@ -1,5 +1,6 @@
 import { Color, Content, Director, DrawNode, Label, Node, Path, RenderTarget, Sprite, Vec2 } from 'Dora';
 import * as ImGui from 'ImGui';
+import { SetCond } from 'ImGui';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { okColor, viewportBgColor } from 'Script/Tools/SceneEditor/Theme';
 import { pushConsole, workspacePath, zh } from 'Script/Tools/SceneEditor/Model';
@@ -75,6 +76,18 @@ function firstCameraId(state: EditorState) {
 		if (item !== undefined && item.kind === 'Camera' && item.visible) return id;
 	}
 	return undefined;
+}
+
+function sceneWorldPosition(state: EditorState, id: string): [number, number] {
+	let x = 0;
+	let y = 0;
+	let cursor: SceneNodeData | undefined = state.nodes[id];
+	while (cursor !== undefined) {
+		x += cursor.x;
+		y += cursor.y;
+		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
+	}
+	return [x, y];
 }
 
 function loadScriptText(scriptPath: string) {
@@ -242,9 +255,18 @@ function rebuildPlayRuntime(state: EditorState) {
 	}
 
 	const cameraId = firstCameraId(state);
+	const cameraData = cameraId !== undefined ? state.nodes[cameraId] : undefined;
 	const cameraNode = cameraId !== undefined ? state.playRuntimeNodes[cameraId] : undefined;
 	const updateCamera = function(this: void) {
-		if (cameraNode !== undefined) {
+		if (cameraNode !== undefined && cameraData !== undefined) {
+			if (cameraData.followTargetId !== '') {
+				const targetNode = state.playRuntimeNodes[cameraData.followTargetId];
+				if (targetNode !== undefined) {
+					const [targetX, targetY] = sceneWorldPosition(state, cameraData.followTargetId);
+					cameraNode.x = targetX + cameraData.followOffsetX;
+					cameraNode.y = targetY + cameraData.followOffsetY;
+				}
+			}
 			world.x = width / 2;
 			world.y = height / 2;
 			world.angle = -cameraNode.angle;
@@ -303,7 +325,7 @@ export function drawGamePreviewWindow(state: EditorState) {
 	if (!state.isPlaying) return;
 	renderPlayTarget(state);
 	if (playTarget === undefined) return;
-	ImGui.SetNextWindowSize(Vec2(720, 480), 'FirstUseEver');
+	ImGui.SetNextWindowSize(Vec2(720, 480), SetCond.FirstUseEver);
 	ImGui.Begin(zh ? '游戏预览' : 'Game Preview', () => {
 		const avail = ImGui.GetContentRegionAvail();
 		const width = gameWidthOf(state);

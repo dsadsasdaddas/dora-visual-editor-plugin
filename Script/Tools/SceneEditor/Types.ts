@@ -19,10 +19,14 @@ export interface SceneNodeData {
 	texture: string;
 	text: string;
 	script: string;
+	followTargetId: string;
+	followOffsetX: number;
+	followOffsetY: number;
 	nameBuffer: Buffer.Type;
 	textureBuffer: Buffer.Type;
 	textBuffer: Buffer.Type;
 	scriptBuffer: Buffer.Type;
+	followTargetBuffer: Buffer.Type;
 }
 
 export interface ViewportState {

@@ -12,6 +12,29 @@ function markSceneChanged(state: EditorState) {
 	state.playDirty = true;
 }
 
+function nodeDisplayName(node: SceneNodeData) {
+	return node.name + ' (' + node.id + ')';
+}
+
+function selectNextFollowTarget(state: EditorState, camera: SceneNodeData) {
+	let foundCurrent = camera.followTargetId === '';
+	for (const id of state.order) {
+		const candidate = state.nodes[id];
+		if (candidate !== undefined && candidate.id !== camera.id && candidate.kind !== 'Root' && candidate.kind !== 'Camera') {
+			if (foundCurrent) {
+				camera.followTargetId = candidate.id;
+				camera.followTargetBuffer.text = candidate.id;
+				markSceneChanged(state);
+				return;
+			}
+			if (candidate.id === camera.followTargetId) foundCurrent = true;
+		}
+	}
+	camera.followTargetId = '';
+	camera.followTargetBuffer.text = '';
+	markSceneChanged(state);
+}
+
 export function drawInspectorPanel(
 	state: EditorState,
 	bindTextureToSprite: BindTextureToSprite,
@@ -71,5 +94,28 @@ export function drawInspectorPanel(
 	} else if (node.kind === 'Camera') {
 		ImGui.Separator();
 		ImGui.TextDisabled(zh ? 'Camera 显示真实取景框。' : 'Camera shows a real frame in viewport.');
+		ImGui.Separator();
+		ImGui.TextColored(themeColor, zh ? '跟随目标' : 'Follow Target');
+		if (ImGui.InputText('Target Id', node.followTargetBuffer, inputTextFlags)) {
+			node.followTargetId = node.followTargetBuffer.text;
+			markSceneChanged(state);
+		}
+		ImGui.SameLine();
+		if (ImGui.Button(zh ? '选择下一个' : 'Next Target')) selectNextFollowTarget(state, node);
+		const target = node.followTargetId !== '' ? state.nodes[node.followTargetId] : undefined;
+		ImGui.TextDisabled((zh ? '当前：' : 'Current: ') + (target !== undefined ? nodeDisplayName(target) : (zh ? '无' : 'None')));
+		let [offsetChanged, offsetX, offsetY] = ImGui.DragFloat2('Follow Offset', node.followOffsetX, node.followOffsetY, 1, -10000, 10000, '%.1f');
+		if (offsetChanged) {
+			node.followOffsetX = offsetX;
+			node.followOffsetY = offsetY;
+			markSceneChanged(state);
+		}
+		if (ImGui.Button(zh ? '清除跟随' : 'Clear Follow')) {
+			node.followTargetId = '';
+			node.followTargetBuffer.text = '';
+			node.followOffsetX = 0;
+			node.followOffsetY = 0;
+			markSceneChanged(state);
+		}
 	}
 }

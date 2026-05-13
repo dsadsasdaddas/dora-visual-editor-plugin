@@ -294,10 +294,14 @@ export function addNode(state: EditorState, kind: SceneNodeKind, name: string, p
 		texture: '',
 		text: kind === 'Label' ? 'Label' : '',
 		script: '',
+		followTargetId: '',
+		followOffsetX: 0,
+		followOffsetY: 0,
 		nameBuffer: makeBuffer(name, 128),
 		textureBuffer: makeBuffer('', 256),
 		textBuffer: makeBuffer(kind === 'Label' ? 'Label' : '', 256),
 		scriptBuffer: makeBuffer('', 256),
+		followTargetBuffer: makeBuffer('', 128),
 	};
 	state.nodes[id] = node;
 	state.order.push(id);
@@ -362,6 +366,9 @@ export function loadSceneFromFile(state: EditorState, file: string) {
 		const texture = stringValue((raw as any).texture, '');
 		const text = stringValue((raw as any).text, kind === 'Label' ? 'Label' : '');
 		const script = stringValue((raw as any).script, '');
+		const followTargetId = stringValue((raw as any).followTargetId, '');
+		const followOffsetX = numberValue((raw as any).followOffsetX, 0);
+		const followOffsetY = numberValue((raw as any).followOffsetY, 0);
 		const parentId = id === 'root' ? undefined : stringValue((raw as any).parentId, 'root');
 		const node: SceneNodeData = {
 			id,
@@ -378,10 +385,14 @@ export function loadSceneFromFile(state: EditorState, file: string) {
 			texture,
 			text,
 			script,
+			followTargetId,
+			followOffsetX,
+			followOffsetY,
 			nameBuffer: makeBuffer(name, 128),
 			textureBuffer: makeBuffer(texture, 256),
 			textBuffer: makeBuffer(text, 256),
 			scriptBuffer: makeBuffer(script, 256),
+			followTargetBuffer: makeBuffer(followTargetId, 128),
 		};
 		state.nodes[id] = node;
 		state.order.push(id);
@@ -445,7 +456,7 @@ export function deleteNode(state: EditorState, id: string) {
 function worldPositionOf(state: EditorState, id: string): [number, number] {
 	let x = 0;
 	let y = 0;
-	let cursor = state.nodes[id];
+	let cursor: SceneNodeData | undefined = state.nodes[id];
 	while (cursor !== undefined) {
 		x += cursor.x;
 		y += cursor.y;
@@ -460,7 +471,7 @@ export function reparentNode(state: EditorState, id: string, newParentId: string
 	const newParent = state.nodes[newParentId];
 	if (node === undefined || newParent === undefined || node.parentId === newParentId) return false;
 	const [worldX, worldY] = worldPositionOf(state, id);
-	let cursor = newParent;
+	let cursor: SceneNodeData | undefined = newParent;
 	while (cursor !== undefined) {
 		if (cursor.id === id) return false;
 		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
