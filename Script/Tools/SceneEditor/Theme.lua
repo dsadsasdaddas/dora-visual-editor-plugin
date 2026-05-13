@@ -28,5 +28,6 @@ ____exports.mainWindowFlags = { -- 20
 	"NoScrollbar" -- 28
 } -- 28
 ____exports.noScrollFlags = {"NoScrollbar", "NoScrollWithMouse"} -- 31
-____exports.inputTextFlags = {"AutoSelectAll"} -- 36
-return ____exports -- 36
+____exports.verticalScrollFlags = {"AlwaysVerticalScrollbar"} -- 36
+____exports.inputTextFlags = {"AutoSelectAll"} -- 40
+return ____exports -- 40

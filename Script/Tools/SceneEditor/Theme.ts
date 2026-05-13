@@ -33,4 +33,8 @@ export const noScrollFlags = [
 	WindowFlag.NoScrollWithMouse,
 ];
 
+export const verticalScrollFlags = [
+	WindowFlag.AlwaysVerticalScrollbar,
+];
+
 export const inputTextFlags = [InputTextFlag.AutoSelectAll];

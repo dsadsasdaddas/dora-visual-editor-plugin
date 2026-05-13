@@ -13,6 +13,7 @@ local mainWindowFlags = ____Theme.mainWindowFlags -- 5
 local noScrollFlags = ____Theme.noScrollFlags -- 5
 local panelBg = ____Theme.panelBg -- 5
 local transparent = ____Theme.transparent -- 5
+local verticalScrollFlags = ____Theme.verticalScrollFlags -- 5
 local warnColor = ____Theme.warnColor -- 5
 local ____Model = require("Script.Tools.SceneEditor.Model") -- 6
 local addChildNode = ____Model.addChildNode -- 6
@@ -325,7 +326,7 @@ function ____exports.drawEditor(state) -- 130
 						"RightDock", -- 209
 						Vec2(state.rightWidth, mainHeight), -- 209
 						{}, -- 209
-						noScrollFlags, -- 209
+						verticalScrollFlags, -- 209
 						function() return drawInspectorPanel(state, bindTextureToSprite, openNodeScriptInEditor) end -- 209
 					) -- 209
 				end -- 208

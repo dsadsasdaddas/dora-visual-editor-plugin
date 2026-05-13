@@ -2,7 +2,7 @@ import { App, Color, Content, Path, Vec2, json } from 'Dora';
 import * as ImGui from 'ImGui';
 import { SetCond, StyleColor } from 'ImGui';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
-import { mainWindowFlags, noScrollFlags, panelBg, transparent, warnColor } from 'Script/Tools/SceneEditor/Theme';
+import { mainWindowFlags, noScrollFlags, panelBg, transparent, verticalScrollFlags, warnColor } from 'Script/Tools/SceneEditor/Theme';
 import { addChildNode, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
 import { drawHeaderPanel } from 'Script/Tools/SceneEditor/Panels/HeaderPanel';
 import { drawConsolePanel } from 'Script/Tools/SceneEditor/Panels/ConsolePanel';
@@ -206,7 +206,7 @@ export function drawEditor(state: EditorState) {
 		drawVerticalSplitter('RightSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'right'));
 		ImGui.SameLine(0, 0);
 		ImGui.PushStyleColor(StyleColor.ChildBg, panelBg, () => {
-			ImGui.BeginChild('RightDock', Vec2(state.rightWidth, mainHeight), [], noScrollFlags, () => drawInspectorPanel(state, bindTextureToSprite, openNodeScriptInEditor));
+			ImGui.BeginChild('RightDock', Vec2(state.rightWidth, mainHeight), [], verticalScrollFlags, () => drawInspectorPanel(state, bindTextureToSprite, openNodeScriptInEditor));
 		});
 		ImGui.PushStyleColor(StyleColor.ChildBg, panelBg, () => {
 			ImGui.BeginChild('BottomConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsolePanel(state));
