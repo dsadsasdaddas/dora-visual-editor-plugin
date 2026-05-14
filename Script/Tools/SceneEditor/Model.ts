@@ -30,6 +30,7 @@ type SceneJson = {
 const [localeMatch] = string.match(App.locale, '^zh');
 export const zh = localeMatch !== undefined;
 
+
 const importedAssetRoot = 'Imported';
 const importedAssetRootEntry = importedAssetRoot + '/';
 

@@ -23,10 +23,10 @@ local pushConsole = ____Model.pushConsole -- 6
 local zh = ____Model.zh -- 6
 local SceneModel = require("Script.Tools.SceneEditor.Model") -- 26
 local function workspacePath(path) -- 27
-	return SceneModel:workspacePath(path) -- 27
+	return SceneModel.workspacePath(path) -- 27
 end -- 27
 local function workspaceRoot() -- 28
-	return SceneModel:workspaceRoot() -- 28
+	return SceneModel.workspaceRoot() -- 28
 end -- 28
 local function scriptTemplate(node) -- 32
 	local name = node ~= nil and node.name or "Script" -- 33
@@ -171,7 +171,7 @@ local function openScriptInWebIDE(state, node, attachScriptToNode) -- 164
 		) -- 220
 		pcall(function() -- 221
 			local Entry = require("Script.Dev.Entry") -- 222
-			local config = Entry:getConfig() -- 223
+			local config = Entry.getConfig() -- 223
 			if config ~= nil then -- 223
 				config.editingInfo = editingText -- 224
 			end -- 224

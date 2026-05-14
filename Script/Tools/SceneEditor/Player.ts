@@ -335,6 +335,10 @@ export function drawGamePreviewWindow(state: EditorState) {
 		const displayWidth = width * scale;
 		const displayHeight = height * scale;
 		ImGui.TextDisabled((zh ? '运行尺寸：' : 'Game Size: ') + tostring(width) + ' x ' + tostring(height));
-		ImGui.ImageTexture(target.texture, Vec2(displayWidth, displayHeight));
+		if (ImGui.ImageTexture !== undefined) {
+			ImGui.ImageTexture(target.texture, Vec2(displayWidth, displayHeight));
+		} else {
+			ImGui.TextColored(okColor, zh ? '游戏正在运行。当前 Dora App 缺少 ImGui.ImageTexture，无法显示独立预览窗口。' : 'Game is running. Current Dora App lacks ImGui.ImageTexture, so the detached preview cannot be shown.');
+		}
 	});
 }

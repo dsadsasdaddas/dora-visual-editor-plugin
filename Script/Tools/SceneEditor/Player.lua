@@ -406,10 +406,14 @@ function ____exports.drawGamePreviewWindow(state) -- 324
 			local displayWidth = width * scale -- 335
 			local displayHeight = height * scale -- 336
 			ImGui.TextDisabled((((zh and "运行尺寸：" or "Game Size: ") .. tostring(width)) .. " x ") .. tostring(height)) -- 337
-			ImGui.ImageTexture( -- 338
-				target.texture, -- 338
-				Vec2(displayWidth, displayHeight) -- 338
-			) -- 338
+			if ImGui.ImageTexture ~= nil then -- 337
+				ImGui.ImageTexture( -- 339
+					target.texture, -- 339
+					Vec2(displayWidth, displayHeight) -- 339
+				) -- 339
+			else -- 339
+				ImGui.TextColored(okColor, zh and "游戏正在运行。当前 Dora App 缺少 ImGui.ImageTexture，无法显示独立预览窗口。" or "Game is running. Current Dora App lacks ImGui.ImageTexture, so the detached preview cannot be shown.") -- 341
+			end -- 341
 		end -- 330
 	) -- 330
 end -- 324

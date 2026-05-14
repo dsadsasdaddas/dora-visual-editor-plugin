@@ -7,8 +7,8 @@ import { importFileDialog, isFolderAsset, isScriptAsset, pushConsole, zh } from 
 
 declare function pcall(fn: () => void): LuaMultiReturn<[boolean, unknown]>;
 type SceneModelApi = {
-	workspacePath: (path: string) => string;
-	workspaceRoot: () => string;
+	workspacePath: (this: void, path: string) => string;
+	workspaceRoot: (this: void) => string;
 };
 
 type EntryConfig = {
@@ -16,7 +16,7 @@ type EntryConfig = {
 };
 
 type EntryApi = {
-	getConfig: () => EntryConfig | undefined;
+	getConfig: (this: void) => EntryConfig | undefined;
 };
 
 declare function require(path: 'Script.Tools.SceneEditor.Model'): SceneModelApi;

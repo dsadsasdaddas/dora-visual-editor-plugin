@@ -14,7 +14,7 @@ import { drawViewportPanel } from 'Script/Tools/SceneEditor/Panels/ViewportPanel
 import { drawGamePreviewWindow } from 'Script/Tools/SceneEditor/Player';
 
 type SceneModelApi = {
-	workspacePath: (path: string) => string;
+	workspacePath: (this: void, path: string) => string;
 };
 
 declare function require(path: string): SceneModelApi;
@@ -112,10 +112,11 @@ function openNodeScriptInEditor(state: EditorState, node: SceneNodeData) {
 }
 
 function drawVerticalSplitter(id: string, height: number, onDrag: (deltaX: number) => void) {
-	ImGui.PushStyleColor(StyleColor.Button, Color(0xff343a44), () => {
-		ImGui.PushStyleColor(StyleColor.ButtonHovered, Color(0xff4d5968), () => {
+	const hitWidth = 14;
+	ImGui.PushStyleColor(StyleColor.Button, Color(0x66343a44), () => {
+		ImGui.PushStyleColor(StyleColor.ButtonHovered, Color(0xaa4d5968), () => {
 			ImGui.PushStyleColor(StyleColor.ButtonActive, Color(0xffffcc33), () => {
-				ImGui.Button('##' + id, Vec2(8, height));
+				ImGui.Button('##' + id, Vec2(hitWidth, height));
 			});
 		});
 	});
@@ -124,7 +125,7 @@ function drawVerticalSplitter(id: string, height: number, onDrag: (deltaX: numbe
 	}
 	if (ImGui.IsItemActive() && ImGui.IsMouseDragging(0)) {
 		const delta = ImGui.GetMouseDragDelta(0);
-		if (delta.x !== 0) {
+		if (math.abs(delta.x) >= 1) {
 			onDrag(delta.x);
 			ImGui.ResetMouseDragDelta(0);
 		}
@@ -156,12 +157,12 @@ export function drawEditor(state: EditorState) {
 		}
 		const mainHeight = math.max(160, avail.y - bottomHeight - 10);
 		const availableWidth = math.max(320, avail.x);
-		const splitterWidth = 8;
+		const splitterWidth = 14;
 		const compactLayout = availableWidth < 760;
-		const minLeftWidth = compactLayout ? 110 : 170;
-		const minRightWidth = compactLayout ? 130 : 220;
-		const minCenterWidth = compactLayout ? 80 : 180;
-		const sideBudget = math.max(0, availableWidth - splitterWidth * 2 - minCenterWidth);
+		const minLeftWidth = compactLayout ? 92 : 132;
+		const minRightWidth = compactLayout ? 120 : 180;
+		const minCenterWidth = compactLayout ? 80 : 120;
+		const sideBudget = math.max(0, availableWidth - minCenterWidth);
 		if (sideBudget <= minLeftWidth + minRightWidth) {
 			state.leftWidth = math.max(1, math.floor(sideBudget * 0.45));
 			state.rightWidth = math.max(1, sideBudget - state.leftWidth);
@@ -176,7 +177,7 @@ export function drawEditor(state: EditorState) {
 			state.leftWidth = math.min(state.leftWidth, sideBudget - minRightWidth);
 			state.rightWidth = math.min(state.rightWidth, sideBudget - state.leftWidth);
 		}
-		const centerWidth = math.max(1, availableWidth - state.leftWidth - state.rightWidth - splitterWidth * 2);
+		const centerWidth = math.max(1, availableWidth - state.leftWidth - state.rightWidth);
 		const leftTopHeight = math.floor(mainHeight * 0.58);
 		const leftBottomHeight = mainHeight - leftTopHeight - 8;
 		const clampPanelWidth = function(this: void, value: number, minValue: number, maxValue: number) {
@@ -186,20 +187,24 @@ export function drawEditor(state: EditorState) {
 		};
 		const resizeSidePanels = function(this: void, deltaX: number, side: 'left' | 'right') {
 			if (side === 'left') {
-				state.leftWidth = clampPanelWidth(state.leftWidth + deltaX, minLeftWidth, availableWidth - state.rightWidth - splitterWidth * 2 - minCenterWidth);
+				state.leftWidth = clampPanelWidth(state.leftWidth + deltaX, minLeftWidth, availableWidth - state.rightWidth - minCenterWidth);
 			} else {
-				state.rightWidth = clampPanelWidth(state.rightWidth - deltaX, minRightWidth, availableWidth - state.leftWidth - splitterWidth * 2 - minCenterWidth);
+				state.rightWidth = clampPanelWidth(state.rightWidth - deltaX, minRightWidth, availableWidth - state.leftWidth - minCenterWidth);
 			}
 		};
 
 		ImGui.PushStyleColor(StyleColor.ChildBg, panelBg, () => {
 			ImGui.BeginChild('LeftDock', Vec2(state.leftWidth, mainHeight), [], noScrollFlags, () => {
-				ImGui.BeginChild('SceneDock', Vec2(0, leftTopHeight), [], noScrollFlags, () => drawSceneTreePanel(state));
-				ImGui.BeginChild('AssetDock', Vec2(0, leftBottomHeight), [], noScrollFlags, () => drawAssetsPanel(state, bindTextureToSprite, createSpriteFromTexture, attachScriptToNode));
+				const contentWidth = math.max(1, state.leftWidth - splitterWidth);
+				ImGui.BeginChild('LeftDockContent', Vec2(contentWidth, mainHeight), [], noScrollFlags, () => {
+					ImGui.BeginChild('SceneDock', Vec2(0, leftTopHeight), [], noScrollFlags, () => drawSceneTreePanel(state));
+					ImGui.BeginChild('AssetDock', Vec2(0, leftBottomHeight), [], noScrollFlags, () => drawAssetsPanel(state, bindTextureToSprite, createSpriteFromTexture, attachScriptToNode));
+				});
+				ImGui.SameLine(0, 0);
+				const splitterOrigin = ImGui.GetCursorScreenPos();
+				drawVerticalSplitter('LeftSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'left'));
 			});
 		});
-		ImGui.SameLine(0, 0);
-		drawVerticalSplitter('LeftSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'left'));
 		ImGui.SameLine(0, 0);
 		ImGui.PushStyleColor(StyleColor.ChildBg, transparent, () => {
 			ImGui.BeginChild('CenterDock', Vec2(centerWidth, mainHeight), [], noScrollFlags, () => {
@@ -207,10 +212,13 @@ export function drawEditor(state: EditorState) {
 			});
 		});
 		ImGui.SameLine(0, 0);
-		drawVerticalSplitter('RightSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'right'));
-		ImGui.SameLine(0, 0);
 		ImGui.PushStyleColor(StyleColor.ChildBg, panelBg, () => {
-			ImGui.BeginChild('RightDock', Vec2(state.rightWidth, mainHeight), [], verticalScrollFlags, () => drawInspectorPanel(state, bindTextureToSprite, openNodeScriptInEditor));
+			ImGui.BeginChild('RightDock', Vec2(state.rightWidth, mainHeight), [], verticalScrollFlags, () => {
+				const splitterOrigin = ImGui.GetCursorScreenPos();
+				drawVerticalSplitter('RightSplitter', mainHeight, (deltaX) => resizeSidePanels(deltaX, 'right'));
+				ImGui.SameLine(0, 0);
+				ImGui.BeginChild('RightDockContent', Vec2(math.max(1, state.rightWidth - splitterWidth), mainHeight), [], verticalScrollFlags, () => drawInspectorPanel(state, bindTextureToSprite, openNodeScriptInEditor));
+			});
 		});
 		ImGui.PushStyleColor(StyleColor.ChildBg, panelBg, () => {
 			ImGui.BeginChild('BottomConsoleDock', Vec2(0, bottomHeight), [], noScrollFlags, () => drawConsolePanel(state));
