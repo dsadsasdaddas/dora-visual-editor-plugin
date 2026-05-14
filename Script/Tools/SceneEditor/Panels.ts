@@ -13,7 +13,11 @@ import { drawScriptPanel, openScriptForNode } from 'Script/Tools/SceneEditor/Pan
 import { drawViewportPanel } from 'Script/Tools/SceneEditor/Panels/ViewportPanel';
 import { drawGamePreviewWindow } from 'Script/Tools/SceneEditor/Player';
 
-declare function require(path: string): any;
+type SceneModelApi = {
+	workspacePath: (path: string) => string;
+};
+
+declare function require(path: string): SceneModelApi;
 
 const SceneModel = require('Script.Tools.SceneEditor.Model');
 function workspacePath(path: string) { return SceneModel.workspacePath(path) as string; }

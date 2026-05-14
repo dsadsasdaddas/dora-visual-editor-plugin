@@ -1,6 +1,32 @@
 import { App, Buffer, Content, Path, emit, json } from 'Dora';
 import { EditorState, SceneNodeData, SceneNodeKind } from 'Script/Tools/SceneEditor/EditorTypes';
 
+type SceneNodeJson = {
+	id?: unknown;
+	kind?: unknown;
+	name?: unknown;
+	parentId?: unknown;
+	x?: unknown;
+	y?: unknown;
+	scaleX?: unknown;
+	scaleY?: unknown;
+	rotation?: unknown;
+	visible?: unknown;
+	texture?: unknown;
+	text?: unknown;
+	script?: unknown;
+	followTargetId?: unknown;
+	followOffsetX?: unknown;
+	followOffsetY?: unknown;
+};
+
+type SceneJson = {
+	gameWidth?: unknown;
+	gameHeight?: unknown;
+	gameScript?: unknown;
+	nodes?: SceneNodeJson[];
+};
+
 const [localeMatch] = string.match(App.locale, '^zh');
 export const zh = localeMatch !== undefined;
 
@@ -324,7 +350,8 @@ function stringValue(value: unknown, fallback: string) {
 }
 
 function numberValue(value: unknown, fallback: number) {
-	const parsed = tonumber(value as any);
+	if (type(value) !== 'number' && type(value) !== 'string') return fallback;
+	const parsed = tonumber(value);
 	return parsed !== undefined ? parsed : fallback;
 }
 
@@ -342,13 +369,14 @@ function updateNextIdFromNodeId(state: EditorState, id: string) {
 
 export function loadSceneFromFile(state: EditorState, file: string) {
 	if (!Content.exist(file)) return false;
-	const [data] = json.decode(Content.load(file));
+	const [decoded] = json.decode(Content.load(file));
+	const data = decoded as unknown as SceneJson | undefined;
 	if (data === undefined) return false;
-	const rawNodes = (data as any).nodes as any[] | undefined;
+	const rawNodes = data.nodes;
 	if (rawNodes === undefined) return false;
-	state.gameWidth = math.max(160, math.min(8192, numberValue((data as any).gameWidth, state.gameWidth || 960)));
-	state.gameHeight = math.max(120, math.min(8192, numberValue((data as any).gameHeight, state.gameHeight || 540)));
-	state.gameScript = stringValue((data as any).gameScript, state.gameScript || 'Script/Main.lua');
+	state.gameWidth = math.max(160, math.min(8192, numberValue(data.gameWidth, state.gameWidth || 960)));
+	state.gameHeight = math.max(120, math.min(8192, numberValue(data.gameHeight, state.gameHeight || 540)));
+	state.gameScript = stringValue(data.gameScript, state.gameScript || 'Script/Main.lua');
 	state.gameScriptBuffer.text = state.gameScript;
 
 	state.nodes = {};
@@ -360,28 +388,28 @@ export function loadSceneFromFile(state: EditorState, file: string) {
 	state.nextId = 0;
 
 	for (const raw of rawNodes) {
-		const kind = sceneNodeKind((raw as any).kind);
-		const id = stringValue((raw as any).id, kind === 'Root' ? 'root' : string.lower(kind) + '-' + tostring(state.nextId + 1));
-		const name = stringValue((raw as any).name, kind === 'Root' ? 'MainScene' : kind);
-		const texture = stringValue((raw as any).texture, '');
-		const text = stringValue((raw as any).text, kind === 'Label' ? 'Label' : '');
-		const script = stringValue((raw as any).script, '');
-		const followTargetId = stringValue((raw as any).followTargetId, '');
-		const followOffsetX = numberValue((raw as any).followOffsetX, 0);
-		const followOffsetY = numberValue((raw as any).followOffsetY, 0);
-		const parentId = id === 'root' ? undefined : stringValue((raw as any).parentId, 'root');
+		const kind = sceneNodeKind(raw.kind);
+		const id = stringValue(raw.id, kind === 'Root' ? 'root' : string.lower(kind) + '-' + tostring(state.nextId + 1));
+		const name = stringValue(raw.name, kind === 'Root' ? 'MainScene' : kind);
+		const texture = stringValue(raw.texture, '');
+		const text = stringValue(raw.text, kind === 'Label' ? 'Label' : '');
+		const script = stringValue(raw.script, '');
+		const followTargetId = stringValue(raw.followTargetId, '');
+		const followOffsetX = numberValue(raw.followOffsetX, 0);
+		const followOffsetY = numberValue(raw.followOffsetY, 0);
+		const parentId = id === 'root' ? undefined : stringValue(raw.parentId, 'root');
 		const node: SceneNodeData = {
 			id,
 			kind,
 			name,
 			parentId,
 			children: [],
-			x: numberValue((raw as any).x, 0),
-			y: numberValue((raw as any).y, 0),
-			scaleX: numberValue((raw as any).scaleX, 1),
-			scaleY: numberValue((raw as any).scaleY, 1),
-			rotation: numberValue((raw as any).rotation, 0),
-			visible: booleanValue((raw as any).visible, true),
+			x: numberValue(raw.x, 0),
+			y: numberValue(raw.y, 0),
+			scaleX: numberValue(raw.scaleX, 1),
+			scaleY: numberValue(raw.scaleY, 1),
+			rotation: numberValue(raw.rotation, 0),
+			visible: booleanValue(raw.visible, true),
 			texture,
 			text,
 			script,

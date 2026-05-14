@@ -13,7 +13,7 @@ type GameMainModule = {
 	start?: (scene: Node.Type, nodes: Record<string, Node.Type>, world: Node.Type) => unknown;
 };
 
-let playTarget: any = undefined;
+let playTarget: ReturnType<typeof RenderTarget> | undefined = undefined;
 let playTargetWidth = 0;
 let playTargetHeight = 0;
 
@@ -325,6 +325,7 @@ export function drawGamePreviewWindow(state: EditorState) {
 	if (!state.isPlaying) return;
 	renderPlayTarget(state);
 	if (playTarget === undefined) return;
+	const target = playTarget;
 	ImGui.SetNextWindowSize(Vec2(720, 480), SetCond.FirstUseEver);
 	ImGui.Begin(zh ? '游戏预览' : 'Game Preview', () => {
 		const avail = ImGui.GetContentRegionAvail();
@@ -334,6 +335,6 @@ export function drawGamePreviewWindow(state: EditorState) {
 		const displayWidth = width * scale;
 		const displayHeight = height * scale;
 		ImGui.TextDisabled((zh ? '运行尺寸：' : 'Game Size: ') + tostring(width) + ' x ' + tostring(height));
-		ImGui.ImageTexture(playTarget.texture, Vec2(displayWidth, displayHeight));
+		ImGui.ImageTexture(target.texture, Vec2(displayWidth, displayHeight));
 	});
 }

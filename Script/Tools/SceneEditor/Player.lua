@@ -373,7 +373,7 @@ local function renderPlayTarget(state) -- 313
 	local target = ensurePlayTarget(state) -- 316
 	if state.playRoot ~= nil then -- 316
 		state.playRoot.visible = true -- 318
-		target.renderWithClear( -- 319
+		target:renderWithClear( -- 319
 			state.playRoot, -- 319
 			Color(4279572511) -- 319
 		) -- 319
@@ -388,28 +388,29 @@ function ____exports.drawGamePreviewWindow(state) -- 324
 	if playTarget == nil then -- 326
 		return -- 327
 	end -- 327
-	ImGui.SetNextWindowSize( -- 328
-		Vec2(720, 480), -- 328
-		"FirstUseEver" -- 328
-	) -- 328
-	ImGui.Begin( -- 329
-		zh and "游戏预览" or "Game Preview", -- 329
-		function() -- 329
-			local avail = ImGui.GetContentRegionAvail() -- 330
-			local width = gameWidthOf(state) -- 331
-			local height = gameHeightOf(state) -- 332
-			local scale = math.max( -- 333
-				0.1, -- 333
-				math.min(avail.x / width, avail.y / height) -- 333
-			) -- 333
-			local displayWidth = width * scale -- 334
-			local displayHeight = height * scale -- 335
-			ImGui.TextDisabled((((zh and "运行尺寸：" or "Game Size: ") .. tostring(width)) .. " x ") .. tostring(height)) -- 336
-			ImGui.ImageTexture( -- 337
-				playTarget.texture, -- 337
-				Vec2(displayWidth, displayHeight) -- 337
-			) -- 337
-		end -- 329
+	local target = playTarget -- 328
+	ImGui.SetNextWindowSize( -- 329
+		Vec2(720, 480), -- 329
+		"FirstUseEver" -- 329
 	) -- 329
+	ImGui.Begin( -- 330
+		zh and "游戏预览" or "Game Preview", -- 330
+		function() -- 330
+			local avail = ImGui.GetContentRegionAvail() -- 331
+			local width = gameWidthOf(state) -- 332
+			local height = gameHeightOf(state) -- 333
+			local scale = math.max( -- 334
+				0.1, -- 334
+				math.min(avail.x / width, avail.y / height) -- 334
+			) -- 334
+			local displayWidth = width * scale -- 335
+			local displayHeight = height * scale -- 336
+			ImGui.TextDisabled((((zh and "运行尺寸：" or "Game Size: ") .. tostring(width)) .. " x ") .. tostring(height)) -- 337
+			ImGui.ImageTexture( -- 338
+				target.texture, -- 338
+				Vec2(displayWidth, displayHeight) -- 338
+			) -- 338
+		end -- 330
+	) -- 330
 end -- 324
 return ____exports -- 324
