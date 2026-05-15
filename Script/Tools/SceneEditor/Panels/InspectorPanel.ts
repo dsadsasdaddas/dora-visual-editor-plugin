@@ -3,6 +3,8 @@ import * as ImGui from 'ImGui';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { inputTextFlags, themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { addAssetPath, iconFor, isTextureAsset, zh } from 'Script/Tools/SceneEditor/Model';
+import { nodeKindLabel } from 'Script/Tools/SceneEditor/NodeCatalog';
+import { canNodeKindBeFollowTarget, canNodeKindBindScript, canNodeKindBindTexture, canNodeKindEditText, canNodeKindFollowTarget } from 'Script/Tools/SceneEditor/NodeCapabilities';
 
 type BindTextureToSprite = (state: EditorState, node: SceneNodeData, texture: string) => void;
 type OpenScriptForNode = (state: EditorState, node: SceneNodeData) => void;
@@ -20,7 +22,7 @@ function selectNextFollowTarget(state: EditorState, camera: SceneNodeData) {
 	let foundCurrent = camera.followTargetId === '';
 	for (const id of state.order) {
 		const candidate = state.nodes[id];
-		if (candidate !== undefined && candidate.id !== camera.id && candidate.kind !== 'Root' && candidate.kind !== 'Camera') {
+		if (candidate !== undefined && candidate.id !== camera.id && canNodeKindBeFollowTarget(candidate.kind)) {
 			if (foundCurrent) {
 				camera.followTargetId = candidate.id;
 				camera.followTargetBuffer.text = candidate.id;
@@ -47,7 +49,7 @@ export function drawInspectorPanel(
 		ImGui.TextDisabled(zh ? '没有选中节点' : 'No node selected');
 		return;
 	}
-	ImGui.Text(iconFor(node.kind) + '  ' + node.kind);
+	ImGui.Text(iconFor(node.kind) + '  ' + nodeKindLabel(node.kind, zh));
 	if (state.isPlaying) {
 		ImGui.TextDisabled(zh ? '运行中属性锁定；点 Stop 后再编辑节点。' : 'Properties are locked in Play Mode. Stop to edit nodes.');
 		ImGui.Separator();
@@ -56,8 +58,8 @@ export function drawInspectorPanel(
 		ImGui.TextDisabled('Scale: ' + tostring(node.scaleX) + ', ' + tostring(node.scaleY));
 		ImGui.TextDisabled('Rotation: ' + tostring(node.rotation));
 		ImGui.TextDisabled('Script: ' + node.script);
-		if (node.kind === 'Sprite') ImGui.TextDisabled('Texture: ' + node.texture);
-		if (node.kind === 'Label') ImGui.TextDisabled('Text: ' + node.text);
+		if (canNodeKindBindTexture(node.kind)) ImGui.TextDisabled('Texture: ' + node.texture);
+		if (canNodeKindEditText(node.kind)) ImGui.TextDisabled('Text: ' + node.text);
 		return;
 	}
 	if (ImGui.InputText('Name', node.nameBuffer, inputTextFlags)) { node.name = node.nameBuffer.text; markSceneChanged(state); }
@@ -70,9 +72,13 @@ export function drawInspectorPanel(
 	const [visibleChanged, visible] = ImGui.Checkbox('Visible', node.visible);
 	if (visibleChanged) { node.visible = visible; markSceneChanged(state); }
 	ImGui.Separator();
-	if (ImGui.InputText('Script', node.scriptBuffer, inputTextFlags)) { node.script = node.scriptBuffer.text; markSceneChanged(state); }
-	if (ImGui.Button(zh ? '打开脚本' : 'Open Script')) openScriptForNode(state, node);
-	if (node.kind === 'Sprite') {
+	if (canNodeKindBindScript(node.kind)) {
+		if (ImGui.InputText('Script', node.scriptBuffer, inputTextFlags)) { node.script = node.scriptBuffer.text; markSceneChanged(state); }
+		if (ImGui.Button(zh ? '打开脚本' : 'Open Script')) openScriptForNode(state, node);
+	} else {
+		ImGui.TextDisabled(zh ? '该节点不支持挂载脚本。' : 'This node does not support scripts.');
+	}
+	if (canNodeKindBindTexture(node.kind)) {
 		ImGui.Separator();
 		if (ImGui.InputText('Texture', node.textureBuffer, inputTextFlags)) {
 			node.texture = node.textureBuffer.text;
@@ -88,10 +94,12 @@ export function drawInspectorPanel(
 		if (ImGui.Button(zh ? '绑定选中贴图' : 'Use Selected')) {
 			if (state.selectedAsset !== '' && isTextureAsset(state.selectedAsset)) bindTextureToSprite(state, node, state.selectedAsset);
 		}
-	} else if (node.kind === 'Label') {
+	}
+	if (canNodeKindEditText(node.kind)) {
 		ImGui.Separator();
 		if (ImGui.InputText('Text', node.textBuffer, inputTextFlags)) { node.text = node.textBuffer.text; markSceneChanged(state); }
-	} else if (node.kind === 'Camera') {
+	}
+	if (canNodeKindFollowTarget(node.kind)) {
 		ImGui.Separator();
 		ImGui.TextDisabled(zh ? 'Camera 显示真实取景框。' : 'Camera shows a real frame in viewport.');
 		ImGui.Separator();

@@ -6,6 +6,7 @@ import { okColor, themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { zh } from 'Script/Tools/SceneEditor/Model';
 import { updatePreviewRuntime } from 'Script/Tools/SceneEditor/Runtime';
 import { isScenePointInsideNode } from 'Script/Tools/SceneEditor/SpriteMetrics';
+import { canSelectNodeKindInViewport, nodeKindViewportPickLayer } from 'Script/Tools/SceneEditor/NodeCapabilities';
 
 function viewportScale(state: EditorState) {
 	return math.max(0.25, state.zoom / 100);
@@ -51,17 +52,15 @@ function pickNodeAt(state: EditorState, screenX: number, screenY: number) {
 	for (let i = state.order.length; i >= 1; i--) {
 		const id = state.order[i - 1];
 		const node = state.nodes[id];
-		if (node !== undefined && id !== 'root' && node.visible && node.kind !== 'Camera') {
-			if (isScenePointInsideNode(node, sceneX, sceneY)) return id;
+		if (node !== undefined && node.visible && canSelectNodeKindInViewport(node.kind) && nodeKindViewportPickLayer(node.kind) === 'object') {
+			if (isScenePointInsideNode(node, sceneX, sceneY, state.gameWidth, state.gameHeight)) return id;
 		}
 	}
 	for (let i = state.order.length; i >= 1; i--) {
 		const id = state.order[i - 1];
 		const node = state.nodes[id];
-		if (node !== undefined && id !== 'root' && node.visible && node.kind === 'Camera') {
-			const width = math.max(160, state.gameWidth);
-			const height = math.max(120, state.gameHeight);
-			if (math.abs(sceneX - node.x) <= width / 2 && math.abs(sceneY - node.y) <= height / 2) return id;
+		if (node !== undefined && node.visible && canSelectNodeKindInViewport(node.kind) && nodeKindViewportPickLayer(node.kind) === 'camera') {
+			if (isScenePointInsideNode(node, sceneX, sceneY, state.gameWidth, state.gameHeight)) return id;
 		}
 	}
 	return undefined;

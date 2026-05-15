@@ -1,10 +1,12 @@
-import { Color, Content, Director, DrawNode, Label, Node, Path, RenderTarget, Sprite, Vec2 } from 'Dora';
+import { Color, Content, Director, DrawNode, Node, Path, RenderTarget, Vec2 } from 'Dora';
 import * as ImGui from 'ImGui';
 import { SetCond } from 'ImGui';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { okColor, viewportBgColor } from 'Script/Tools/SceneEditor/Theme';
 import { pushConsole, workspacePath, zh } from 'Script/Tools/SceneEditor/Model';
 import { worldPositionOf } from 'Script/Tools/SceneEditor/SceneGraph';
+import { canNodeKindFollowTarget } from 'Script/Tools/SceneEditor/NodeCapabilities';
+import { applySceneNodeTransform, createSceneNodeVisual, updateSceneNodeDynamicVisual } from 'Script/Tools/SceneEditor/SceneNodeRenderer';
 
 declare function load(code: string, chunkname?: string): LuaMultiReturn<[(() => unknown) | undefined, string | undefined]>;
 declare function pcall(fn: () => unknown): LuaMultiReturn<[boolean, unknown]>;
@@ -31,50 +33,20 @@ function makeGameBackground(width: number, height: number) {
 	return bg;
 }
 
-function makeFallbackRect(width: number, height: number, color: Color.Type) {
-	const hw = width / 2;
-	const hh = height / 2;
-	const rect = DrawNode();
-	rect.drawSegment(Vec2(-hw, -hh), Vec2(hw, -hh), 1, color);
-	rect.drawSegment(Vec2(hw, -hh), Vec2(hw, hh), 1, color);
-	rect.drawSegment(Vec2(hw, hh), Vec2(-hw, hh), 1, color);
-	rect.drawSegment(Vec2(-hw, hh), Vec2(-hw, -hh), 1, color);
-	return rect;
-}
-
-function createPlayVisual(item: SceneNodeData) {
-	if (item.kind === 'Sprite') {
-		if (item.texture !== '') {
-			const sprite = Sprite(item.texture);
-			if (sprite !== undefined) return sprite;
-		}
-		return makeFallbackRect(128, 96, Color(0xaa72a6c8));
-	}
-	if (item.kind === 'Label') {
-		const label = Label('sarasa-mono-sc-regular', 32);
-		if (label !== undefined) {
-			label.text = item.text || 'Label';
-			return label;
-		}
-		return makeFallbackRect(180, 56, Color(0xaad6b13f));
-	}
-	return Node();
-}
-
-function applyTransform(target: Node.Type, item: SceneNodeData) {
-	target.x = item.x;
-	target.y = item.y;
-	target.scaleX = item.scaleX;
-	target.scaleY = item.scaleY;
-	target.angle = item.rotation;
-	target.visible = item.visible;
-	target.tag = item.name;
+function createPlayVisual(state: EditorState, item: SceneNodeData) {
+	return createSceneNodeVisual(item, {
+		mode: 'play',
+		selected: false,
+		gameWidth: gameWidthOf(state),
+		gameHeight: gameHeightOf(state),
+		labels: state.playRuntimeLabels,
+	});
 }
 
 function firstCameraId(state: EditorState) {
 	for (const id of state.order) {
 		const item = state.nodes[id];
-		if (item !== undefined && item.kind === 'Camera' && item.visible) return id;
+		if (item !== undefined && canNodeKindFollowTarget(item.kind) && item.visible) return id;
 	}
 	return undefined;
 }
@@ -234,10 +206,10 @@ function rebuildPlayRuntime(state: EditorState) {
 	for (const id of state.order) {
 		const item = state.nodes[id];
 		if (item !== undefined && id !== 'root') {
-			const runtime = createPlayVisual(item);
-			applyTransform(runtime, item);
+			const runtime = createPlayVisual(state, item);
+			applySceneNodeTransform(runtime, item);
+			updateSceneNodeDynamicVisual(item, state.playRuntimeLabels);
 			state.playRuntimeNodes[id] = runtime;
-			if (item.kind === 'Label') state.playRuntimeLabels[id] = runtime;
 			const parent = state.playRuntimeNodes[item.parentId || 'root'] || content;
 			parent.addChild(runtime);
 		}

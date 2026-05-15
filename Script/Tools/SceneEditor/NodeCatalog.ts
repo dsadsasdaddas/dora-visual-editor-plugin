@@ -1,6 +1,7 @@
 import { SceneNodeKind } from 'Script/Tools/SceneEditor/EditorTypes';
 
 export type NodeCategoryId = 'structure' | 'renderable' | 'view';
+export type ViewportPickLayer = 'object' | 'camera' | 'none';
 
 export interface NodeCategoryDefinition {
 	id: NodeCategoryId;
@@ -19,6 +20,21 @@ export interface NodeKindDefinition {
 	canCreate: boolean;
 	canDelete: boolean;
 	canHaveChildren: boolean;
+	canBindTexture: boolean;
+	canBindScript: boolean;
+	canEditText: boolean;
+	canFollowTarget: boolean;
+	canBeFollowTarget: boolean;
+	selectableInViewport: boolean;
+	viewportPickLayer: ViewportPickLayer;
+	usesTextureSize: boolean;
+	usesGameFrameSize: boolean;
+	spawnAtOrigin: boolean;
+	defaultName: string;
+	defaultNamePrefix: string;
+	defaultText: string;
+	defaultWidth: number;
+	defaultHeight: number;
 }
 
 export const nodeCategoryDefinitions: NodeCategoryDefinition[] = [
@@ -39,6 +55,21 @@ export const nodeKindDefinitions: NodeKindDefinition[] = [
 		canCreate: false,
 		canDelete: false,
 		canHaveChildren: true,
+		canBindTexture: false,
+		canBindScript: false,
+		canEditText: false,
+		canFollowTarget: false,
+		canBeFollowTarget: false,
+		selectableInViewport: false,
+		viewportPickLayer: 'none',
+		usesTextureSize: false,
+		usesGameFrameSize: false,
+		spawnAtOrigin: true,
+		defaultName: 'MainScene',
+		defaultNamePrefix: 'Root',
+		defaultText: '',
+		defaultWidth: 72,
+		defaultHeight: 72,
 	},
 	{
 		kind: 'Node',
@@ -51,6 +82,21 @@ export const nodeKindDefinitions: NodeKindDefinition[] = [
 		canCreate: true,
 		canDelete: true,
 		canHaveChildren: true,
+		canBindTexture: false,
+		canBindScript: true,
+		canEditText: false,
+		canFollowTarget: false,
+		canBeFollowTarget: true,
+		selectableInViewport: true,
+		viewportPickLayer: 'object',
+		usesTextureSize: false,
+		usesGameFrameSize: false,
+		spawnAtOrigin: false,
+		defaultName: '',
+		defaultNamePrefix: 'Node',
+		defaultText: '',
+		defaultWidth: 72,
+		defaultHeight: 72,
 	},
 	{
 		kind: 'Sprite',
@@ -63,6 +109,21 @@ export const nodeKindDefinitions: NodeKindDefinition[] = [
 		canCreate: true,
 		canDelete: true,
 		canHaveChildren: true,
+		canBindTexture: true,
+		canBindScript: true,
+		canEditText: false,
+		canFollowTarget: false,
+		canBeFollowTarget: true,
+		selectableInViewport: true,
+		viewportPickLayer: 'object',
+		usesTextureSize: true,
+		usesGameFrameSize: false,
+		spawnAtOrigin: false,
+		defaultName: '',
+		defaultNamePrefix: 'Sprite',
+		defaultText: '',
+		defaultWidth: 128,
+		defaultHeight: 96,
 	},
 	{
 		kind: 'Label',
@@ -75,6 +136,21 @@ export const nodeKindDefinitions: NodeKindDefinition[] = [
 		canCreate: true,
 		canDelete: true,
 		canHaveChildren: true,
+		canBindTexture: false,
+		canBindScript: true,
+		canEditText: true,
+		canFollowTarget: false,
+		canBeFollowTarget: true,
+		selectableInViewport: true,
+		viewportPickLayer: 'object',
+		usesTextureSize: false,
+		usesGameFrameSize: false,
+		spawnAtOrigin: false,
+		defaultName: '',
+		defaultNamePrefix: 'Label',
+		defaultText: 'Label',
+		defaultWidth: 180,
+		defaultHeight: 56,
 	},
 	{
 		kind: 'Camera',
@@ -87,6 +163,21 @@ export const nodeKindDefinitions: NodeKindDefinition[] = [
 		canCreate: true,
 		canDelete: true,
 		canHaveChildren: false,
+		canBindTexture: false,
+		canBindScript: false,
+		canEditText: false,
+		canFollowTarget: true,
+		canBeFollowTarget: false,
+		selectableInViewport: true,
+		viewportPickLayer: 'camera',
+		usesTextureSize: false,
+		usesGameFrameSize: true,
+		spawnAtOrigin: true,
+		defaultName: '',
+		defaultNamePrefix: 'Camera',
+		defaultText: '',
+		defaultWidth: 960,
+		defaultHeight: 540,
 	},
 ];
 
@@ -100,6 +191,10 @@ export function getNodeKindDefinition(kind: SceneNodeKind) {
 		if (definition.kind === kind) return definition;
 	}
 	return nodeKindDefinitions[1];
+}
+
+export function isRootNodeKind(kind: SceneNodeKind) {
+	return kind === 'Root';
 }
 
 export function nodeKindIcon(kind: SceneNodeKind) {
@@ -128,12 +223,61 @@ export function canNodeKindHaveChildren(kind: SceneNodeKind) {
 	return getNodeKindDefinition(kind).canHaveChildren;
 }
 
+export function canNodeKindBindTexture(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).canBindTexture;
+}
+
+export function canNodeKindBindScript(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).canBindScript;
+}
+
+export function canNodeKindEditText(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).canEditText;
+}
+
+export function canNodeKindFollowTarget(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).canFollowTarget;
+}
+
+export function canNodeKindBeFollowTarget(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).canBeFollowTarget;
+}
+
+export function canSelectNodeKindInViewport(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).selectableInViewport;
+}
+
+export function nodeKindViewportPickLayer(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).viewportPickLayer;
+}
+
+export function nodeKindUsesTextureSize(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).usesTextureSize;
+}
+
+export function nodeKindUsesGameFrameSize(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).usesGameFrameSize;
+}
+
+export function defaultNodeText(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).defaultText;
+}
+
+export function defaultNodeVisualSize(kind: SceneNodeKind): [number, number] {
+	const definition = getNodeKindDefinition(kind);
+	return [definition.defaultWidth, definition.defaultHeight];
+}
+
+export function shouldSpawnNodeAtOrigin(kind: SceneNodeKind) {
+	return getNodeKindDefinition(kind).spawnAtOrigin;
+}
+
 export function categoryLabel(category: NodeCategoryDefinition, zh: boolean) {
 	return zh ? category.labelZh : category.labelEn;
 }
 
 export function defaultNodeName(kind: SceneNodeKind, index: number) {
-	if (kind === 'Root') return 'MainScene';
-	if (kind === 'Camera') return 'Camera' + (tostring(index) || '');
-	return kind + (tostring(index) || '');
+	const definition = getNodeKindDefinition(kind);
+	if (definition.defaultName !== '') return definition.defaultName;
+	return definition.defaultNamePrefix + (tostring(index) || '');
 }

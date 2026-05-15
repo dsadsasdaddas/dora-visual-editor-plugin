@@ -12,6 +12,7 @@ local zh = ____Model.zh -- 4
 local ____NodeCatalog = require("Script.Tools.SceneEditor.NodeCatalog") -- 5
 local categoryLabel = ____NodeCatalog.categoryLabel -- 5
 local canCreateNodeKind = ____NodeCatalog.canCreateNodeKind -- 5
+local canNodeKindHaveChildren = ____NodeCatalog.canNodeKindHaveChildren -- 5
 local nodeCategoryDefinitions = ____NodeCatalog.nodeCategoryDefinitions -- 5
 local nodeKindDefinitions = ____NodeCatalog.nodeKindDefinitions -- 5
 local function drawNodeOption(state, kind, icon, title, description) -- 7
@@ -35,8 +36,8 @@ function ____exports.drawAddNodePopup(state) -- 20
 			ImGui.TextColored(themeColor, zh and "添加节点" or "Add Node") -- 25
 			ImGui.TextDisabled(zh and "新节点会挂到下面这个父节点：" or "New node will be created under:") -- 26
 			ImGui.Text(parent ~= nil and nodePath(state, parent.id) or "Root") -- 27
-			if selected ~= nil and selected.kind == "Camera" then -- 27
-				ImGui.TextDisabled(zh and "提示：Camera 不作为父节点，已自动使用它的父节点。" or "Tip: Camera is not used as a parent; its parent is used instead.") -- 29
+			if selected ~= nil and not canNodeKindHaveChildren(selected.kind) then -- 27
+				ImGui.TextDisabled(zh and "提示：当前节点不能作为父节点，已自动使用它的父节点。" or "Tip: the selected node cannot be used as a parent; its parent is used instead.") -- 29
 			end -- 29
 			ImGui.Separator() -- 31
 			for ____, category in ipairs(nodeCategoryDefinitions) do -- 32

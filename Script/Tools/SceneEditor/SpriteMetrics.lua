@@ -2,62 +2,62 @@
 local ____exports = {} -- 1
 local ____Dora = require("Dora") -- 1
 local Texture2D = ____Dora.Texture2D -- 1
-local textureSizeCache = {} -- 4
-local function safeScale(value) -- 6
-	local scale = math.abs(value) -- 7
-	return scale > 0.001 and scale or 1 -- 8
-end -- 6
-function ____exports.getTextureSize(texture) -- 11
-	if texture == "" then -- 11
-		return nil -- 12
-	end -- 12
-	local cached = textureSizeCache[texture] -- 13
-	if cached ~= nil then -- 13
-		return cached -- 14
-	end -- 14
-	local image = Texture2D(texture) -- 15
-	if image == nil then -- 15
-		return nil -- 16
-	end -- 16
-	local size = { -- 17
-		math.max(1, image.width), -- 17
-		math.max(1, image.height) -- 17
-	} -- 17
-	textureSizeCache[texture] = size -- 18
-	return size -- 19
-end -- 11
-function ____exports.getNodeVisualSize(item, gameWidth, gameHeight) -- 22
-	if item.kind == "Camera" then -- 22
-		return { -- 23
-			math.max(160, gameWidth or 960), -- 23
-			math.max(120, gameHeight or 540) -- 23
-		} -- 23
-	end -- 23
-	if item.kind == "Sprite" then -- 23
-		local size = ____exports.getTextureSize(item.texture) -- 25
-		if size ~= nil then -- 25
-			return size -- 26
-		end -- 26
-		return {128, 96} -- 27
+local ____NodeCapabilities = require("Script.Tools.SceneEditor.NodeCapabilities") -- 3
+local defaultNodeVisualSize = ____NodeCapabilities.defaultNodeVisualSize -- 3
+local nodeKindUsesGameFrameSize = ____NodeCapabilities.nodeKindUsesGameFrameSize -- 3
+local nodeKindUsesTextureSize = ____NodeCapabilities.nodeKindUsesTextureSize -- 3
+local textureSizeCache = {} -- 5
+local function safeScale(value) -- 7
+	local scale = math.abs(value) -- 8
+	return scale > 0.001 and scale or 1 -- 9
+end -- 7
+function ____exports.getTextureSize(texture) -- 12
+	if texture == "" then -- 12
+		return nil -- 13
+	end -- 13
+	local cached = textureSizeCache[texture] -- 14
+	if cached ~= nil then -- 14
+		return cached -- 15
+	end -- 15
+	local image = Texture2D(texture) -- 16
+	if image == nil then -- 16
+		return nil -- 17
+	end -- 17
+	local size = { -- 18
+		math.max(1, image.width), -- 18
+		math.max(1, image.height) -- 18
+	} -- 18
+	textureSizeCache[texture] = size -- 19
+	return size -- 20
+end -- 12
+function ____exports.getNodeVisualSize(item, gameWidth, gameHeight) -- 23
+	if nodeKindUsesGameFrameSize(item.kind) then -- 23
+		return { -- 24
+			math.max(160, gameWidth or 960), -- 24
+			math.max(120, gameHeight or 540) -- 24
+		} -- 24
+	end -- 24
+	if nodeKindUsesTextureSize(item.kind) then -- 24
+		local size = ____exports.getTextureSize(item.texture) -- 26
+		if size ~= nil then -- 26
+			return size -- 27
+		end -- 27
 	end -- 27
-	if item.kind == "Label" then -- 27
-		return {180, 56} -- 29
-	end -- 29
-	return {72, 72} -- 30
-end -- 22
-function ____exports.isScenePointInsideNode(item, sceneX, sceneY, gameWidth, gameHeight) -- 33
-	local width, height = table.unpack( -- 34
-		____exports.getNodeVisualSize(item, gameWidth, gameHeight), -- 34
-		1, -- 34
-		2 -- 34
-	) -- 34
-	local dx = sceneX - item.x -- 35
-	local dy = sceneY - item.y -- 36
-	local radians = -item.rotation * math.pi / 180 -- 37
-	local cos = math.cos(radians) -- 38
-	local sin = math.sin(radians) -- 39
-	local localX = (dx * cos - dy * sin) / safeScale(item.scaleX) -- 40
-	local localY = (dx * sin + dy * cos) / safeScale(item.scaleY) -- 41
-	return math.abs(localX) <= width / 2 and math.abs(localY) <= height / 2 -- 42
-end -- 33
-return ____exports -- 33
+	return defaultNodeVisualSize(item.kind) -- 29
+end -- 23
+function ____exports.isScenePointInsideNode(item, sceneX, sceneY, gameWidth, gameHeight) -- 32
+	local width, height = table.unpack( -- 33
+		____exports.getNodeVisualSize(item, gameWidth, gameHeight), -- 33
+		1, -- 33
+		2 -- 33
+	) -- 33
+	local dx = sceneX - item.x -- 34
+	local dy = sceneY - item.y -- 35
+	local radians = -item.rotation * math.pi / 180 -- 36
+	local cos = math.cos(radians) -- 37
+	local sin = math.sin(radians) -- 38
+	local localX = (dx * cos - dy * sin) / safeScale(item.scaleX) -- 39
+	local localY = (dx * sin + dy * cos) / safeScale(item.scaleY) -- 40
+	return math.abs(localX) <= width / 2 and math.abs(localY) <= height / 2 -- 41
+end -- 32
+return ____exports -- 32
