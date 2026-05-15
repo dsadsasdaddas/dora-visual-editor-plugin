@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "gameWidth": 960,
+  "gameHeight": 540,
+  "gameScript": "Script/Main.lua",
+  "nodes": [
+    {
+      "id": "root",
+      "kind": "Root",
+      "name": "MainScene",
+      "x": 0,
+      "y": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0,
+      "visible": true,
+      "texture": "",
+      "text": "",
+      "script": ""
+    },
+    {
+      "id": "node-1",
+      "kind": "Node",
+      "name": "Group",
+      "parentId": "root",
+      "x": 10,
+      "y": 20,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0,
+      "visible": true,
+      "texture": "",
+      "text": "",
+      "script": ""
+    },
+    {
+      "id": "sprite-2",
+      "kind": "Sprite",
+      "name": "Player",
+      "parentId": "node-1",
+      "x": 30,
+      "y": 40,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0,
+      "visible": true,
+      "texture": "Imported/player.png",
+      "text": "",
+      "script": ""
+    }
+  ]
+}

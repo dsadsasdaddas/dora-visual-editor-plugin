@@ -1,0 +1,36 @@
+name: Package Plugin
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  package:
+    name: Build distributable zip
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run static checks
+        run: bash Tests/check_static.sh
+
+      - name: Create plugin zip
+        run: |
+          mkdir -p dist
+          zip -r dist/dora-visual-editor-plugin.zip \
+            init.lua lualib_bundle.lua README.md DESIGN.md .agent .dora Script \
+            -x '*/.DS_Store' -x '*/Imported/*'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dora-visual-editor-plugin
+          path: dist/dora-visual-editor-plugin.zip

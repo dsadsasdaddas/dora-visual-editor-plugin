@@ -3,7 +3,7 @@ import * as ImGui from 'ImGui';
 import { SetCond, StyleColor } from 'ImGui';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { mainWindowFlags, noScrollFlags, panelBg, transparent, verticalScrollFlags, warnColor } from 'Script/Tools/SceneEditor/Theme';
-import { addChildNode, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
+import { addChildNode, pushConsole, workspacePath, zh } from 'Script/Tools/SceneEditor/Model';
 import { drawHeaderPanel } from 'Script/Tools/SceneEditor/Panels/HeaderPanel';
 import { drawConsolePanel } from 'Script/Tools/SceneEditor/Panels/ConsolePanel';
 import { drawSceneTreePanel } from 'Script/Tools/SceneEditor/Panels/SceneTreePanel';
@@ -12,15 +12,6 @@ import { drawInspectorPanel } from 'Script/Tools/SceneEditor/Panels/InspectorPan
 import { drawScriptPanel, openScriptForNode } from 'Script/Tools/SceneEditor/Panels/ScriptPanel';
 import { drawViewportPanel } from 'Script/Tools/SceneEditor/Panels/ViewportPanel';
 import { drawGamePreviewWindow } from 'Script/Tools/SceneEditor/Player';
-
-type SceneModelApi = {
-	workspacePath: (this: void, path: string) => string;
-};
-
-declare function require(path: string): SceneModelApi;
-
-const SceneModel = require('Script.Tools.SceneEditor.Model');
-function workspacePath(path: string) { return SceneModel.workspacePath(path) as string; }
 
 function sceneSaveFile() {
 	return workspacePath(Path('.dora', 'imgui-editor.scene.json'));
@@ -42,7 +33,7 @@ function writeSceneFile(state: EditorState) {
 				id: node.id,
 				kind: node.kind,
 				name: node.name,
-				parentId: node.parentId,
+				parentId: node.id === 'root' ? undefined : node.parentId,
 				x: node.x,
 				y: node.y,
 				scaleX: node.scaleX,
@@ -60,7 +51,13 @@ function writeSceneFile(state: EditorState) {
 	}
 	const [text] = json.encode(data);
 	const file = sceneSaveFile();
-	if (text !== undefined && Content.save(file, text)) return file;
+	if (text !== undefined && Content.save(file, text)) {
+		// Keep the legacy writable scene path in sync so older launches do not appear to lose saves.
+		const legacyDir = Path(Content.writablePath, '.dora');
+		Content.mkdir(legacyDir);
+		Content.save(Path(legacyDir, 'imgui-editor.scene.json'), text);
+		return file;
+	}
 	return undefined;
 }
 
