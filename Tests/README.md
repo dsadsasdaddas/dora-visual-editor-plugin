@@ -3,6 +3,8 @@
 This repo is a Dora plugin, so CI runs checks that do not need a local Dora app:
 
 - static source checks for repeated TSTL/Lua pitfalls
+- generated TS/Lua sync checks
+- unit tests for node capabilities, scene graph rules, and scene fixture normalization
 - scene fixture structural checks
 - package payload checks from GitHub Actions
 
@@ -10,6 +12,12 @@ This repo is a Dora plugin, so CI runs checks that do not need a local Dora app:
 
 ```bash
 bash Tests/run_all.sh
+```
+
+## Run unit checks only
+
+```bash
+bash Tests/run_unit.sh
 ```
 
 ## Run local Dora smoke checks
