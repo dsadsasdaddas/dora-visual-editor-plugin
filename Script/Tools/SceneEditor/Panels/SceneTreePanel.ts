@@ -1,30 +1,21 @@
 import * as ImGui from 'ImGui';
 import { EditorState } from 'Script/Tools/SceneEditor/EditorTypes';
 import { helperColor, themeColor } from 'Script/Tools/SceneEditor/Theme';
-import { iconFor, nodePath, reparentNode, zh } from 'Script/Tools/SceneEditor/Model';
+import { nodePath, reparentNode, zh } from 'Script/Tools/SceneEditor/Model';
+import { buildSceneTreeRows, canReparentSceneNode, toggleTreeNodeExpanded } from 'Script/Tools/SceneEditor/SceneGraph';
 import { drawAddNodePopup } from 'Script/Tools/SceneEditor/Panels/AddNodePopup';
-
-function kindLabel(kind: string) {
-	if (kind === 'Root') return zh ? '根' : 'Root';
-	if (kind === 'Node') return zh ? '分组' : 'Node';
-	if (kind === 'Sprite') return zh ? '精灵' : 'Sprite';
-	if (kind === 'Label') return zh ? '文本' : 'Label';
-	if (kind === 'Camera') return zh ? '相机' : 'Camera';
-	return kind;
-}
 
 function childCountSuffix(count: number) {
 	if (count <= 0) return '';
-	return '  (' + tostring(count) + ')';
+	return '  (' + (tostring(count) || '0') + ')';
 }
 
-function drawNodeRow(state: EditorState, id: string, prefix: string, isLast: boolean) {
-	const node = state.nodes[id];
-	if (node === undefined) return;
-	const isDropTarget = state.treeDropTargetId === id && state.treeDraggingNodeId !== undefined;
-	const connector = id === 'root' ? '' : (isLast ? '└─ ' : '├─ ');
-	const dropMarker = isDropTarget ? '→ ' : '  ';
-	const label = dropMarker + prefix + connector + iconFor(node.kind) + '  ' + node.name + '  · ' + kindLabel(node.kind) + childCountSuffix(node.children.length) + '##tree_' + id;
+function foldGlyph(hasChildren: boolean, expanded: boolean) {
+	if (!hasChildren) return '  ';
+	return expanded ? '▼ ' : '▶ ';
+}
+
+function drawTreeRow(state: EditorState, id: string, label: string, canAcceptDrop: boolean) {
 	if (ImGui.Selectable(label, state.selectedId === id)) {
 		state.selectedId = id;
 		state.previewDirty = true;
@@ -34,16 +25,11 @@ function drawNodeRow(state: EditorState, id: string, prefix: string, isLast: boo
 			state.treeDraggingNodeId = id;
 		}
 		const draggingId = state.treeDraggingNodeId;
-		if (draggingId !== undefined && draggingId !== id && ImGui.IsItemHovered()) {
+		if (draggingId !== undefined && canAcceptDrop && ImGui.IsItemHovered()) {
 			state.treeDropTargetId = id;
-			const targetName = node.name;
-			ImGui.BeginTooltip(() => ImGui.Text((zh ? '松开移动到：' : 'Release to move under: ') + targetName));
+			const target = state.nodes[id];
+			ImGui.BeginTooltip(() => ImGui.Text((zh ? '松开移动到：' : 'Release to move under: ') + (target !== undefined ? target.name : id)));
 		}
-	}
-	const childPrefix = id === 'root' ? '' : prefix + (isLast ? '   ' : '│  ');
-	for (let i = 0; i < node.children.length; i++) {
-		const childId = node.children[i];
-		drawNodeRow(state, childId, childPrefix, i === node.children.length - 1);
 	}
 }
 
@@ -63,8 +49,32 @@ export function drawSceneTreePanel(state: EditorState) {
 		ImGui.TextDisabled(nodePath(state, selected.id));
 		ImGui.Separator();
 	}
+
 	state.treeDropTargetId = undefined;
-	drawNodeRow(state, 'root', '', true);
+	const rows = buildSceneTreeRows(state, zh);
+	for (const row of rows) {
+		const draggingId = state.treeDraggingNodeId;
+		const canAcceptDrop = draggingId !== undefined && canReparentSceneNode(state, draggingId, row.id);
+		const isDropTarget = state.treeDropTargetId === row.id && draggingId !== undefined;
+		const dropMarker = isDropTarget ? '→ ' : '  ';
+		const label = dropMarker
+			+ row.connectorPrefix
+			+ row.connector
+			+ foldGlyph(row.hasChildren, row.expanded)
+			+ row.icon
+			+ '  '
+			+ row.name
+			+ '  · '
+			+ row.kindLabel
+			+ childCountSuffix(row.childCount)
+			+ '##tree_'
+			+ row.id;
+		drawTreeRow(state, row.id, label, canAcceptDrop);
+		if (row.hasChildren && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0)) {
+			toggleTreeNodeExpanded(state, row.id);
+		}
+	}
+
 	if (state.treeDraggingNodeId !== undefined && ImGui.IsMouseReleased(0)) {
 		const dragId = state.treeDraggingNodeId;
 		const dropId = state.treeDropTargetId;
@@ -75,5 +85,5 @@ export function drawSceneTreePanel(state: EditorState) {
 		state.treeDropTargetId = undefined;
 	}
 	ImGui.Separator();
-	ImGui.TextDisabled(zh ? '拖动节点到另一个节点上可调整父子关系' : 'Drag a node onto another node to reparent it');
+	ImGui.TextDisabled(zh ? '拖动节点到可作为父级的节点上；双击父节点可折叠。' : 'Drag onto a valid parent; double-click parent rows to fold.');
 }

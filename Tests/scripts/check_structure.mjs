@@ -15,10 +15,13 @@ function assertSourceGuard(file, pattern, label) {
   if (!pattern.test(source)) fail(`${file} is missing ${label}`);
 }
 
-assertSourceGuard('Script/Tools/SceneEditor/Model.ts', /function nodePath[\s\S]*visited[\s\S]*cursor\.parentId === cursor\.id/, 'nodePath cycle guard');
+assertSourceGuard('Script/Tools/SceneEditor/SceneGraph.ts', /export function nodePath[\s\S]*visited[\s\S]*cursor\.parentId === cursor\.id/, 'nodePath cycle guard');
 assertSourceGuard('Script/Tools/SceneEditor/Model.ts', /export function addNode[\s\S]*kind === 'Root'[\s\S]*resolvedParentId = ''/, 'root parent normalization');
-assertSourceGuard('Script/Tools/SceneEditor/Player.ts', /function sceneWorldPosition[\s\S]*visited[\s\S]*cursor\.parentId === cursor\.id/, 'runtime position cycle guard');
+assertSourceGuard('Script/Tools/SceneEditor/SceneGraph.ts', /export function worldPositionOf[\s\S]*visited[\s\S]*cursor\.parentId === cursor\.id/, 'world-position cycle guard');
 assertSourceGuard('Script/Tools/SceneEditor/Panels.ts', /parentId: node\.id === 'root' \? undefined : node\.parentId/, 'root save parent cleanup');
+assertSourceGuard('Script/Tools/SceneEditor/SceneGraph.ts', /export function canReparentSceneNode[\s\S]*canNodeHaveChildren[\s\S]*isAncestorOf/, 'safe reparent validation');
+assertSourceGuard('Script/Tools/SceneEditor/Panels/SceneTreePanel.ts', /buildSceneTreeRows[\s\S]*toggleTreeNodeExpanded/, 'tree row view model rendering');
+assertSourceGuard('Script/Tools/SceneEditor/Panels/AddNodePopup.ts', /nodeCategoryDefinitions[\s\S]*nodeKindDefinitions/, 'catalog-driven add-node popup');
 
 function loadFixture(name) {
   const file = path.join(repo, 'Tests', 'fixtures', name);
@@ -46,6 +49,16 @@ function validateScene(scene, { allowRootSelfParent = false } = {}) {
     assert.equal(typeof node.parentId, 'string', `${node.id} must have parentId`);
     assert.ok(nodes.has(node.parentId), `${node.id} parent ${node.parentId} is missing`);
   }
+  for (const node of scene.nodes) {
+    const seen = new Set();
+    let cursor = node;
+    while (cursor && cursor.parentId) {
+      if (seen.has(cursor.id)) throw new Error(`parent cycle detected at ${cursor.id}`);
+      seen.add(cursor.id);
+      if (cursor.parentId === cursor.id) throw new Error(`parent cycle detected at ${cursor.id}`);
+      cursor = nodes.get(cursor.parentId);
+    }
+  }
 }
 
 for (const name of ['basic.scene.json', 'nested-parent.scene.json']) {
@@ -59,6 +72,14 @@ try {
   detectedBadRoot = /root must not point to itself/.test(String(error.message));
 }
 if (!detectedBadRoot) fail('bad-root-cycle fixture did not trigger root self-parent detection');
+
+let detectedNestedCycle = false;
+try {
+  validateScene(loadFixture('bad-nested-cycle.scene.json'));
+} catch (error) {
+  detectedNestedCycle = /parent cycle detected/.test(String(error.message));
+}
+if (!detectedNestedCycle) fail('bad-nested-cycle fixture did not trigger parent cycle detection');
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log('[structure] ok');

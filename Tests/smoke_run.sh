@@ -10,6 +10,12 @@ if [ ! -f "$DORA_CLI" ]; then
   exit 0
 fi
 
+# Keep the run assertion scoped to this invocation. Dora's log file is shared
+# by the app process, so stale errors from a previous manual editor run must not
+# fail a fresh smoke test.
+mkdir -p "$(dirname "$LOG")"
+: > "$LOG"
+
 python3 "$DORA_CLI" ts run -p "$PLUGIN_RUNTIME" --entry init.lua
 sleep "${DORA_SMOKE_SLEEP:-3}"
 

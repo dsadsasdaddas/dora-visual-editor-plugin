@@ -1,5 +1,7 @@
 import { App, Buffer, Content, Path, emit, json } from 'Dora';
 import { EditorState, SceneNodeData, SceneNodeKind } from 'Script/Tools/SceneEditor/EditorTypes';
+import { canNodeKindHaveChildren, defaultNodeName, nodeKindIcon, normalizeNodeKind } from 'Script/Tools/SceneEditor/NodeCatalog';
+import { nodePath as graphNodePath, normalizeSceneGraph, reparentSceneNode, resolveAddParentId as resolveGraphAddParentId } from 'Script/Tools/SceneEditor/SceneGraph';
 
 type SceneNodeJson = {
 	id?: unknown;
@@ -96,6 +98,7 @@ export function createEditorState(): EditorState {
 		console: [zh ? '真实 Dora Viewport 已启用。' : 'Real Dora viewport enabled.'],
 		nodes: {},
 		order: [],
+		treeExpanded: { root: true },
 		preview: { x: 0, y: 0, width: 640, height: 360 },
 		previewDirty: true,
 		runtimeNodes: {},
@@ -127,10 +130,7 @@ export function pushConsole(state: EditorState, message: string) {
 }
 
 export function iconFor(kind: SceneNodeKind) {
-	if (kind === 'Sprite') return '▣';
-	if (kind === 'Label') return 'T';
-	if (kind === 'Camera') return '◉';
-	return '○';
+	return nodeKindIcon(kind);
 }
 
 export function lowerExt(path: string) {
@@ -306,7 +306,7 @@ export function addNode(state: EditorState, kind: SceneNodeKind, name: string, p
 	let resolvedParentId = 'root';
 	if (kind === 'Root') {
 		resolvedParentId = '';
-	} else if (parentId !== undefined && parentId !== '') {
+	} else if (parentId !== undefined && parentId !== '' && state.nodes[parentId] !== undefined && canNodeKindHaveChildren(state.nodes[parentId].kind)) {
 		resolvedParentId = parentId;
 	}
 	const id = kind === 'Root' ? 'root' : newNodeId(state, kind);
@@ -340,15 +340,14 @@ export function addNode(state: EditorState, kind: SceneNodeKind, name: string, p
 	const parent = resolvedParentId !== '' ? state.nodes[resolvedParentId] : undefined;
 	if (id !== 'root' && parent !== undefined) {
 		parent.children.push(id);
+		state.treeExpanded[resolvedParentId] = true;
 	}
+	if (state.treeExpanded[id] === undefined) state.treeExpanded[id] = true;
 	return node;
 }
 
 function sceneNodeKind(value: unknown): SceneNodeKind {
-	if (value === 'Root' || value === 'Node' || value === 'Sprite' || value === 'Label' || value === 'Camera') {
-		return value;
-	}
-	return 'Node';
+	return normalizeNodeKind(value);
 }
 
 function stringValue(value: unknown, fallback: string) {
@@ -395,7 +394,8 @@ export function loadSceneFromFile(state: EditorState, file: string) {
 
 	for (const raw of rawNodes) {
 		const kind = sceneNodeKind(raw.kind);
-		const id = stringValue(raw.id, kind === 'Root' ? 'root' : string.lower(kind) + '-' + tostring(state.nextId + 1));
+		let id = stringValue(raw.id, kind === 'Root' ? 'root' : string.lower(kind) + '-' + (tostring(state.nextId + 1) || ''));
+		if (state.nodes[id] !== undefined) id = kind === 'Root' ? 'root' : string.lower(kind) + '-' + (tostring(state.nextId + 1) || '');
 		const name = stringValue(raw.name, kind === 'Root' ? 'MainScene' : kind);
 		const texture = stringValue(raw.texture, '');
 		const text = stringValue(raw.text, kind === 'Label' ? 'Label' : '');
@@ -436,15 +436,7 @@ export function loadSceneFromFile(state: EditorState, file: string) {
 	if (state.nodes.root === undefined) {
 		addNode(state, 'Root', 'MainScene');
 	}
-	for (const id of state.order) {
-		if (id === 'root') continue;
-		const node = state.nodes[id];
-		if (node === undefined) continue;
-		if (node.parentId === undefined || state.nodes[node.parentId] === undefined) {
-			node.parentId = 'root';
-		}
-		state.nodes[node.parentId].children.push(id);
-	}
+	normalizeSceneGraph(state);
 	state.selectedId = state.nodes.root !== undefined ? 'root' : (state.order[0] || 'root');
 	state.previewDirty = true;
 	state.playDirty = true;
@@ -478,6 +470,7 @@ export function deleteNode(state: EditorState, id: string) {
 		}
 	}
 	delete state.nodes[id];
+	delete state.treeExpanded[id];
 	removeFromOrder(state, id);
 	state.selectedId = 'root';
 	state.draggingNodeId = undefined;
@@ -487,48 +480,11 @@ export function deleteNode(state: EditorState, id: string) {
 	pushConsole(state, state.status);
 }
 
-function worldPositionOf(state: EditorState, id: string): [number, number] {
-	let x = 0;
-	let y = 0;
-	const visited: Record<string, boolean> = {};
-	let cursor: SceneNodeData | undefined = state.nodes[id];
-	while (cursor !== undefined) {
-		if (visited[cursor.id]) break;
-		visited[cursor.id] = true;
-		x += cursor.x;
-		y += cursor.y;
-		if (cursor.parentId === undefined || cursor.parentId === cursor.id) break;
-		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
-	}
-	return [x, y];
-}
-
 export function reparentNode(state: EditorState, id: string, newParentId: string) {
-	if (id === 'root') return false;
 	const node = state.nodes[id];
 	const newParent = state.nodes[newParentId];
-	if (node === undefined || newParent === undefined || node.parentId === newParentId) return false;
-	const [worldX, worldY] = worldPositionOf(state, id);
-	const visited: Record<string, boolean> = {};
-	let cursor: SceneNodeData | undefined = newParent;
-	while (cursor !== undefined) {
-		if (cursor.id === id) return false;
-		if (visited[cursor.id]) return false;
-		visited[cursor.id] = true;
-		if (cursor.parentId === undefined || cursor.parentId === cursor.id) break;
-		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
-	}
-	const oldParent = node.parentId !== undefined ? state.nodes[node.parentId] : undefined;
-	if (oldParent !== undefined) {
-		for (let i = oldParent.children.length; i >= 1; i--) {
-			if (oldParent.children[i - 1] === id) table.remove(oldParent.children, i);
-		}
-	}
-	node.parentId = newParentId;
-	const [parentWorldX, parentWorldY] = worldPositionOf(state, newParentId);
-	node.x = worldX - parentWorldX;
-	node.y = worldY - parentWorldY;
-	newParent.children.push(id);
+	if (node === undefined || newParent === undefined) return false;
+	if (!reparentSceneNode(state, id, newParentId)) return false;
 	state.previewDirty = true;
 	state.playDirty = true;
 	state.status = (zh ? '已移动节点到：' : 'Moved node under: ') + newParent.name;
@@ -537,37 +493,16 @@ export function reparentNode(state: EditorState, id: string, newParentId: string
 }
 
 export function resolveAddParentId(state: EditorState) {
-	let parentId = state.selectedId || 'root';
-	if (state.nodes[parentId] === undefined) parentId = 'root';
-	const selected = state.nodes[parentId];
-	if (selected !== undefined && selected.kind === 'Camera') {
-		parentId = selected.parentId || 'root';
-	}
-	if (state.nodes[parentId] === undefined) return 'root';
-	return parentId;
+	return resolveGraphAddParentId(state);
 }
 
 export function nodePath(state: EditorState, id: string) {
-	const parts: string[] = [];
-	const visited: Record<string, boolean> = {};
-	let cursor: SceneNodeData | undefined = state.nodes[id];
-	while (cursor !== undefined) {
-		if (visited[cursor.id]) break;
-		visited[cursor.id] = true;
-		parts.push(cursor.name);
-		if (cursor.parentId === undefined || cursor.parentId === cursor.id) break;
-		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
-	}
-	let path = '';
-	for (let i = parts.length; i >= 1; i--) {
-		path += (path === '' ? '' : ' / ') + parts[i - 1];
-	}
-	return path === '' ? 'Root' : path;
+	return graphNodePath(state, id);
 }
 
 export function addChildNode(state: EditorState, kind: SceneNodeKind) {
 	const parentId = resolveAddParentId(state);
-	const node = addNode(state, kind, kind + (tostring(state.nextId + 1) || ''), parentId);
+	const node = addNode(state, kind, defaultNodeName(kind, state.nextId + 1), parentId);
 	state.selectedId = node.id;
 	state.previewDirty = true;
 	state.playDirty = true;

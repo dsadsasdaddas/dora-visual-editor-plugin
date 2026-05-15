@@ -22,6 +22,8 @@ Script/Tools/
 ├── SceneImGuiEditor.lua/.ts          # Editor entry
 └── SceneEditor/
     ├── Model.lua/.ts                 # Data model (nodes/assets/scene)
+    ├── SceneGraph.lua/.ts            # Parent-child graph operations and tree rows
+    ├── NodeCatalog.lua/.ts           # Node kind metadata and creation catalog
     ├── Panels.lua/.ts                # Panel module
     ├── Panels/                       # Sub-panels
     │   ├── HeaderPanel.lua/.ts       #   Top toolbar
