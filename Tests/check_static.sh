@@ -23,6 +23,7 @@ check_absent "no Lua object-style SceneModel calls" 'SceneModel:' Script/Tools -
 
 node Tests/scripts/check_structure.mjs
 node Tests/scripts/check_lua_sync.mjs
+bash Tests/run_unit.sh
 
 if [ "$fail" -ne 0 ]; then
   exit 1
