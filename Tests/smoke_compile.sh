@@ -22,10 +22,14 @@ run_build() {
   local target="$1"
   local output
   local attempt
+  local status
   for attempt in 1 2 3; do
+    set +e
     output=$(DORA_TIMEOUT="${DORA_TIMEOUT:-60}" python3 "$DORA_CLI" ts build -p "$PLUGIN_RUNTIME" -f "$target" 2>&1)
+    status=$?
+    set -e
     printf '%s\n' "$output"
-    if ! printf '%s\n' "$output" | grep -E "Compiling error|\[error\]" >/dev/null; then
+    if [ "$status" -eq 0 ] && ! printf '%s\n' "$output" | grep -E "Compiling error|\[error\]" >/dev/null; then
       return
     fi
     if [ "$attempt" -lt 3 ]; then

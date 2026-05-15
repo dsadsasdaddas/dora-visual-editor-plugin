@@ -22,6 +22,7 @@ check_absent "no openFileDialog arrow callback" 'openFileDialog\([^\n]*=>' Scrip
 check_absent "no Lua object-style SceneModel calls" 'SceneModel:' Script/Tools --include='*.lua'
 
 node Tests/scripts/check_structure.mjs
+node Tests/scripts/check_lua_sync.mjs
 
 if [ "$fail" -ne 0 ]; then
   exit 1
