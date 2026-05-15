@@ -1,7 +1,7 @@
-import { App, ClipNode, Color, Director, DrawNode, Label, Line, Node, Sprite, Vec2 } from 'Dora';
+import { App, ClipNode, Color, Director, DrawNode, Line, Node, Vec2 } from 'Dora';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
-import { getNodeVisualSize } from 'Script/Tools/SceneEditor/SpriteMetrics';
-import { greenAxisColor, gridMajorColor, gridMinorColor, helperColor, redAxisColor, selectionColor, viewportBgColor, viewportFrameColor, viewportGameFrameColor } from 'Script/Tools/SceneEditor/Theme';
+import { applySceneNodeTransform, createSceneNodeVisual, sceneNodeVisualKey, updateSceneNodeDynamicVisual } from 'Script/Tools/SceneEditor/SceneNodeRenderer';
+import { greenAxisColor, gridMajorColor, gridMinorColor, redAxisColor, viewportBgColor, viewportFrameColor, viewportGameFrameColor } from 'Script/Tools/SceneEditor/Theme';
 
 function worldPointFromScreen(screenX: number, screenY: number): [number, number] {
 	const size = App.visualSize;
@@ -10,18 +10,6 @@ function worldPointFromScreen(screenX: number, screenY: number): [number, number
 
 function makeLine(points: Vec2.Type[], color: Color.Type) {
 	return Line(points, color);
-}
-
-function makeThickLine(a: Vec2.Type, b: Vec2.Type, color: Color.Type, horizontal: boolean) {
-	const node = Node();
-	for (let offset = -1; offset <= 1; offset++) {
-		if (horizontal) {
-			node.addChild(makeLine([Vec2(a.x, a.y + offset), Vec2(b.x, b.y + offset)], color));
-		} else {
-			node.addChild(makeLine([Vec2(a.x + offset, a.y), Vec2(b.x + offset, b.y)], color));
-		}
-	}
-	return node;
 }
 
 function makeSegmentRect(width: number, height: number, color: Color.Type, thickness: number) {
@@ -35,28 +23,6 @@ function makeSegmentRect(width: number, height: number, color: Color.Type, thick
 	return rect;
 }
 
-function addCornerHandles(node: Node.Type, width: number, height: number, color: Color.Type) {
-	const hw = width / 2;
-	const hh = height / 2;
-	const size = 8;
-	const points = [
-		Vec2(-hw, -hh),
-		Vec2(hw, -hh),
-		Vec2(hw, hh),
-		Vec2(-hw, hh),
-	];
-	for (const point of points) {
-		const handle = DrawNode();
-		handle.drawPolygon([
-			Vec2(point.x - size / 2, point.y - size / 2),
-			Vec2(point.x + size / 2, point.y - size / 2),
-			Vec2(point.x + size / 2, point.y + size / 2),
-			Vec2(point.x - size / 2, point.y + size / 2),
-		], color, 0, Color());
-		node.addChild(handle);
-	}
-}
-
 function gameWidthOf(state: EditorState) {
 	return math.max(160, state.gameWidth);
 }
@@ -64,19 +30,6 @@ function gameWidthOf(state: EditorState) {
 function gameHeightOf(state: EditorState) {
 	return math.max(120, state.gameHeight);
 }
-
-function selectionSize(state: EditorState, item: SceneNodeData): [number, number] {
-	if (item.kind === 'Camera') return [gameWidthOf(state), gameHeightOf(state)];
-	return getNodeVisualSize(item);
-}
-
-function addSelectionOverlay(state: EditorState, item: SceneNodeData, node: Node.Type) {
-	const [width, height] = selectionSize(state, item);
-	const color = item.id === state.selectedId ? selectionColor : helperColor;
-	node.addChild(makeSegmentRect(width, height, color, item.id === state.selectedId ? 1.6 : 0.8));
-	if (item.id === state.selectedId) addCornerHandles(node, width, height, color);
-}
-
 
 function makeClipStencil(width: number, height: number) {
 	const hw = width / 2;
@@ -151,53 +104,14 @@ function makeAxisLine(width: number, height: number) {
 	return axis;
 }
 
-function makeSpritePlaceholder(width: number, height: number) {
-	const node = Node();
-	node.addChild(makeSegmentRect(width, height, helperColor, 1.1));
-	const cross = DrawNode();
-	const hw = width / 2;
-	const hh = height / 2;
-	cross.drawSegment(Vec2(-hw, -hh), Vec2(hw, hh), 0.6, helperColor);
-	cross.drawSegment(Vec2(-hw, hh), Vec2(hw, -hh), 0.6, helperColor);
-	node.addChild(cross);
-	return node;
-}
-
-function makeCameraShape(state: EditorState) {
-	const node = Node();
-	node.addChild(makeSegmentRect(gameWidthOf(state), gameHeightOf(state), viewportGameFrameColor, 1.1));
-	return node;
-}
-
 function createRuntimeVisual(state: EditorState, item: SceneNodeData) {
-	const wrapper = Node();
-	if (item.kind === 'Sprite') {
-		let visual: Sprite.Type | undefined = undefined;
-		if (item.texture !== '') {
-			visual = Sprite(item.texture);
-		}
-		const [width, height] = selectionSize(state, item);
-		wrapper.addChild(visual !== undefined ? visual : makeSpritePlaceholder(width, height));
-		addSelectionOverlay(state, item, wrapper);
-	} else if (item.kind === 'Label') {
-		const label = Label('sarasa-mono-sc-regular', 32);
-		if (label !== undefined) {
-			label.text = item.text || 'Label';
-			state.runtimeLabels[item.id] = label;
-			wrapper.addChild(label);
-		} else {
-			wrapper.addChild(makeSegmentRect(180, 56, Color(0xffffffff), 3));
-		}
-		addSelectionOverlay(state, item, wrapper);
-	} else if (item.kind === 'Camera') {
-		wrapper.addChild(makeCameraShape(state));
-		addSelectionOverlay(state, item, wrapper);
-	} else {
-		wrapper.addChild(makeThickLine(Vec2(-20, 0), Vec2(20, 0), helperColor, true));
-		wrapper.addChild(makeThickLine(Vec2(0, -20), Vec2(0, 20), helperColor, false));
-		addSelectionOverlay(state, item, wrapper);
-	}
-	return wrapper;
+	return createSceneNodeVisual(item, {
+		mode: 'editor',
+		selected: item.id === state.selectedId,
+		gameWidth: gameWidthOf(state),
+		gameHeight: gameHeightOf(state),
+		labels: state.runtimeLabels,
+	});
 }
 
 const runtimeVisualKeys: Record<string, string> = {};
@@ -219,14 +133,13 @@ function resetPreviewCaches(state: EditorState) {
 }
 
 function runtimeVisualKey(state: EditorState, item: SceneNodeData) {
-	return [
-		item.kind,
-		item.texture || '',
-		item.text || '',
-		item.name || '',
-		item.id === state.selectedId ? 'selected' : 'normal',
-		item.kind === 'Camera' ? tostring(gameWidthOf(state)) + 'x' + tostring(gameHeightOf(state)) : '',
-	].join('|');
+	return sceneNodeVisualKey(item, {
+		mode: 'editor',
+		selected: item.id === state.selectedId,
+		gameWidth: gameWidthOf(state),
+		gameHeight: gameHeightOf(state),
+		labels: state.runtimeLabels,
+	});
 }
 
 function ensurePreviewRuntime(state: EditorState) {
@@ -284,15 +197,8 @@ function updatePreviewLayout(state: EditorState) {
 }
 
 function applyRuntimeTransform(state: EditorState, item: SceneNodeData, runtime: Node.Type) {
-	runtime.x = item.x;
-	runtime.y = item.y;
-	runtime.scaleX = item.scaleX;
-	runtime.scaleY = item.scaleY;
-	runtime.angle = item.rotation;
-	runtime.visible = item.visible;
-	runtime.tag = item.name;
-	const label = state.runtimeLabels[item.id] as Label.Type | undefined;
-	if (label !== undefined) label.text = item.text || 'Label';
+	applySceneNodeTransform(runtime, item);
+	updateSceneNodeDynamicVisual(item, state.runtimeLabels);
 }
 
 function ensureRuntimeVisual(state: EditorState, item: SceneNodeData) {

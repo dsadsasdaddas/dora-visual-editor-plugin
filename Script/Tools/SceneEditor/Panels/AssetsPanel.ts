@@ -3,6 +3,7 @@ import * as ImGui from 'ImGui';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { themeColor } from 'Script/Tools/SceneEditor/Theme';
 import { importFileDialog, importFolderDialog, isFolderAsset, isScriptAsset, isTextureAsset, lowerExt, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
+import { canNodeKindBindScript, canNodeKindBindTexture } from 'Script/Tools/SceneEditor/NodeCapabilities';
 
 declare function pcall(fn: () => void): LuaMultiReturn<[boolean, unknown]>;
 
@@ -50,14 +51,14 @@ function drawAssetRow(
 			return;
 		}
 		const node = state.nodes[state.selectedId];
-		if (node !== undefined && node.kind === 'Sprite' && isTextureAsset(asset)) {
+		if (node !== undefined && canNodeKindBindTexture(node.kind) && isTextureAsset(asset)) {
 			bindTextureToSprite(state, node, asset);
 			return;
-		} else if (node !== undefined && isScriptAsset(asset)) {
+		} else if (node !== undefined && canNodeKindBindScript(node.kind) && isScriptAsset(asset)) {
 			attachScriptToNode(state, node, asset, (zh ? '已绑定脚本并保存：' : 'Script assigned and saved: ') + asset);
 			return;
 		} else {
-			state.status = zh ? '已选择资源；选中 Sprite 可绑定图片，选中节点可绑定脚本' : 'Asset selected; select a Sprite for images, or a node for scripts';
+			state.status = zh ? '已选择资源；选中支持的节点可绑定图片或脚本' : 'Asset selected; select a compatible node to bind images or scripts';
 		}
 		pushConsole(state, state.status);
 	}
@@ -101,13 +102,13 @@ export function drawAssetsPanel(
 		const selectedNode = state.nodes[state.selectedId];
 		if (state.isPlaying) {
 			ImGui.BeginDisabled(() => {
-				ImGui.Button(zh ? '绑定到当前 Sprite' : 'Bind To Sprite');
+				ImGui.Button(zh ? '绑定到当前节点' : 'Bind To Node');
 				ImGui.SameLine();
 				ImGui.Button(zh ? '用此贴图创建 Sprite' : 'Create Sprite');
 			});
 		} else {
-			if (selectedNode !== undefined && selectedNode.kind === 'Sprite') {
-				if (ImGui.Button(zh ? '绑定到当前 Sprite' : 'Bind To Sprite')) bindTextureToSprite(state, selectedNode, state.selectedAsset);
+			if (selectedNode !== undefined && canNodeKindBindTexture(selectedNode.kind)) {
+				if (ImGui.Button(zh ? '绑定到当前节点' : 'Bind To Node')) bindTextureToSprite(state, selectedNode, state.selectedAsset);
 				ImGui.SameLine();
 			}
 			if (ImGui.Button(zh ? '用此贴图创建 Sprite' : 'Create Sprite')) createSpriteFromTexture(state, state.selectedAsset);

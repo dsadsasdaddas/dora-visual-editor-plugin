@@ -12,6 +12,7 @@ import { drawInspectorPanel } from 'Script/Tools/SceneEditor/Panels/InspectorPan
 import { drawScriptPanel, openScriptForNode } from 'Script/Tools/SceneEditor/Panels/ScriptPanel';
 import { drawViewportPanel } from 'Script/Tools/SceneEditor/Panels/ViewportPanel';
 import { drawGamePreviewWindow } from 'Script/Tools/SceneEditor/Player';
+import { canNodeKindBindTexture } from 'Script/Tools/SceneEditor/NodeCapabilities';
 
 function sceneSaveFile() {
 	return workspacePath(Path('.dora', 'imgui-editor.scene.json'));
@@ -99,7 +100,7 @@ function bindTextureToSprite(state: EditorState, node: SceneNodeData, texture: s
 function createSpriteFromTexture(state: EditorState, texture: string) {
 	addChildNode(state, 'Sprite');
 	const node = state.nodes[state.selectedId];
-	if (node !== undefined && node.kind === 'Sprite') {
+	if (node !== undefined && canNodeKindBindTexture(node.kind)) {
 		bindTextureToSprite(state, node, texture);
 	}
 }

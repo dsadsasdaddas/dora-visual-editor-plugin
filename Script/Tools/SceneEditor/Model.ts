@@ -1,6 +1,8 @@
 import { App, Buffer, Content, Path, emit, json } from 'Dora';
-import { EditorState, SceneNodeData, SceneNodeKind } from 'Script/Tools/SceneEditor/EditorTypes';
-import { canNodeKindHaveChildren, defaultNodeName, nodeKindIcon, normalizeNodeKind } from 'Script/Tools/SceneEditor/NodeCatalog';
+import { EditorState, SceneNodeKind } from 'Script/Tools/SceneEditor/EditorTypes';
+import { defaultNodeName, nodeKindIcon, normalizeNodeKind } from 'Script/Tools/SceneEditor/NodeCatalog';
+import { canDeleteNodeKind, canNodeKindHaveChildren, isRootNodeKind } from 'Script/Tools/SceneEditor/NodeCapabilities';
+import { createSceneNodeData } from 'Script/Tools/SceneEditor/NodeFactory';
 import { nodePath as graphNodePath, normalizeSceneGraph, reparentSceneNode, resolveAddParentId as resolveGraphAddParentId } from 'Script/Tools/SceneEditor/SceneGraph';
 
 type SceneNodeJson = {
@@ -304,37 +306,20 @@ function newNodeId(state: EditorState, kind: SceneNodeKind): string {
 
 export function addNode(state: EditorState, kind: SceneNodeKind, name: string, parentId?: string) {
 	let resolvedParentId = 'root';
-	if (kind === 'Root') {
+	if (isRootNodeKind(kind)) {
 		resolvedParentId = '';
 	} else if (parentId !== undefined && parentId !== '' && state.nodes[parentId] !== undefined && canNodeKindHaveChildren(state.nodes[parentId].kind)) {
 		resolvedParentId = parentId;
 	}
-	const id = kind === 'Root' ? 'root' : newNodeId(state, kind);
+	const id = isRootNodeKind(kind) ? 'root' : newNodeId(state, kind);
 	const index = state.nextId;
-	const node: SceneNodeData = {
+	const node = createSceneNodeData({
 		id,
 		kind,
 		name,
 		parentId: resolvedParentId,
-		children: [],
-		x: (kind === 'Root' || kind === 'Camera') ? 0 : ((index % 5) - 2) * 70,
-		y: (kind === 'Root' || kind === 'Camera') ? 0 : (math.floor(index / 5) % 4) * 55,
-		scaleX: 1,
-		scaleY: 1,
-		rotation: 0,
-		visible: true,
-		texture: '',
-		text: kind === 'Label' ? 'Label' : '',
-		script: '',
-		followTargetId: '',
-		followOffsetX: 0,
-		followOffsetY: 0,
-		nameBuffer: makeBuffer(name, 128),
-		textureBuffer: makeBuffer('', 256),
-		textBuffer: makeBuffer(kind === 'Label' ? 'Label' : '', 256),
-		scriptBuffer: makeBuffer('', 256),
-		followTargetBuffer: makeBuffer('', 128),
-	};
+		index,
+	});
 	state.nodes[id] = node;
 	state.order.push(id);
 	const parent = resolvedParentId !== '' ? state.nodes[resolvedParentId] : undefined;
@@ -352,6 +337,10 @@ function sceneNodeKind(value: unknown): SceneNodeKind {
 
 function stringValue(value: unknown, fallback: string) {
 	return type(value) === 'string' ? value as string : fallback;
+}
+
+function optionalStringValue(value: unknown) {
+	return type(value) === 'string' ? value as string : undefined;
 }
 
 function numberValue(value: unknown, fallback: number) {
@@ -394,22 +383,21 @@ export function loadSceneFromFile(state: EditorState, file: string) {
 
 	for (const raw of rawNodes) {
 		const kind = sceneNodeKind(raw.kind);
-		let id = stringValue(raw.id, kind === 'Root' ? 'root' : string.lower(kind) + '-' + (tostring(state.nextId + 1) || ''));
-		if (state.nodes[id] !== undefined) id = kind === 'Root' ? 'root' : string.lower(kind) + '-' + (tostring(state.nextId + 1) || '');
-		const name = stringValue(raw.name, kind === 'Root' ? 'MainScene' : kind);
+		let id = stringValue(raw.id, isRootNodeKind(kind) ? 'root' : string.lower(kind) + '-' + (tostring(state.nextId + 1) || ''));
+		if (state.nodes[id] !== undefined) id = isRootNodeKind(kind) ? 'root' : string.lower(kind) + '-' + (tostring(state.nextId + 1) || '');
+		const name = stringValue(raw.name, defaultNodeName(kind, state.nextId + 1));
 		const texture = stringValue(raw.texture, '');
-		const text = stringValue(raw.text, kind === 'Label' ? 'Label' : '');
+		const text = optionalStringValue(raw.text);
 		const script = stringValue(raw.script, '');
 		const followTargetId = stringValue(raw.followTargetId, '');
 		const followOffsetX = numberValue(raw.followOffsetX, 0);
 		const followOffsetY = numberValue(raw.followOffsetY, 0);
 		const parentId = id === 'root' ? undefined : stringValue(raw.parentId, 'root');
-		const node: SceneNodeData = {
+		const node = createSceneNodeData({
 			id,
 			kind,
 			name,
 			parentId,
-			children: [],
 			x: numberValue(raw.x, 0),
 			y: numberValue(raw.y, 0),
 			scaleX: numberValue(raw.scaleX, 1),
@@ -422,12 +410,7 @@ export function loadSceneFromFile(state: EditorState, file: string) {
 			followTargetId,
 			followOffsetX,
 			followOffsetY,
-			nameBuffer: makeBuffer(name, 128),
-			textureBuffer: makeBuffer(texture, 256),
-			textBuffer: makeBuffer(text, 256),
-			scriptBuffer: makeBuffer(script, 256),
-			followTargetBuffer: makeBuffer(followTargetId, 128),
-		};
+		});
 		state.nodes[id] = node;
 		state.order.push(id);
 		updateNextIdFromNodeId(state, id);
@@ -454,12 +437,12 @@ function removeFromOrder(state: EditorState, id: string) {
 }
 
 export function deleteNode(state: EditorState, id: string) {
-	if (id === 'root') {
+	const node = state.nodes[id];
+	if (node === undefined) return;
+	if (!canDeleteNodeKind(node.kind)) {
 		state.status = zh ? '根节点不能删除' : 'Root cannot be deleted';
 		return;
 	}
-	const node = state.nodes[id];
-	if (node === undefined) return;
 	for (let i = node.children.length; i >= 1; i--) {
 		deleteNode(state, node.children[i - 1]);
 	}

@@ -1,5 +1,6 @@
 import { Texture2D } from 'Dora';
 import { SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
+import { defaultNodeVisualSize, nodeKindUsesGameFrameSize, nodeKindUsesTextureSize } from 'Script/Tools/SceneEditor/NodeCapabilities';
 
 const textureSizeCache: Record<string, [number, number]> = {};
 
@@ -20,14 +21,12 @@ export function getTextureSize(texture: string): [number, number] | undefined {
 }
 
 export function getNodeVisualSize(item: SceneNodeData, gameWidth?: number, gameHeight?: number): [number, number] {
-	if (item.kind === 'Camera') return [math.max(160, gameWidth || 960), math.max(120, gameHeight || 540)];
-	if (item.kind === 'Sprite') {
+	if (nodeKindUsesGameFrameSize(item.kind)) return [math.max(160, gameWidth || 960), math.max(120, gameHeight || 540)];
+	if (nodeKindUsesTextureSize(item.kind)) {
 		const size = getTextureSize(item.texture);
 		if (size !== undefined) return size;
-		return [128, 96];
 	}
-	if (item.kind === 'Label') return [180, 56];
-	return [72, 72];
+	return defaultNodeVisualSize(item.kind);
 }
 
 export function isScenePointInsideNode(item: SceneNodeData, sceneX: number, sceneY: number, gameWidth?: number, gameHeight?: number) {

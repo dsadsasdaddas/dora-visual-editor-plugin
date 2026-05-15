@@ -16,12 +16,15 @@ function assertSourceGuard(file, pattern, label) {
 }
 
 assertSourceGuard('Script/Tools/SceneEditor/SceneGraph.ts', /export function nodePath[\s\S]*visited[\s\S]*cursor\.parentId === cursor\.id/, 'nodePath cycle guard');
-assertSourceGuard('Script/Tools/SceneEditor/Model.ts', /export function addNode[\s\S]*kind === 'Root'[\s\S]*resolvedParentId = ''/, 'root parent normalization');
+assertSourceGuard('Script/Tools/SceneEditor/Model.ts', /export function addNode[\s\S]*isRootNodeKind\(kind\)[\s\S]*resolvedParentId = ''/, 'root parent normalization');
 assertSourceGuard('Script/Tools/SceneEditor/SceneGraph.ts', /export function worldPositionOf[\s\S]*visited[\s\S]*cursor\.parentId === cursor\.id/, 'world-position cycle guard');
 assertSourceGuard('Script/Tools/SceneEditor/Panels.ts', /parentId: node\.id === 'root' \? undefined : node\.parentId/, 'root save parent cleanup');
 assertSourceGuard('Script/Tools/SceneEditor/SceneGraph.ts', /export function canReparentSceneNode[\s\S]*canNodeHaveChildren[\s\S]*isAncestorOf/, 'safe reparent validation');
 assertSourceGuard('Script/Tools/SceneEditor/Panels/SceneTreePanel.ts', /buildSceneTreeRows[\s\S]*toggleTreeNodeExpanded/, 'tree row view model rendering');
 assertSourceGuard('Script/Tools/SceneEditor/Panels/AddNodePopup.ts', /nodeCategoryDefinitions[\s\S]*nodeKindDefinitions/, 'catalog-driven add-node popup');
+assertSourceGuard('Script/Tools/SceneEditor/NodeFactory.ts', /indexedSpawnPosition[\s\S]*export function createSceneNodeData[\s\S]*defaultNodeText/, 'central node factory defaults');
+assertSourceGuard('Script/Tools/SceneEditor/SceneNodeRenderer.ts', /export function createSceneNodeVisual[\s\S]*createBaseVisual[\s\S]*addEditorSelectionOverlay/, 'central node renderer');
+assertSourceGuard('Script/Tools/SceneEditor/NodeCatalog.ts', /canBindTexture[\s\S]*canBindScript[\s\S]*viewportPickLayer/, 'node capability catalog');
 
 function loadFixture(name) {
   const file = path.join(repo, 'Tests', 'fixtures', name);
