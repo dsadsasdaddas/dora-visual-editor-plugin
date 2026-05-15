@@ -81,10 +81,14 @@ function firstCameraId(state: EditorState) {
 function sceneWorldPosition(state: EditorState, id: string): [number, number] {
 	let x = 0;
 	let y = 0;
+	const visited: Record<string, boolean> = {};
 	let cursor: SceneNodeData | undefined = state.nodes[id];
 	while (cursor !== undefined) {
+		if (visited[cursor.id]) break;
+		visited[cursor.id] = true;
 		x += cursor.x;
 		y += cursor.y;
+		if (cursor.parentId === undefined || cursor.parentId === cursor.id) break;
 		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
 	}
 	return [x, y];

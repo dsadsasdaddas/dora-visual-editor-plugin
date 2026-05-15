@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "gameWidth": 1280,
+  "gameHeight": 720,
+  "gameScript": "Script/Main.lua",
+  "nodes": [
+    { "id": "root", "kind": "Root", "name": "MainScene", "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "visible": true, "texture": "", "text": "", "script": "" },
+    { "id": "node-1", "kind": "Node", "name": "World", "parentId": "root", "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "visible": true, "texture": "", "text": "", "script": "" },
+    { "id": "node-2", "kind": "Node", "name": "Actors", "parentId": "node-1", "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "visible": true, "texture": "", "text": "", "script": "" },
+    { "id": "camera-3", "kind": "Camera", "name": "Camera2D", "parentId": "root", "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "visible": true, "texture": "", "text": "", "script": "", "followTargetId": "sprite-4", "followOffsetX": 0, "followOffsetY": 0 },
+    { "id": "sprite-4", "kind": "Sprite", "name": "Player", "parentId": "node-2", "x": 100, "y": 50, "scaleX": 1, "scaleY": 1, "rotation": 0, "visible": true, "texture": "Imported/player.png", "text": "", "script": "Script/Player.lua" }
+  ]
+}

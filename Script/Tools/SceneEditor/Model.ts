@@ -297,13 +297,18 @@ export function importFolderDialog(state: EditorState) {
 	});
 }
 
-function newNodeId(state: EditorState, kind: SceneNodeKind) {
+function newNodeId(state: EditorState, kind: SceneNodeKind): string {
 	state.nextId += 1;
-	return string.lower(kind) + '-' + tostring(state.nextId);
+	return string.lower(kind) + '-' + (tostring(state.nextId) || '0');
 }
 
 export function addNode(state: EditorState, kind: SceneNodeKind, name: string, parentId?: string) {
-	const resolvedParentId = parentId || 'root';
+	let resolvedParentId = 'root';
+	if (kind === 'Root') {
+		resolvedParentId = '';
+	} else if (parentId !== undefined && parentId !== '') {
+		resolvedParentId = parentId;
+	}
 	const id = kind === 'Root' ? 'root' : newNodeId(state, kind);
 	const index = state.nextId;
 	const node: SceneNodeData = {
@@ -332,7 +337,7 @@ export function addNode(state: EditorState, kind: SceneNodeKind, name: string, p
 	};
 	state.nodes[id] = node;
 	state.order.push(id);
-	const parent = state.nodes[resolvedParentId];
+	const parent = resolvedParentId !== '' ? state.nodes[resolvedParentId] : undefined;
 	if (id !== 'root' && parent !== undefined) {
 		parent.children.push(id);
 	}
@@ -485,10 +490,14 @@ export function deleteNode(state: EditorState, id: string) {
 function worldPositionOf(state: EditorState, id: string): [number, number] {
 	let x = 0;
 	let y = 0;
+	const visited: Record<string, boolean> = {};
 	let cursor: SceneNodeData | undefined = state.nodes[id];
 	while (cursor !== undefined) {
+		if (visited[cursor.id]) break;
+		visited[cursor.id] = true;
 		x += cursor.x;
 		y += cursor.y;
+		if (cursor.parentId === undefined || cursor.parentId === cursor.id) break;
 		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
 	}
 	return [x, y];
@@ -500,9 +509,13 @@ export function reparentNode(state: EditorState, id: string, newParentId: string
 	const newParent = state.nodes[newParentId];
 	if (node === undefined || newParent === undefined || node.parentId === newParentId) return false;
 	const [worldX, worldY] = worldPositionOf(state, id);
+	const visited: Record<string, boolean> = {};
 	let cursor: SceneNodeData | undefined = newParent;
 	while (cursor !== undefined) {
 		if (cursor.id === id) return false;
+		if (visited[cursor.id]) return false;
+		visited[cursor.id] = true;
+		if (cursor.parentId === undefined || cursor.parentId === cursor.id) break;
 		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
 	}
 	const oldParent = node.parentId !== undefined ? state.nodes[node.parentId] : undefined;
@@ -523,16 +536,42 @@ export function reparentNode(state: EditorState, id: string, newParentId: string
 	return true;
 }
 
-export function addChildNode(state: EditorState, kind: SceneNodeKind) {
+export function resolveAddParentId(state: EditorState) {
 	let parentId = state.selectedId || 'root';
 	if (state.nodes[parentId] === undefined) parentId = 'root';
-	if (state.nodes[parentId].kind === 'Camera') {
-		parentId = state.nodes[parentId].parentId || 'root';
+	const selected = state.nodes[parentId];
+	if (selected !== undefined && selected.kind === 'Camera') {
+		parentId = selected.parentId || 'root';
 	}
-	const node = addNode(state, kind, kind + tostring(state.nextId + 1), parentId);
+	if (state.nodes[parentId] === undefined) return 'root';
+	return parentId;
+}
+
+export function nodePath(state: EditorState, id: string) {
+	const parts: string[] = [];
+	const visited: Record<string, boolean> = {};
+	let cursor: SceneNodeData | undefined = state.nodes[id];
+	while (cursor !== undefined) {
+		if (visited[cursor.id]) break;
+		visited[cursor.id] = true;
+		parts.push(cursor.name);
+		if (cursor.parentId === undefined || cursor.parentId === cursor.id) break;
+		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
+	}
+	let path = '';
+	for (let i = parts.length; i >= 1; i--) {
+		path += (path === '' ? '' : ' / ') + parts[i - 1];
+	}
+	return path === '' ? 'Root' : path;
+}
+
+export function addChildNode(state: EditorState, kind: SceneNodeKind) {
+	const parentId = resolveAddParentId(state);
+	const node = addNode(state, kind, kind + (tostring(state.nextId + 1) || ''), parentId);
 	state.selectedId = node.id;
 	state.previewDirty = true;
 	state.playDirty = true;
-	state.status = (zh ? '已添加 ' : 'Added ') + node.name;
+	const parent = state.nodes[parentId];
+	state.status = (zh ? '已添加 ' : 'Added ') + node.name + (parent !== undefined ? ((zh ? ' 到 ' : ' under ') + parent.name) : '');
 	pushConsole(state, state.status);
 }

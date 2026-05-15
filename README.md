@@ -1,5 +1,8 @@
 # Dora Visual Editor Plugin
 
+[![CI](https://github.com/dsadsasdaddas/dora-visual-editor-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/dsadsasdaddas/dora-visual-editor-plugin/actions/workflows/ci.yml)
+
+
 Native ImGui-based 2D visual editor plugin for Dora SSR.
 
 ## Features
@@ -48,6 +51,25 @@ Copy `Script/` directory into your Dora project, then run `init.lua`.
 ## Development
 
 Source code is in `Script/Tools/`, maintained in both Lua and TypeScript.
+
+See [`Docs/DEVELOPMENT.md`](Docs/DEVELOPMENT.md) for the document-driven development workflow.
+
+## Testing
+
+Run repository-safe checks:
+
+```bash
+bash Tests/run_all.sh
+```
+
+Run local Dora compile/run smoke checks when Dora is open and the Web IDE is available:
+
+```bash
+RUN_DORA_SMOKE=1 bash Tests/run_all.sh
+```
+
+GitHub Actions runs the static/structure checks on every push and PR. Tag builds (`v*`) also package a distributable plugin zip.
+
 
 **TSTL Note**: Do not use `null` — Lua has no null concept. Use `undefined` in TypeScript.
 

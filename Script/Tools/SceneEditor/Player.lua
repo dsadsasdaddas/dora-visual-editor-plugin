@@ -118,303 +118,311 @@ end -- 73
 local function sceneWorldPosition(state, id) -- 81
 	local x = 0 -- 82
 	local y = 0 -- 83
-	local cursor = state.nodes[id] -- 84
-	while cursor ~= nil do -- 84
-		x = x + cursor.x -- 86
-		y = y + cursor.y -- 87
-		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil -- 88
-	end -- 88
-	return {x, y} -- 90
+	local visited = {} -- 84
+	local cursor = state.nodes[id] -- 85
+	while cursor ~= nil do -- 85
+		if visited[cursor.id] then -- 85
+			break -- 87
+		end -- 87
+		visited[cursor.id] = true -- 88
+		x = x + cursor.x -- 89
+		y = y + cursor.y -- 90
+		if cursor.parentId == nil or cursor.parentId == cursor.id then -- 90
+			break -- 91
+		end -- 91
+		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil -- 92
+	end -- 92
+	return {x, y} -- 94
 end -- 81
-local function loadScriptText(scriptPath) -- 93
-	if scriptPath == "" then -- 93
-		return "" -- 94
-	end -- 94
-	local projectPath = workspacePath(scriptPath) -- 95
-	if Content:exist(projectPath) then -- 95
-		return Content:load(projectPath) or "" -- 96
-	end -- 96
-	if Content:exist(scriptPath) then -- 96
-		return Content:load(scriptPath) or "" -- 97
-	end -- 97
-	return "" -- 98
-end -- 93
-local function runNodeScript(state, item, runtimeNode) -- 101
-	local scriptText = loadScriptText(item.script) -- 102
-	if scriptText == "" then -- 102
-		return -- 103
-	end -- 103
-	local chunk, loadError = load(scriptText, item.script) -- 104
-	if chunk == nil then -- 104
-		pushConsole( -- 106
-			state, -- 106
-			(((zh and "脚本加载失败：" or "Script load failed: ") .. item.script) .. " ") .. tostring(loadError or "") -- 106
-		) -- 106
+local function loadScriptText(scriptPath) -- 97
+	if scriptPath == "" then -- 97
+		return "" -- 98
+	end -- 98
+	local projectPath = workspacePath(scriptPath) -- 99
+	if Content:exist(projectPath) then -- 99
+		return Content:load(projectPath) or "" -- 100
+	end -- 100
+	if Content:exist(scriptPath) then -- 100
+		return Content:load(scriptPath) or "" -- 101
+	end -- 101
+	return "" -- 102
+end -- 97
+local function runNodeScript(state, item, runtimeNode) -- 105
+	local scriptText = loadScriptText(item.script) -- 106
+	if scriptText == "" then -- 106
 		return -- 107
 	end -- 107
-	local ok, result = pcall(chunk) -- 109
-	if not ok then -- 109
-		pushConsole( -- 111
-			state, -- 111
-			(((zh and "脚本执行失败：" or "Script failed: ") .. item.script) .. " ") .. tostring(result) -- 111
-		) -- 111
-		return -- 112
-	end -- 112
-	if type(result) == "function" then -- 112
-		local behavior = result -- 115
-		local behaviorOk, behaviorError = pcall(function() return behavior(runtimeNode, state.playContent or runtimeNode, state.playRuntimeNodes) end) -- 116
-		if not behaviorOk then -- 116
-			pushConsole( -- 117
-				state, -- 117
-				(((zh and "脚本绑定失败：" or "Script attach failed: ") .. item.script) .. " ") .. tostring(behaviorError) -- 117
-			) -- 117
-		end -- 117
-	end -- 117
-end -- 101
-local function defaultGameMainLua() -- 121
+	local chunk, loadError = load(scriptText, item.script) -- 108
+	if chunk == nil then -- 108
+		pushConsole( -- 110
+			state, -- 110
+			(((zh and "脚本加载失败：" or "Script load failed: ") .. item.script) .. " ") .. tostring(loadError or "") -- 110
+		) -- 110
+		return -- 111
+	end -- 111
+	local ok, result = pcall(chunk) -- 113
+	if not ok then -- 113
+		pushConsole( -- 115
+			state, -- 115
+			(((zh and "脚本执行失败：" or "Script failed: ") .. item.script) .. " ") .. tostring(result) -- 115
+		) -- 115
+		return -- 116
+	end -- 116
+	if type(result) == "function" then -- 116
+		local behavior = result -- 119
+		local behaviorOk, behaviorError = pcall(function() return behavior(runtimeNode, state.playContent or runtimeNode, state.playRuntimeNodes) end) -- 120
+		if not behaviorOk then -- 120
+			pushConsole( -- 121
+				state, -- 121
+				(((zh and "脚本绑定失败：" or "Script attach failed: ") .. item.script) .. " ") .. tostring(behaviorError) -- 121
+			) -- 121
+		end -- 121
+	end -- 121
+end -- 105
+local function defaultGameMainLua() -- 125
 	return ((((((((((((((((("-- Game main script\n" .. "-- Auto-created by Dora Visual Editor.\n") .. "local _ENV = Dora\n\n") .. "return {\n") .. "\tstart = function(scene, nodes, world)\n") .. "\t\tlocal player = nil\n") .. "\t\tfor _, node in pairs(nodes) do\n") .. "\t\t\tlocal tag = tostring(node.tag or \"\")\n") .. "\t\t\tif node ~= scene and player == nil and string.find(tag, \"Camera\") == nil then player = node end\n") .. "\t\tend\n") .. "\t\tif player == nil then return end\n") .. "\t\tscene:schedule(function(deltaTime)\n") .. "\t\t\tlocal speed = 220\n") .. "\t\t\tif Keyboard:isKeyPressed(\"A\") or Keyboard:isKeyPressed(\"Left\") then player.x = player.x - speed * deltaTime end\n") .. "\t\t\tif Keyboard:isKeyPressed(\"D\") or Keyboard:isKeyPressed(\"Right\") then player.x = player.x + speed * deltaTime end\n") .. "\t\t\treturn false\n") .. "\t\tend)\n") .. "\tend\n") .. "}\n"
-end -- 121
-local function ensureGameMainScript(state) -- 143
-	local scriptPath = state.gameScript ~= "" and state.gameScript or "Script/Main.lua" -- 144
-	state.gameScript = scriptPath -- 145
-	state.gameScriptBuffer.text = scriptPath -- 146
-	local file = workspacePath(scriptPath) -- 147
-	if not Content:exist(file) then -- 147
-		Content:mkdir(Path:getPath(file)) -- 149
-		Content:save( -- 150
-			file, -- 150
-			defaultGameMainLua() -- 150
-		) -- 150
-	end -- 150
-end -- 143
-local function runGameMain(state) -- 154
-	local scriptPath = state.gameScript ~= "" and state.gameScript or "Script/Main.lua" -- 155
-	local scriptText = loadScriptText(scriptPath) -- 156
-	if scriptText == "" then -- 156
-		return -- 157
-	end -- 157
-	local chunk, loadError = load(scriptText, scriptPath) -- 158
-	if chunk == nil then -- 158
-		pushConsole( -- 160
-			state, -- 160
-			(((zh and "主脚本加载失败：" or "Main script load failed: ") .. scriptPath) .. " ") .. tostring(loadError or "") -- 160
-		) -- 160
+end -- 125
+local function ensureGameMainScript(state) -- 147
+	local scriptPath = state.gameScript ~= "" and state.gameScript or "Script/Main.lua" -- 148
+	state.gameScript = scriptPath -- 149
+	state.gameScriptBuffer.text = scriptPath -- 150
+	local file = workspacePath(scriptPath) -- 151
+	if not Content:exist(file) then -- 151
+		Content:mkdir(Path:getPath(file)) -- 153
+		Content:save( -- 154
+			file, -- 154
+			defaultGameMainLua() -- 154
+		) -- 154
+	end -- 154
+end -- 147
+local function runGameMain(state) -- 158
+	local scriptPath = state.gameScript ~= "" and state.gameScript or "Script/Main.lua" -- 159
+	local scriptText = loadScriptText(scriptPath) -- 160
+	if scriptText == "" then -- 160
 		return -- 161
 	end -- 161
-	local ok, result = pcall(chunk) -- 163
-	if not ok then -- 163
-		pushConsole( -- 165
-			state, -- 165
-			(((zh and "主脚本执行失败：" or "Main script failed: ") .. scriptPath) .. " ") .. tostring(result) -- 165
-		) -- 165
-		return -- 166
-	end -- 166
-	local start = nil -- 168
-	if type(result) == "function" then -- 168
-		start = result -- 170
-	elseif type(result) == "table" then -- 170
-		local module = result -- 172
-		if module.start ~= nil then -- 172
-			start = module.start -- 173
-		end -- 173
-	end -- 173
-	local scene = state.playContent -- 175
-	local world = state.playWorld -- 176
-	if start ~= nil and scene ~= nil and world ~= nil then -- 176
-		local entry = start -- 178
-		local startOk, startError = pcall(function() return entry(scene, state.playRuntimeNodes, world) end) -- 179
-		if not startOk then -- 179
-			pushConsole( -- 180
-				state, -- 180
-				(zh and "主脚本启动失败：" or "Main script start failed: ") .. tostring(startError) -- 180
-			) -- 180
-		end -- 180
-	end -- 180
-end -- 154
-local function clearPlayRuntime(state) -- 184
-	if state.playRoot ~= nil then -- 184
-		state.playRoot:removeFromParent(true) -- 186
-		state.playRoot = nil -- 187
-	end -- 187
-	state.playWorld = nil -- 189
-	state.playContent = nil -- 190
-	state.playRuntimeNodes = {} -- 191
-	state.playRuntimeLabels = {} -- 192
-	state.isPlaying = false -- 193
-	state.playDirty = true -- 194
-end -- 184
-function ____exports.stopPlay(state) -- 197
-	clearPlayRuntime(state) -- 198
-	state.status = zh and "游戏预览已停止" or "Game preview stopped" -- 199
-	pushConsole(state, state.status) -- 200
-end -- 197
-function ____exports.startPlay(state) -- 203
-	clearPlayRuntime(state) -- 204
-	ensureGameMainScript(state) -- 205
-	state.isPlaying = true -- 206
-	state.gameWindowOpen = true -- 207
-	state.playDirty = true -- 208
-	state.status = zh and "游戏预览运行中" or "Game preview running" -- 209
-	pushConsole(state, state.status) -- 210
-end -- 203
-local function gameWidthOf(state) -- 213
-	return math.max( -- 214
-		160, -- 214
-		math.floor(state.gameWidth) -- 214
-	) -- 214
-end -- 213
-local function gameHeightOf(state) -- 217
+	local chunk, loadError = load(scriptText, scriptPath) -- 162
+	if chunk == nil then -- 162
+		pushConsole( -- 164
+			state, -- 164
+			(((zh and "主脚本加载失败：" or "Main script load failed: ") .. scriptPath) .. " ") .. tostring(loadError or "") -- 164
+		) -- 164
+		return -- 165
+	end -- 165
+	local ok, result = pcall(chunk) -- 167
+	if not ok then -- 167
+		pushConsole( -- 169
+			state, -- 169
+			(((zh and "主脚本执行失败：" or "Main script failed: ") .. scriptPath) .. " ") .. tostring(result) -- 169
+		) -- 169
+		return -- 170
+	end -- 170
+	local start = nil -- 172
+	if type(result) == "function" then -- 172
+		start = result -- 174
+	elseif type(result) == "table" then -- 174
+		local module = result -- 176
+		if module.start ~= nil then -- 176
+			start = module.start -- 177
+		end -- 177
+	end -- 177
+	local scene = state.playContent -- 179
+	local world = state.playWorld -- 180
+	if start ~= nil and scene ~= nil and world ~= nil then -- 180
+		local entry = start -- 182
+		local startOk, startError = pcall(function() return entry(scene, state.playRuntimeNodes, world) end) -- 183
+		if not startOk then -- 183
+			pushConsole( -- 184
+				state, -- 184
+				(zh and "主脚本启动失败：" or "Main script start failed: ") .. tostring(startError) -- 184
+			) -- 184
+		end -- 184
+	end -- 184
+end -- 158
+local function clearPlayRuntime(state) -- 188
+	if state.playRoot ~= nil then -- 188
+		state.playRoot:removeFromParent(true) -- 190
+		state.playRoot = nil -- 191
+	end -- 191
+	state.playWorld = nil -- 193
+	state.playContent = nil -- 194
+	state.playRuntimeNodes = {} -- 195
+	state.playRuntimeLabels = {} -- 196
+	state.isPlaying = false -- 197
+	state.playDirty = true -- 198
+end -- 188
+function ____exports.stopPlay(state) -- 201
+	clearPlayRuntime(state) -- 202
+	state.status = zh and "游戏预览已停止" or "Game preview stopped" -- 203
+	pushConsole(state, state.status) -- 204
+end -- 201
+function ____exports.startPlay(state) -- 207
+	clearPlayRuntime(state) -- 208
+	ensureGameMainScript(state) -- 209
+	state.isPlaying = true -- 210
+	state.gameWindowOpen = true -- 211
+	state.playDirty = true -- 212
+	state.status = zh and "游戏预览运行中" or "Game preview running" -- 213
+	pushConsole(state, state.status) -- 214
+end -- 207
+local function gameWidthOf(state) -- 217
 	return math.max( -- 218
-		120, -- 218
-		math.floor(state.gameHeight) -- 218
+		160, -- 218
+		math.floor(state.gameWidth) -- 218
 	) -- 218
 end -- 217
-local function rebuildPlayRuntime(state) -- 221
-	local width = gameWidthOf(state) -- 222
-	local height = gameHeightOf(state) -- 223
-	state.playRoot = Node() -- 224
-	state.playRoot.tag = "__DoraImGuiGamePreview__" -- 225
-	state.playRoot.visible = false -- 226
-	state.playRuntimeNodes = {} -- 227
-	state.playRuntimeLabels = {} -- 228
-	Director.entry:addChild(state.playRoot) -- 229
-	local background = makeGameBackground(width, height) -- 231
-	background.x = width / 2 -- 232
-	background.y = height / 2 -- 233
-	state.playRoot:addChild(background) -- 234
-	local world = Node() -- 235
-	state.playWorld = world -- 236
-	world.x = width / 2 -- 237
-	world.y = height / 2 -- 238
-	state.playRoot:addChild(world) -- 239
-	local content = Node() -- 240
-	state.playContent = content -- 241
-	world:addChild(content) -- 242
-	state.playRuntimeNodes.root = content -- 243
-	for ____, id in ipairs(state.order) do -- 245
-		local item = state.nodes[id] -- 246
-		if item ~= nil and id ~= "root" then -- 246
-			local runtime = createPlayVisual(item) -- 248
-			applyTransform(runtime, item) -- 249
-			state.playRuntimeNodes[id] = runtime -- 250
-			if item.kind == "Label" then -- 250
-				state.playRuntimeLabels[id] = runtime -- 251
-			end -- 251
-			local parent = state.playRuntimeNodes[item.parentId or "root"] or content -- 252
-			parent:addChild(runtime) -- 253
-		end -- 253
-	end -- 253
-	local cameraId = firstCameraId(state) -- 257
-	local cameraData = cameraId ~= nil and state.nodes[cameraId] or nil -- 258
-	local cameraNode = cameraId ~= nil and state.playRuntimeNodes[cameraId] or nil -- 259
-	local function updateCamera() -- 260
-		if cameraNode ~= nil and cameraData ~= nil then -- 260
-			if cameraData.followTargetId ~= "" then -- 260
-				local targetNode = state.playRuntimeNodes[cameraData.followTargetId] -- 263
-				if targetNode ~= nil then -- 263
-					local targetX, targetY = table.unpack( -- 265
-						sceneWorldPosition(state, cameraData.followTargetId), -- 265
-						1, -- 265
-						2 -- 265
-					) -- 265
-					cameraNode.x = targetX + cameraData.followOffsetX -- 266
-					cameraNode.y = targetY + cameraData.followOffsetY -- 267
-				end -- 267
-			end -- 267
-			world.x = width / 2 -- 270
-			world.y = height / 2 -- 271
-			world.angle = -cameraNode.angle -- 272
-			world.scaleX = cameraNode.scaleX ~= 0 and 1 / cameraNode.scaleX or 1 -- 273
-			world.scaleY = cameraNode.scaleY ~= 0 and 1 / cameraNode.scaleY or 1 -- 274
-			content.x = -cameraNode.x -- 275
-			content.y = -cameraNode.y -- 276
-		else -- 276
-			world.x = width / 2 -- 278
-			world.y = height / 2 -- 279
-			world.angle = 0 -- 280
-			world.scaleX = 1 -- 281
-			world.scaleY = 1 -- 282
-			content.x = 0 -- 283
-			content.y = 0 -- 284
-		end -- 284
-	end -- 260
-	updateCamera() -- 287
-	world:schedule(function() -- 288
-		updateCamera() -- 289
-		return false -- 290
-	end) -- 288
-	for ____, id in ipairs(state.order) do -- 293
-		local item = state.nodes[id] -- 294
-		local runtime = state.playRuntimeNodes[id] -- 295
-		if item ~= nil and runtime ~= nil then -- 295
-			runNodeScript(state, item, runtime) -- 296
-		end -- 296
-	end -- 296
-	runGameMain(state) -- 298
-	state.playDirty = false -- 299
+local function gameHeightOf(state) -- 221
+	return math.max( -- 222
+		120, -- 222
+		math.floor(state.gameHeight) -- 222
+	) -- 222
 end -- 221
-local function ensurePlayTarget(state) -- 302
-	local width = gameWidthOf(state) -- 303
-	local height = gameHeightOf(state) -- 304
-	if playTarget == nil or playTargetWidth ~= width or playTargetHeight ~= height then -- 304
-		playTarget = RenderTarget(width, height) -- 306
-		playTargetWidth = width -- 307
-		playTargetHeight = height -- 308
-	end -- 308
-	return playTarget -- 310
-end -- 302
-local function renderPlayTarget(state) -- 313
-	if not state.isPlaying then -- 313
-		return -- 314
-	end -- 314
-	if state.playDirty or state.playRoot == nil then -- 314
-		rebuildPlayRuntime(state) -- 315
-	end -- 315
-	local target = ensurePlayTarget(state) -- 316
-	if state.playRoot ~= nil then -- 316
-		state.playRoot.visible = true -- 318
-		target:renderWithClear( -- 319
-			state.playRoot, -- 319
-			Color(4279572511) -- 319
-		) -- 319
-		state.playRoot.visible = false -- 320
-	end -- 320
-end -- 313
-function ____exports.drawGamePreviewWindow(state) -- 324
-	if not state.isPlaying then -- 324
-		return -- 325
-	end -- 325
-	renderPlayTarget(state) -- 326
-	if playTarget == nil then -- 326
-		return -- 327
-	end -- 327
-	local target = playTarget -- 328
-	ImGui.SetNextWindowSize( -- 329
-		Vec2(720, 480), -- 329
-		"FirstUseEver" -- 329
-	) -- 329
-	ImGui.Begin( -- 330
-		zh and "游戏预览" or "Game Preview", -- 330
-		function() -- 330
-			local avail = ImGui.GetContentRegionAvail() -- 331
-			local width = gameWidthOf(state) -- 332
-			local height = gameHeightOf(state) -- 333
-			local scale = math.max( -- 334
-				0.1, -- 334
-				math.min(avail.x / width, avail.y / height) -- 334
-			) -- 334
-			local displayWidth = width * scale -- 335
-			local displayHeight = height * scale -- 336
-			ImGui.TextDisabled((((zh and "运行尺寸：" or "Game Size: ") .. tostring(width)) .. " x ") .. tostring(height)) -- 337
-			if ImGui.ImageTexture ~= nil then -- 337
-				ImGui.ImageTexture( -- 339
-					target.texture, -- 339
-					Vec2(displayWidth, displayHeight) -- 339
-				) -- 339
-			else -- 339
-				ImGui.TextColored(okColor, zh and "游戏正在运行。当前 Dora App 缺少 ImGui.ImageTexture，无法显示独立预览窗口。" or "Game is running. Current Dora App lacks ImGui.ImageTexture, so the detached preview cannot be shown.") -- 341
-			end -- 341
-		end -- 330
-	) -- 330
-end -- 324
-return ____exports -- 324
+local function rebuildPlayRuntime(state) -- 225
+	local width = gameWidthOf(state) -- 226
+	local height = gameHeightOf(state) -- 227
+	state.playRoot = Node() -- 228
+	state.playRoot.tag = "__DoraImGuiGamePreview__" -- 229
+	state.playRoot.visible = false -- 230
+	state.playRuntimeNodes = {} -- 231
+	state.playRuntimeLabels = {} -- 232
+	Director.entry:addChild(state.playRoot) -- 233
+	local background = makeGameBackground(width, height) -- 235
+	background.x = width / 2 -- 236
+	background.y = height / 2 -- 237
+	state.playRoot:addChild(background) -- 238
+	local world = Node() -- 239
+	state.playWorld = world -- 240
+	world.x = width / 2 -- 241
+	world.y = height / 2 -- 242
+	state.playRoot:addChild(world) -- 243
+	local content = Node() -- 244
+	state.playContent = content -- 245
+	world:addChild(content) -- 246
+	state.playRuntimeNodes.root = content -- 247
+	for ____, id in ipairs(state.order) do -- 249
+		local item = state.nodes[id] -- 250
+		if item ~= nil and id ~= "root" then -- 250
+			local runtime = createPlayVisual(item) -- 252
+			applyTransform(runtime, item) -- 253
+			state.playRuntimeNodes[id] = runtime -- 254
+			if item.kind == "Label" then -- 254
+				state.playRuntimeLabels[id] = runtime -- 255
+			end -- 255
+			local parent = state.playRuntimeNodes[item.parentId or "root"] or content -- 256
+			parent:addChild(runtime) -- 257
+		end -- 257
+	end -- 257
+	local cameraId = firstCameraId(state) -- 261
+	local cameraData = cameraId ~= nil and state.nodes[cameraId] or nil -- 262
+	local cameraNode = cameraId ~= nil and state.playRuntimeNodes[cameraId] or nil -- 263
+	local function updateCamera() -- 264
+		if cameraNode ~= nil and cameraData ~= nil then -- 264
+			if cameraData.followTargetId ~= "" then -- 264
+				local targetNode = state.playRuntimeNodes[cameraData.followTargetId] -- 267
+				if targetNode ~= nil then -- 267
+					local targetX, targetY = table.unpack( -- 269
+						sceneWorldPosition(state, cameraData.followTargetId), -- 269
+						1, -- 269
+						2 -- 269
+					) -- 269
+					cameraNode.x = targetX + cameraData.followOffsetX -- 270
+					cameraNode.y = targetY + cameraData.followOffsetY -- 271
+				end -- 271
+			end -- 271
+			world.x = width / 2 -- 274
+			world.y = height / 2 -- 275
+			world.angle = -cameraNode.angle -- 276
+			world.scaleX = cameraNode.scaleX ~= 0 and 1 / cameraNode.scaleX or 1 -- 277
+			world.scaleY = cameraNode.scaleY ~= 0 and 1 / cameraNode.scaleY or 1 -- 278
+			content.x = -cameraNode.x -- 279
+			content.y = -cameraNode.y -- 280
+		else -- 280
+			world.x = width / 2 -- 282
+			world.y = height / 2 -- 283
+			world.angle = 0 -- 284
+			world.scaleX = 1 -- 285
+			world.scaleY = 1 -- 286
+			content.x = 0 -- 287
+			content.y = 0 -- 288
+		end -- 288
+	end -- 264
+	updateCamera() -- 291
+	world:schedule(function() -- 292
+		updateCamera() -- 293
+		return false -- 294
+	end) -- 292
+	for ____, id in ipairs(state.order) do -- 297
+		local item = state.nodes[id] -- 298
+		local runtime = state.playRuntimeNodes[id] -- 299
+		if item ~= nil and runtime ~= nil then -- 299
+			runNodeScript(state, item, runtime) -- 300
+		end -- 300
+	end -- 300
+	runGameMain(state) -- 302
+	state.playDirty = false -- 303
+end -- 225
+local function ensurePlayTarget(state) -- 306
+	local width = gameWidthOf(state) -- 307
+	local height = gameHeightOf(state) -- 308
+	if playTarget == nil or playTargetWidth ~= width or playTargetHeight ~= height then -- 308
+		playTarget = RenderTarget(width, height) -- 310
+		playTargetWidth = width -- 311
+		playTargetHeight = height -- 312
+	end -- 312
+	return playTarget -- 314
+end -- 306
+local function renderPlayTarget(state) -- 317
+	if not state.isPlaying then -- 317
+		return -- 318
+	end -- 318
+	if state.playDirty or state.playRoot == nil then -- 318
+		rebuildPlayRuntime(state) -- 319
+	end -- 319
+	local target = ensurePlayTarget(state) -- 320
+	if state.playRoot ~= nil then -- 320
+		state.playRoot.visible = true -- 322
+		target:renderWithClear( -- 323
+			state.playRoot, -- 323
+			Color(4279572511) -- 323
+		) -- 323
+		state.playRoot.visible = false -- 324
+	end -- 324
+end -- 317
+function ____exports.drawGamePreviewWindow(state) -- 328
+	if not state.isPlaying then -- 328
+		return -- 329
+	end -- 329
+	renderPlayTarget(state) -- 330
+	if playTarget == nil then -- 330
+		return -- 331
+	end -- 331
+	local target = playTarget -- 332
+	ImGui.SetNextWindowSize( -- 333
+		Vec2(720, 480), -- 333
+		"FirstUseEver" -- 333
+	) -- 333
+	ImGui.Begin( -- 334
+		zh and "游戏预览" or "Game Preview", -- 334
+		function() -- 334
+			local avail = ImGui.GetContentRegionAvail() -- 335
+			local width = gameWidthOf(state) -- 336
+			local height = gameHeightOf(state) -- 337
+			local scale = math.max( -- 338
+				0.1, -- 338
+				math.min(avail.x / width, avail.y / height) -- 338
+			) -- 338
+			local displayWidth = width * scale -- 339
+			local displayHeight = height * scale -- 340
+			ImGui.TextDisabled((((zh and "运行尺寸：" or "Game Size: ") .. tostring(width)) .. " x ") .. tostring(height)) -- 341
+			if ImGui.ImageTexture ~= nil then -- 341
+				ImGui.ImageTexture( -- 343
+					target.texture, -- 343
+					Vec2(displayWidth, displayHeight) -- 343
+				) -- 343
+			else -- 343
+				ImGui.TextColored(okColor, zh and "游戏正在运行。当前 Dora App 缺少 ImGui.ImageTexture，无法显示独立预览窗口。" or "Game is running. Current Dora App lacks ImGui.ImageTexture, so the detached preview cannot be shown.") -- 345
+			end -- 345
+		end -- 334
+	) -- 334
+end -- 328
+return ____exports -- 328

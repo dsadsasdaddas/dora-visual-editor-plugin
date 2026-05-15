@@ -311,318 +311,373 @@ function ____exports.importFolderDialog(state) -- 294
 end -- 294
 local function newNodeId(state, kind) -- 300
 	state.nextId = state.nextId + 1 -- 301
-	return (string.lower(kind) .. "-") .. tostring(state.nextId) -- 302
+	return (string.lower(kind) .. "-") .. (tostring(state.nextId) or "0") -- 302
 end -- 300
 function ____exports.addNode(state, kind, name, parentId) -- 305
-	local resolvedParentId = parentId or "root" -- 306
-	local id = kind == "Root" and "root" or newNodeId(state, kind) -- 307
-	local index = state.nextId -- 308
-	local node = { -- 309
-		id = id, -- 310
-		kind = kind, -- 311
-		name = name, -- 312
-		parentId = resolvedParentId, -- 313
-		children = {}, -- 314
-		x = (kind == "Root" or kind == "Camera") and 0 or (index % 5 - 2) * 70, -- 315
-		y = (kind == "Root" or kind == "Camera") and 0 or math.floor(index / 5) % 4 * 55, -- 316
-		scaleX = 1, -- 317
-		scaleY = 1, -- 318
-		rotation = 0, -- 319
-		visible = true, -- 320
-		texture = "", -- 321
-		text = kind == "Label" and "Label" or "", -- 322
-		script = "", -- 323
-		followTargetId = "", -- 324
-		followOffsetX = 0, -- 325
-		followOffsetY = 0, -- 326
-		nameBuffer = ____exports.makeBuffer(name, 128), -- 327
-		textureBuffer = ____exports.makeBuffer("", 256), -- 328
-		textBuffer = ____exports.makeBuffer(kind == "Label" and "Label" or "", 256), -- 329
-		scriptBuffer = ____exports.makeBuffer("", 256), -- 330
-		followTargetBuffer = ____exports.makeBuffer("", 128) -- 331
-	} -- 331
-	state.nodes[id] = node -- 333
-	local ____state_order_2 = state.order -- 333
-	____state_order_2[#____state_order_2 + 1] = id -- 334
-	local parent = state.nodes[resolvedParentId] -- 335
-	if id ~= "root" and parent ~= nil then -- 335
-		local ____parent_children_3 = parent.children -- 335
-		____parent_children_3[#____parent_children_3 + 1] = id -- 337
-	end -- 337
-	return node -- 339
+	local resolvedParentId = "root" -- 306
+	if kind == "Root" then -- 306
+		resolvedParentId = "" -- 308
+	elseif parentId ~= nil and parentId ~= "" then -- 308
+		resolvedParentId = parentId -- 310
+	end -- 310
+	local id = kind == "Root" and "root" or newNodeId(state, kind) -- 312
+	local index = state.nextId -- 313
+	local node = { -- 314
+		id = id, -- 315
+		kind = kind, -- 316
+		name = name, -- 317
+		parentId = resolvedParentId, -- 318
+		children = {}, -- 319
+		x = (kind == "Root" or kind == "Camera") and 0 or (index % 5 - 2) * 70, -- 320
+		y = (kind == "Root" or kind == "Camera") and 0 or math.floor(index / 5) % 4 * 55, -- 321
+		scaleX = 1, -- 322
+		scaleY = 1, -- 323
+		rotation = 0, -- 324
+		visible = true, -- 325
+		texture = "", -- 326
+		text = kind == "Label" and "Label" or "", -- 327
+		script = "", -- 328
+		followTargetId = "", -- 329
+		followOffsetX = 0, -- 330
+		followOffsetY = 0, -- 331
+		nameBuffer = ____exports.makeBuffer(name, 128), -- 332
+		textureBuffer = ____exports.makeBuffer("", 256), -- 333
+		textBuffer = ____exports.makeBuffer(kind == "Label" and "Label" or "", 256), -- 334
+		scriptBuffer = ____exports.makeBuffer("", 256), -- 335
+		followTargetBuffer = ____exports.makeBuffer("", 128) -- 336
+	} -- 336
+	state.nodes[id] = node -- 338
+	local ____state_order_2 = state.order -- 338
+	____state_order_2[#____state_order_2 + 1] = id -- 339
+	local parent = resolvedParentId ~= "" and state.nodes[resolvedParentId] or nil -- 340
+	if id ~= "root" and parent ~= nil then -- 340
+		local ____parent_children_3 = parent.children -- 340
+		____parent_children_3[#____parent_children_3 + 1] = id -- 342
+	end -- 342
+	return node -- 344
 end -- 305
-local function sceneNodeKind(value) -- 342
-	if value == "Root" or value == "Node" or value == "Sprite" or value == "Label" or value == "Camera" then -- 342
-		return value -- 344
-	end -- 344
-	return "Node" -- 346
-end -- 342
-local function stringValue(value, fallback) -- 349
-	return type(value) == "string" and value or fallback -- 350
-end -- 349
-local function numberValue(value, fallback) -- 353
-	if type(value) ~= "number" and type(value) ~= "string" then -- 353
-		return fallback -- 354
-	end -- 354
-	local parsed = tonumber(value) -- 355
-	return parsed ~= nil and parsed or fallback -- 356
-end -- 353
-local function booleanValue(value, fallback) -- 359
-	local ____temp_4 -- 360
-	if type(value) == "boolean" then -- 360
-		____temp_4 = value -- 360
-	else -- 360
-		____temp_4 = fallback -- 360
-	end -- 360
-	return ____temp_4 -- 360
-end -- 359
-local function updateNextIdFromNodeId(state, id) -- 363
-	local digits = string.match(id, "%-(%d+)$") -- 364
-	if digits ~= nil then -- 364
-		local value = tonumber(digits) -- 366
-		if value ~= nil and value > state.nextId then -- 366
-			state.nextId = value -- 367
-		end -- 367
-	end -- 367
-end -- 363
-function ____exports.loadSceneFromFile(state, file) -- 371
-	if not Content:exist(file) then -- 371
-		return false -- 372
+local function sceneNodeKind(value) -- 347
+	if value == "Root" or value == "Node" or value == "Sprite" or value == "Label" or value == "Camera" then -- 347
+		return value -- 349
+	end -- 349
+	return "Node" -- 351
+end -- 347
+local function stringValue(value, fallback) -- 354
+	return type(value) == "string" and value or fallback -- 355
+end -- 354
+local function numberValue(value, fallback) -- 358
+	if type(value) ~= "number" and type(value) ~= "string" then -- 358
+		return fallback -- 359
+	end -- 359
+	local parsed = tonumber(value) -- 360
+	return parsed ~= nil and parsed or fallback -- 361
+end -- 358
+local function booleanValue(value, fallback) -- 364
+	local ____temp_4 -- 365
+	if type(value) == "boolean" then -- 365
+		____temp_4 = value -- 365
+	else -- 365
+		____temp_4 = fallback -- 365
+	end -- 365
+	return ____temp_4 -- 365
+end -- 364
+local function updateNextIdFromNodeId(state, id) -- 368
+	local digits = string.match(id, "%-(%d+)$") -- 369
+	if digits ~= nil then -- 369
+		local value = tonumber(digits) -- 371
+		if value ~= nil and value > state.nextId then -- 371
+			state.nextId = value -- 372
+		end -- 372
 	end -- 372
-	local decoded = json.decode(Content:load(file)) -- 373
-	local data = decoded -- 374
-	if data == nil then -- 374
-		return false -- 375
-	end -- 375
-	local rawNodes = data.nodes -- 376
-	if rawNodes == nil then -- 376
+end -- 368
+function ____exports.loadSceneFromFile(state, file) -- 376
+	if not Content:exist(file) then -- 376
 		return false -- 377
 	end -- 377
-	state.gameWidth = math.max( -- 378
-		160, -- 378
-		math.min( -- 378
-			8192, -- 378
-			numberValue(data.gameWidth, state.gameWidth or 960) -- 378
-		) -- 378
-	) -- 378
-	state.gameHeight = math.max( -- 379
-		120, -- 379
-		math.min( -- 379
-			8192, -- 379
-			numberValue(data.gameHeight, state.gameHeight or 540) -- 379
-		) -- 379
-	) -- 379
-	state.gameScript = stringValue(data.gameScript, state.gameScript or "Script/Main.lua") -- 380
-	state.gameScriptBuffer.text = state.gameScript -- 381
-	state.nodes = {} -- 383
-	state.order = {} -- 384
-	state.runtimeNodes = {} -- 385
-	state.runtimeLabels = {} -- 386
-	state.playRuntimeNodes = {} -- 387
-	state.playRuntimeLabels = {} -- 388
-	state.nextId = 0 -- 389
-	for ____, raw in ipairs(rawNodes) do -- 391
-		local kind = sceneNodeKind(raw.kind) -- 392
-		local id = stringValue( -- 393
-			raw.id, -- 393
-			kind == "Root" and "root" or (string.lower(kind) .. "-") .. tostring(state.nextId + 1) -- 393
-		) -- 393
-		local name = stringValue(raw.name, kind == "Root" and "MainScene" or kind) -- 394
-		local texture = stringValue(raw.texture, "") -- 395
-		local text = stringValue(raw.text, kind == "Label" and "Label" or "") -- 396
-		local script = stringValue(raw.script, "") -- 397
-		local followTargetId = stringValue(raw.followTargetId, "") -- 398
-		local followOffsetX = numberValue(raw.followOffsetX, 0) -- 399
-		local followOffsetY = numberValue(raw.followOffsetY, 0) -- 400
-		local ____temp_5 -- 401
-		if id == "root" then -- 401
-			____temp_5 = nil -- 401
-		else -- 401
-			____temp_5 = stringValue(raw.parentId, "root") -- 401
-		end -- 401
-		local parentId = ____temp_5 -- 401
-		local node = { -- 402
-			id = id, -- 403
-			kind = kind, -- 404
-			name = name, -- 405
-			parentId = parentId, -- 406
-			children = {}, -- 407
-			x = numberValue(raw.x, 0), -- 408
-			y = numberValue(raw.y, 0), -- 409
-			scaleX = numberValue(raw.scaleX, 1), -- 410
-			scaleY = numberValue(raw.scaleY, 1), -- 411
-			rotation = numberValue(raw.rotation, 0), -- 412
-			visible = booleanValue(raw.visible, true), -- 413
-			texture = texture, -- 414
-			text = text, -- 415
-			script = script, -- 416
-			followTargetId = followTargetId, -- 417
-			followOffsetX = followOffsetX, -- 418
-			followOffsetY = followOffsetY, -- 419
-			nameBuffer = ____exports.makeBuffer(name, 128), -- 420
-			textureBuffer = ____exports.makeBuffer(texture, 256), -- 421
-			textBuffer = ____exports.makeBuffer(text, 256), -- 422
-			scriptBuffer = ____exports.makeBuffer(script, 256), -- 423
-			followTargetBuffer = ____exports.makeBuffer(followTargetId, 128) -- 424
-		} -- 424
-		state.nodes[id] = node -- 426
-		local ____state_order_6 = state.order -- 426
-		____state_order_6[#____state_order_6 + 1] = id -- 427
-		updateNextIdFromNodeId(state, id) -- 428
-	end -- 428
-	if state.nodes.root == nil then -- 428
-		____exports.addNode(state, "Root", "MainScene") -- 432
-	end -- 432
-	for ____, id in ipairs(state.order) do -- 434
-		do -- 434
-			if id == "root" then -- 434
-				goto __continue84 -- 435
-			end -- 435
-			local node = state.nodes[id] -- 436
-			if node == nil then -- 436
-				goto __continue84 -- 437
-			end -- 437
-			if node.parentId == nil or state.nodes[node.parentId] == nil then -- 437
-				node.parentId = "root" -- 439
-			end -- 439
-			local ____state_nodes_node_parentId_children_7 = state.nodes[node.parentId].children -- 439
-			____state_nodes_node_parentId_children_7[#____state_nodes_node_parentId_children_7 + 1] = id -- 441
-		end -- 441
-		::__continue84:: -- 441
-	end -- 441
-	state.selectedId = state.nodes.root ~= nil and "root" or (state.order[1] or "root") -- 443
-	state.previewDirty = true -- 444
-	state.playDirty = true -- 445
-	state.status = ____exports.zh and "已加载场景" or "Scene loaded" -- 446
-	____exports.pushConsole(state, state.status) -- 447
-	return true -- 448
-end -- 371
-local function removeFromOrder(state, id) -- 451
-	do -- 451
-		local i = #state.order -- 452
-		while i >= 1 do -- 452
-			if state.order[i] == id then -- 452
-				table.remove(state.order, i) -- 454
-			end -- 454
-			i = i - 1 -- 452
-		end -- 452
-	end -- 452
-end -- 451
-function ____exports.deleteNode(state, id) -- 459
-	if id == "root" then -- 459
-		state.status = ____exports.zh and "根节点不能删除" or "Root cannot be deleted" -- 461
-		return -- 462
-	end -- 462
-	local node = state.nodes[id] -- 464
-	if node == nil then -- 464
-		return -- 465
-	end -- 465
-	do -- 465
-		local i = #node.children -- 466
-		while i >= 1 do -- 466
-			____exports.deleteNode(state, node.children[i]) -- 467
-			i = i - 1 -- 466
-		end -- 466
-	end -- 466
-	local parent = node.parentId ~= nil and state.nodes[node.parentId] or nil -- 469
-	if parent ~= nil then -- 469
-		do -- 469
-			local i = #parent.children -- 471
-			while i >= 1 do -- 471
-				if parent.children[i] == id then -- 471
-					table.remove(parent.children, i) -- 472
-				end -- 472
-				i = i - 1 -- 471
-			end -- 471
+	local decoded = json.decode(Content:load(file)) -- 378
+	local data = decoded -- 379
+	if data == nil then -- 379
+		return false -- 380
+	end -- 380
+	local rawNodes = data.nodes -- 381
+	if rawNodes == nil then -- 381
+		return false -- 382
+	end -- 382
+	state.gameWidth = math.max( -- 383
+		160, -- 383
+		math.min( -- 383
+			8192, -- 383
+			numberValue(data.gameWidth, state.gameWidth or 960) -- 383
+		) -- 383
+	) -- 383
+	state.gameHeight = math.max( -- 384
+		120, -- 384
+		math.min( -- 384
+			8192, -- 384
+			numberValue(data.gameHeight, state.gameHeight or 540) -- 384
+		) -- 384
+	) -- 384
+	state.gameScript = stringValue(data.gameScript, state.gameScript or "Script/Main.lua") -- 385
+	state.gameScriptBuffer.text = state.gameScript -- 386
+	state.nodes = {} -- 388
+	state.order = {} -- 389
+	state.runtimeNodes = {} -- 390
+	state.runtimeLabels = {} -- 391
+	state.playRuntimeNodes = {} -- 392
+	state.playRuntimeLabels = {} -- 393
+	state.nextId = 0 -- 394
+	for ____, raw in ipairs(rawNodes) do -- 396
+		local kind = sceneNodeKind(raw.kind) -- 397
+		local id = stringValue( -- 398
+			raw.id, -- 398
+			kind == "Root" and "root" or (string.lower(kind) .. "-") .. tostring(state.nextId + 1) -- 398
+		) -- 398
+		local name = stringValue(raw.name, kind == "Root" and "MainScene" or kind) -- 399
+		local texture = stringValue(raw.texture, "") -- 400
+		local text = stringValue(raw.text, kind == "Label" and "Label" or "") -- 401
+		local script = stringValue(raw.script, "") -- 402
+		local followTargetId = stringValue(raw.followTargetId, "") -- 403
+		local followOffsetX = numberValue(raw.followOffsetX, 0) -- 404
+		local followOffsetY = numberValue(raw.followOffsetY, 0) -- 405
+		local ____temp_5 -- 406
+		if id == "root" then -- 406
+			____temp_5 = nil -- 406
+		else -- 406
+			____temp_5 = stringValue(raw.parentId, "root") -- 406
+		end -- 406
+		local parentId = ____temp_5 -- 406
+		local node = { -- 407
+			id = id, -- 408
+			kind = kind, -- 409
+			name = name, -- 410
+			parentId = parentId, -- 411
+			children = {}, -- 412
+			x = numberValue(raw.x, 0), -- 413
+			y = numberValue(raw.y, 0), -- 414
+			scaleX = numberValue(raw.scaleX, 1), -- 415
+			scaleY = numberValue(raw.scaleY, 1), -- 416
+			rotation = numberValue(raw.rotation, 0), -- 417
+			visible = booleanValue(raw.visible, true), -- 418
+			texture = texture, -- 419
+			text = text, -- 420
+			script = script, -- 421
+			followTargetId = followTargetId, -- 422
+			followOffsetX = followOffsetX, -- 423
+			followOffsetY = followOffsetY, -- 424
+			nameBuffer = ____exports.makeBuffer(name, 128), -- 425
+			textureBuffer = ____exports.makeBuffer(texture, 256), -- 426
+			textBuffer = ____exports.makeBuffer(text, 256), -- 427
+			scriptBuffer = ____exports.makeBuffer(script, 256), -- 428
+			followTargetBuffer = ____exports.makeBuffer(followTargetId, 128) -- 429
+		} -- 429
+		state.nodes[id] = node -- 431
+		local ____state_order_6 = state.order -- 431
+		____state_order_6[#____state_order_6 + 1] = id -- 432
+		updateNextIdFromNodeId(state, id) -- 433
+	end -- 433
+	if state.nodes.root == nil then -- 433
+		____exports.addNode(state, "Root", "MainScene") -- 437
+	end -- 437
+	for ____, id in ipairs(state.order) do -- 439
+		do -- 439
+			if id == "root" then -- 439
+				goto __continue86 -- 440
+			end -- 440
+			local node = state.nodes[id] -- 441
+			if node == nil then -- 441
+				goto __continue86 -- 442
+			end -- 442
+			if node.parentId == nil or state.nodes[node.parentId] == nil then -- 442
+				node.parentId = "root" -- 444
+			end -- 444
+			local ____state_nodes_node_parentId_children_7 = state.nodes[node.parentId].children -- 444
+			____state_nodes_node_parentId_children_7[#____state_nodes_node_parentId_children_7 + 1] = id -- 446
+		end -- 446
+		::__continue86:: -- 446
+	end -- 446
+	state.selectedId = state.nodes.root ~= nil and "root" or (state.order[1] or "root") -- 448
+	state.previewDirty = true -- 449
+	state.playDirty = true -- 450
+	state.status = ____exports.zh and "已加载场景" or "Scene loaded" -- 451
+	____exports.pushConsole(state, state.status) -- 452
+	return true -- 453
+end -- 376
+local function removeFromOrder(state, id) -- 456
+	do -- 456
+		local i = #state.order -- 457
+		while i >= 1 do -- 457
+			if state.order[i] == id then -- 457
+				table.remove(state.order, i) -- 459
+			end -- 459
+			i = i - 1 -- 457
+		end -- 457
+	end -- 457
+end -- 456
+function ____exports.deleteNode(state, id) -- 464
+	if id == "root" then -- 464
+		state.status = ____exports.zh and "根节点不能删除" or "Root cannot be deleted" -- 466
+		return -- 467
+	end -- 467
+	local node = state.nodes[id] -- 469
+	if node == nil then -- 469
+		return -- 470
+	end -- 470
+	do -- 470
+		local i = #node.children -- 471
+		while i >= 1 do -- 471
+			____exports.deleteNode(state, node.children[i]) -- 472
+			i = i - 1 -- 471
 		end -- 471
 	end -- 471
-	__TS__Delete(state.nodes, id) -- 475
-	removeFromOrder(state, id) -- 476
-	state.selectedId = "root" -- 477
-	state.draggingNodeId = nil -- 478
-	state.previewDirty = true -- 479
-	state.playDirty = true -- 480
-	state.status = ____exports.zh and "已删除节点" or "Node deleted" -- 481
-	____exports.pushConsole(state, state.status) -- 482
-end -- 459
-local function worldPositionOf(state, id) -- 485
-	local x = 0 -- 486
-	local y = 0 -- 487
-	local cursor = state.nodes[id] -- 488
-	while cursor ~= nil do -- 488
-		x = x + cursor.x -- 490
-		y = y + cursor.y -- 491
-		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil -- 492
-	end -- 492
-	return {x, y} -- 494
-end -- 485
-function ____exports.reparentNode(state, id, newParentId) -- 497
-	if id == "root" then -- 497
-		return false -- 498
-	end -- 498
-	local node = state.nodes[id] -- 499
-	local newParent = state.nodes[newParentId] -- 500
-	if node == nil or newParent == nil or node.parentId == newParentId then -- 500
-		return false -- 501
+	local parent = node.parentId ~= nil and state.nodes[node.parentId] or nil -- 474
+	if parent ~= nil then -- 474
+		do -- 474
+			local i = #parent.children -- 476
+			while i >= 1 do -- 476
+				if parent.children[i] == id then -- 476
+					table.remove(parent.children, i) -- 477
+				end -- 477
+				i = i - 1 -- 476
+			end -- 476
+		end -- 476
+	end -- 476
+	__TS__Delete(state.nodes, id) -- 480
+	removeFromOrder(state, id) -- 481
+	state.selectedId = "root" -- 482
+	state.draggingNodeId = nil -- 483
+	state.previewDirty = true -- 484
+	state.playDirty = true -- 485
+	state.status = ____exports.zh and "已删除节点" or "Node deleted" -- 486
+	____exports.pushConsole(state, state.status) -- 487
+end -- 464
+local function worldPositionOf(state, id) -- 490
+	local x = 0 -- 491
+	local y = 0 -- 492
+	local visited = {} -- 493
+	local cursor = state.nodes[id] -- 494
+	while cursor ~= nil do -- 494
+		if visited[cursor.id] then -- 494
+			break -- 496
+		end -- 496
+		visited[cursor.id] = true -- 497
+		x = x + cursor.x -- 498
+		y = y + cursor.y -- 499
+		if cursor.parentId == nil or cursor.parentId == cursor.id then -- 499
+			break -- 500
+		end -- 500
+		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil -- 501
 	end -- 501
-	local worldX, worldY = table.unpack( -- 502
-		worldPositionOf(state, id), -- 502
-		1, -- 502
-		2 -- 502
-	) -- 502
-	local cursor = newParent -- 503
-	while cursor ~= nil do -- 503
-		if cursor.id == id then -- 503
-			return false -- 505
-		end -- 505
-		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil -- 506
-	end -- 506
-	local oldParent = node.parentId ~= nil and state.nodes[node.parentId] or nil -- 508
-	if oldParent ~= nil then -- 508
-		do -- 508
-			local i = #oldParent.children -- 510
-			while i >= 1 do -- 510
-				if oldParent.children[i] == id then -- 510
-					table.remove(oldParent.children, i) -- 511
-				end -- 511
-				i = i - 1 -- 510
-			end -- 510
-		end -- 510
+	return {x, y} -- 503
+end -- 490
+function ____exports.reparentNode(state, id, newParentId) -- 506
+	if id == "root" then -- 506
+		return false -- 507
+	end -- 507
+	local node = state.nodes[id] -- 508
+	local newParent = state.nodes[newParentId] -- 509
+	if node == nil or newParent == nil or node.parentId == newParentId then -- 509
+		return false -- 510
 	end -- 510
-	node.parentId = newParentId -- 514
-	local parentWorldX, parentWorldY = table.unpack( -- 515
-		worldPositionOf(state, newParentId), -- 515
-		1, -- 515
-		2 -- 515
-	) -- 515
-	node.x = worldX - parentWorldX -- 516
-	node.y = worldY - parentWorldY -- 517
-	local ____newParent_children_8 = newParent.children -- 517
-	____newParent_children_8[#____newParent_children_8 + 1] = id -- 518
-	state.previewDirty = true -- 519
-	state.playDirty = true -- 520
-	state.status = (____exports.zh and "已移动节点到：" or "Moved node under: ") .. newParent.name -- 521
-	____exports.pushConsole(state, state.status) -- 522
-	return true -- 523
-end -- 497
-function ____exports.addChildNode(state, kind) -- 526
-	local parentId = state.selectedId or "root" -- 527
-	if state.nodes[parentId] == nil then -- 527
-		parentId = "root" -- 528
-	end -- 528
-	if state.nodes[parentId].kind == "Camera" then -- 528
-		parentId = state.nodes[parentId].parentId or "root" -- 530
-	end -- 530
-	local node = ____exports.addNode( -- 532
-		state, -- 532
-		kind, -- 532
-		kind .. tostring(state.nextId + 1), -- 532
-		parentId -- 532
-	) -- 532
-	state.selectedId = node.id -- 533
-	state.previewDirty = true -- 534
-	state.playDirty = true -- 535
-	state.status = (____exports.zh and "已添加 " or "Added ") .. node.name -- 536
-	____exports.pushConsole(state, state.status) -- 537
-end -- 526
-return ____exports -- 526
+	local worldX, worldY = table.unpack( -- 511
+		worldPositionOf(state, id), -- 511
+		1, -- 511
+		2 -- 511
+	) -- 511
+	local visited = {} -- 512
+	local cursor = newParent -- 513
+	while cursor ~= nil do -- 513
+		if cursor.id == id then -- 513
+			return false -- 515
+		end -- 515
+		if visited[cursor.id] then -- 515
+			return false -- 516
+		end -- 516
+		visited[cursor.id] = true -- 517
+		if cursor.parentId == nil or cursor.parentId == cursor.id then -- 517
+			break -- 518
+		end -- 518
+		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil -- 519
+	end -- 519
+	local oldParent = node.parentId ~= nil and state.nodes[node.parentId] or nil -- 521
+	if oldParent ~= nil then -- 521
+		do -- 521
+			local i = #oldParent.children -- 523
+			while i >= 1 do -- 523
+				if oldParent.children[i] == id then -- 523
+					table.remove(oldParent.children, i) -- 524
+				end -- 524
+				i = i - 1 -- 523
+			end -- 523
+		end -- 523
+	end -- 523
+	node.parentId = newParentId -- 527
+	local parentWorldX, parentWorldY = table.unpack( -- 528
+		worldPositionOf(state, newParentId), -- 528
+		1, -- 528
+		2 -- 528
+	) -- 528
+	node.x = worldX - parentWorldX -- 529
+	node.y = worldY - parentWorldY -- 530
+	local ____newParent_children_8 = newParent.children -- 530
+	____newParent_children_8[#____newParent_children_8 + 1] = id -- 531
+	state.previewDirty = true -- 532
+	state.playDirty = true -- 533
+	state.status = (____exports.zh and "已移动节点到：" or "Moved node under: ") .. newParent.name -- 534
+	____exports.pushConsole(state, state.status) -- 535
+	return true -- 536
+end -- 506
+function ____exports.resolveAddParentId(state) -- 539
+	local parentId = state.selectedId or "root" -- 540
+	if state.nodes[parentId] == nil then -- 540
+		parentId = "root" -- 541
+	end -- 541
+	local selected = state.nodes[parentId] -- 542
+	if selected ~= nil and selected.kind == "Camera" then -- 542
+		parentId = selected.parentId or "root" -- 544
+	end -- 544
+	if state.nodes[parentId] == nil then -- 544
+		return "root" -- 546
+	end -- 546
+	return parentId -- 547
+end -- 539
+function ____exports.nodePath(state, id) -- 550
+	local parts = {} -- 551
+	local visited = {} -- 552
+	local cursor = state.nodes[id] -- 553
+	while cursor ~= nil do -- 553
+		if visited[cursor.id] then -- 553
+			break -- 555
+		end -- 555
+		visited[cursor.id] = true -- 556
+		parts[#parts + 1] = cursor.name -- 557
+		if cursor.parentId == nil or cursor.parentId == cursor.id then -- 557
+			break -- 558
+		end -- 558
+		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil -- 559
+	end -- 559
+	local path = "" -- 561
+	do -- 561
+		local i = #parts -- 562
+		while i >= 1 do -- 562
+			path = path .. (path == "" and "" or " / ") .. parts[i] -- 563
+			i = i - 1 -- 562
+		end -- 562
+	end -- 562
+	return path == "" and "Root" or path -- 565
+end -- 550
+function ____exports.addChildNode(state, kind) -- 568
+	local parentId = ____exports.resolveAddParentId(state) -- 569
+	local node = ____exports.addNode( -- 570
+		state, -- 570
+		kind, -- 570
+		kind .. (tostring(state.nextId + 1) or ""), -- 570
+		parentId -- 570
+	) -- 570
+	state.selectedId = node.id -- 571
+	state.previewDirty = true -- 572
+	state.playDirty = true -- 573
+	local parent = state.nodes[parentId] -- 574
+	state.status = ((____exports.zh and "已添加 " or "Added ") .. node.name) .. (parent ~= nil and (____exports.zh and " 到 " or " under ") .. parent.name or "") -- 575
+	____exports.pushConsole(state, state.status) -- 576
+end -- 568
+return ____exports -- 568

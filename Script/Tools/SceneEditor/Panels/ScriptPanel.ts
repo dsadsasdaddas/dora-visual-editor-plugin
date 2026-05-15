@@ -3,14 +3,9 @@ import * as ImGui from 'ImGui';
 import { StyleColor } from 'ImGui';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { inputTextFlags, noScrollFlags, scriptPanelBg, themeColor } from 'Script/Tools/SceneEditor/Theme';
-import { importFileDialog, isFolderAsset, isScriptAsset, pushConsole, zh } from 'Script/Tools/SceneEditor/Model';
+import { importFileDialog, isFolderAsset, isScriptAsset, pushConsole, workspacePath, workspaceRoot, zh } from 'Script/Tools/SceneEditor/Model';
 
 declare function pcall(fn: () => void): LuaMultiReturn<[boolean, unknown]>;
-type SceneModelApi = {
-	workspacePath: (this: void, path: string) => string;
-	workspaceRoot: (this: void) => string;
-};
-
 type EntryConfig = {
 	editingInfo?: string;
 };
@@ -19,13 +14,8 @@ type EntryApi = {
 	getConfig: (this: void) => EntryConfig | undefined;
 };
 
-declare function require(path: 'Script.Tools.SceneEditor.Model'): SceneModelApi;
 declare function require(path: 'Script.Dev.Entry'): EntryApi;
 declare function require(path: string): unknown;
-
-const SceneModel = require('Script.Tools.SceneEditor.Model');
-function workspacePath(path: string) { return SceneModel.workspacePath(path) as string; }
-function workspaceRoot() { return SceneModel.workspaceRoot() as string; }
 
 type AttachScriptToNode = (state: EditorState, node: SceneNodeData, scriptPath: string, message?: string) => void;
 

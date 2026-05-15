@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "gameWidth": 960,
+  "gameHeight": 540,
+  "gameScript": "Script/Main.lua",
+  "nodes": [
+    {
+      "id": "root",
+      "kind": "Root",
+      "name": "MainScene",
+      "parentId": "root",
+      "x": 0,
+      "y": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0,
+      "visible": true,
+      "texture": "",
+      "text": "",
+      "script": ""
+    }
+  ]
+}
