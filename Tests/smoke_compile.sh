@@ -13,7 +13,23 @@ fi
 rsync -a --delete --exclude='.git' --exclude='Imported/' "$PLUGIN_REPO/" "$PLUGIN_RUNTIME/"
 rm -rf "$PLUGIN_RUNTIME/API" "$PLUGIN_RUNTIME/tsconfig.json"
 
-DORA_TIMEOUT="${DORA_TIMEOUT:-60}" python3 "$DORA_CLI" ts build -p "$PLUGIN_RUNTIME" -f "Script/Tools/SceneEditor"
-DORA_TIMEOUT="${DORA_TIMEOUT:-60}" python3 "$DORA_CLI" ts build -p "$PLUGIN_RUNTIME" -f "Script/Tools/SceneImGuiEditor.ts"
+# Dora serves TypeScript builds through the running engine process. After rsync,
+# give its file watcher a short moment to drop stale cached source text before
+# asking the engine to compile.
+sleep "${DORA_FS_SYNC_SLEEP:-1}"
+
+run_build() {
+  local target="$1"
+  local output
+  output=$(DORA_TIMEOUT="${DORA_TIMEOUT:-60}" python3 "$DORA_CLI" ts build -p "$PLUGIN_RUNTIME" -f "$target" 2>&1)
+  printf '%s\n' "$output"
+  if printf '%s\n' "$output" | grep -E "Compiling error|\[error\]" >/dev/null; then
+    echo "[compile] failed: TypeScript build reported errors for $target" >&2
+    exit 1
+  fi
+}
+
+run_build "Script/Tools/SceneEditor"
+run_build "Script/Tools/SceneImGuiEditor.ts"
 
 echo "[compile] ok"

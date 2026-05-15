@@ -4,6 +4,7 @@ import { SetCond } from 'ImGui';
 import { EditorState, SceneNodeData } from 'Script/Tools/SceneEditor/EditorTypes';
 import { okColor, viewportBgColor } from 'Script/Tools/SceneEditor/Theme';
 import { pushConsole, workspacePath, zh } from 'Script/Tools/SceneEditor/Model';
+import { worldPositionOf } from 'Script/Tools/SceneEditor/SceneGraph';
 
 declare function load(code: string, chunkname?: string): LuaMultiReturn<[(() => unknown) | undefined, string | undefined]>;
 declare function pcall(fn: () => unknown): LuaMultiReturn<[boolean, unknown]>;
@@ -76,22 +77,6 @@ function firstCameraId(state: EditorState) {
 		if (item !== undefined && item.kind === 'Camera' && item.visible) return id;
 	}
 	return undefined;
-}
-
-function sceneWorldPosition(state: EditorState, id: string): [number, number] {
-	let x = 0;
-	let y = 0;
-	const visited: Record<string, boolean> = {};
-	let cursor: SceneNodeData | undefined = state.nodes[id];
-	while (cursor !== undefined) {
-		if (visited[cursor.id]) break;
-		visited[cursor.id] = true;
-		x += cursor.x;
-		y += cursor.y;
-		if (cursor.parentId === undefined || cursor.parentId === cursor.id) break;
-		cursor = cursor.parentId !== undefined ? state.nodes[cursor.parentId] : undefined;
-	}
-	return [x, y];
 }
 
 function loadScriptText(scriptPath: string) {
@@ -266,7 +251,7 @@ function rebuildPlayRuntime(state: EditorState) {
 			if (cameraData.followTargetId !== '') {
 				const targetNode = state.playRuntimeNodes[cameraData.followTargetId];
 				if (targetNode !== undefined) {
-					const [targetX, targetY] = sceneWorldPosition(state, cameraData.followTargetId);
+					const [targetX, targetY] = worldPositionOf(state, cameraData.followTargetId);
 					cameraNode.x = targetX + cameraData.followOffsetX;
 					cameraNode.y = targetY + cameraData.followOffsetY;
 				}
@@ -329,7 +314,6 @@ export function drawGamePreviewWindow(state: EditorState) {
 	if (!state.isPlaying) return;
 	renderPlayTarget(state);
 	if (playTarget === undefined) return;
-	const target = playTarget;
 	ImGui.SetNextWindowSize(Vec2(720, 480), SetCond.FirstUseEver);
 	ImGui.Begin(zh ? '游戏预览' : 'Game Preview', () => {
 		const avail = ImGui.GetContentRegionAvail();
@@ -339,10 +323,7 @@ export function drawGamePreviewWindow(state: EditorState) {
 		const displayWidth = width * scale;
 		const displayHeight = height * scale;
 		ImGui.TextDisabled((zh ? '运行尺寸：' : 'Game Size: ') + tostring(width) + ' x ' + tostring(height));
-		if (ImGui.ImageTexture !== undefined) {
-			ImGui.ImageTexture(target.texture, Vec2(displayWidth, displayHeight));
-		} else {
-			ImGui.TextColored(okColor, zh ? '游戏正在运行。当前 Dora App 缺少 ImGui.ImageTexture，无法显示独立预览窗口。' : 'Game is running. Current Dora App lacks ImGui.ImageTexture, so the detached preview cannot be shown.');
-		}
+		ImGui.TextColored(okColor, zh ? '游戏正在运行。当前 Dora App 缺少稳定的 ImGui 纹理显示接口，独立预览窗口暂不显示画面。' : 'Game is running. The current Dora App lacks a stable ImGui texture display API, so this detached preview window does not show the frame yet.');
+		ImGui.TextDisabled((zh ? '目标显示尺寸：' : 'Target display size: ') + tostring(math.floor(displayWidth)) + ' x ' + tostring(math.floor(displayHeight)));
 	});
 }

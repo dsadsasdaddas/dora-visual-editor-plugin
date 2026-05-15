@@ -10,55 +10,65 @@ local Content = ____Dora.Content -- 1
 local Path = ____Dora.Path -- 1
 local emit = ____Dora.emit -- 1
 local json = ____Dora.json -- 1
-function isPathInside(path, root) -- 37
-	local cleanPath = normalizeSlash(path) -- 38
-	local cleanRoot = normalizeSlash(root) -- 39
-	return cleanPath == cleanRoot or string.sub( -- 40
-		cleanPath, -- 40
-		1, -- 40
-		string.len(cleanRoot) + 1 -- 40
-	) == cleanRoot .. "/" -- 40
-end -- 40
-function isProjectRootDir(dir) -- 43
-	if dir == "" or not Content:exist(dir) or not Content:isdir(dir) then -- 43
-		return false -- 44
-	end -- 44
-	for ____, file in ipairs(Content:getFiles(dir)) do -- 45
-		if string.lower(Path:getName(file)) == "init" then -- 45
-			return true -- 46
-		end -- 46
+local ____NodeCatalog = require("Script.Tools.SceneEditor.NodeCatalog") -- 3
+local canNodeKindHaveChildren = ____NodeCatalog.canNodeKindHaveChildren -- 3
+local defaultNodeName = ____NodeCatalog.defaultNodeName -- 3
+local nodeKindIcon = ____NodeCatalog.nodeKindIcon -- 3
+local normalizeNodeKind = ____NodeCatalog.normalizeNodeKind -- 3
+local ____SceneGraph = require("Script.Tools.SceneEditor.SceneGraph") -- 4
+local graphNodePath = ____SceneGraph.nodePath -- 4
+local normalizeSceneGraph = ____SceneGraph.normalizeSceneGraph -- 4
+local reparentSceneNode = ____SceneGraph.reparentSceneNode -- 4
+local resolveGraphAddParentId = ____SceneGraph.resolveAddParentId -- 4
+function isPathInside(path, root) -- 39
+	local cleanPath = normalizeSlash(path) -- 40
+	local cleanRoot = normalizeSlash(root) -- 41
+	return cleanPath == cleanRoot or string.sub( -- 42
+		cleanPath, -- 42
+		1, -- 42
+		string.len(cleanRoot) + 1 -- 42
+	) == cleanRoot .. "/" -- 42
+end -- 42
+function isProjectRootDir(dir) -- 45
+	if dir == "" or not Content:exist(dir) or not Content:isdir(dir) then -- 45
+		return false -- 46
 	end -- 46
-	local agentDir = Path(dir, ".agent") -- 48
-	return Content:exist(agentDir) and Content:isdir(agentDir) -- 49
-end -- 49
-function detectWorkspaceRoot() -- 52
-	for ____, searchPath in ipairs(Content.searchPaths) do -- 53
-		local candidate = searchPath -- 54
-		if Path:getFilename(candidate) == "Script" then -- 54
-			candidate = Path:getPath(candidate) -- 55
-		end -- 55
-		if candidate ~= Content.writablePath and isPathInside(candidate, Content.writablePath) and isProjectRootDir(candidate) then -- 55
-			return candidate -- 57
+	for ____, file in ipairs(Content:getFiles(dir)) do -- 47
+		if string.lower(Path:getName(file)) == "init" then -- 47
+			return true -- 48
+		end -- 48
+	end -- 48
+	local agentDir = Path(dir, ".agent") -- 50
+	return Content:exist(agentDir) and Content:isdir(agentDir) -- 51
+end -- 51
+function detectWorkspaceRoot() -- 54
+	for ____, searchPath in ipairs(Content.searchPaths) do -- 55
+		local candidate = searchPath -- 56
+		if Path:getFilename(candidate) == "Script" then -- 56
+			candidate = Path:getPath(candidate) -- 57
 		end -- 57
-	end -- 57
-	return Content.writablePath -- 60
-end -- 60
-function ____exports.workspaceRoot() -- 63
-	return detectWorkspaceRoot() -- 64
-end -- 63
-function ____exports.workspacePath(path) -- 67
-	return Path( -- 68
-		____exports.workspaceRoot(), -- 68
-		path -- 68
-	) -- 68
-end -- 67
-function ____exports.pushConsole(state, message) -- 122
-	local ____state_console_0 = state.console -- 122
-	____state_console_0[#____state_console_0 + 1] = message -- 123
-	if #state.console > 7 then -- 123
-		table.remove(state.console, 1) -- 125
-	end -- 125
-end -- 122
+		if candidate ~= Content.writablePath and isPathInside(candidate, Content.writablePath) and isProjectRootDir(candidate) then -- 57
+			return candidate -- 59
+		end -- 59
+	end -- 59
+	return Content.writablePath -- 62
+end -- 62
+function ____exports.workspaceRoot() -- 65
+	return detectWorkspaceRoot() -- 66
+end -- 65
+function ____exports.workspacePath(path) -- 69
+	return Path( -- 70
+		____exports.workspaceRoot(), -- 70
+		path -- 70
+	) -- 70
+end -- 69
+function ____exports.pushConsole(state, message) -- 125
+	local ____state_console_0 = state.console -- 125
+	____state_console_0[#____state_console_0 + 1] = message -- 126
+	if #state.console > 7 then -- 126
+		table.remove(state.console, 1) -- 128
+	end -- 128
+end -- 125
 function ____exports.isFolderAsset(path) -- 151
 	return path ~= "" and string.sub( -- 152
 		path, -- 152
@@ -189,71 +199,63 @@ function ____exports.addAssetFolder(state, folderPath) -- 264
 	____exports.pushConsole(state, state.status) -- 284
 	return rootAsset -- 285
 end -- 264
-local localeMatch = string.match(App.locale, "^zh") -- 30
-____exports.zh = localeMatch ~= nil -- 31
-importedAssetRoot = "Imported" -- 34
-importedAssetRootEntry = importedAssetRoot .. "/" -- 35
-function ____exports.makeBuffer(text, size) -- 71
-	local buffer = Buffer(size) -- 72
-	buffer.text = text -- 73
-	return buffer -- 74
-end -- 71
-function ____exports.createEditorState() -- 77
-	Content:addSearchPath(____exports.workspaceRoot()) -- 78
-	Content:mkdir(____exports.workspacePath(importedAssetRoot)) -- 79
-	local state = { -- 80
-		nextId = 0, -- 81
-		selectedId = "root", -- 82
-		mode = "2D", -- 83
-		zoom = 100, -- 84
-		showGrid = true, -- 85
-		snapEnabled = false, -- 86
-		viewportTool = "Select", -- 87
-		leftWidth = 280, -- 88
-		rightWidth = 340, -- 89
-		bottomHeight = 132, -- 90
-		gameWidth = 960, -- 91
-		gameHeight = 540, -- 92
-		gameScript = "Script/Main.lua", -- 93
-		gameScriptBuffer = ____exports.makeBuffer("Script/Main.lua", 256), -- 94
-		status = ____exports.zh and "Dora Visual Editor 已加载" or "Dora Visual Editor loaded", -- 95
-		console = {____exports.zh and "真实 Dora Viewport 已启用。" or "Real Dora viewport enabled."}, -- 96
-		nodes = {}, -- 97
-		order = {}, -- 98
-		preview = {x = 0, y = 0, width = 640, height = 360}, -- 99
-		previewDirty = true, -- 100
-		runtimeNodes = {}, -- 101
-		runtimeLabels = {}, -- 102
-		isPlaying = false, -- 103
-		gameWindowOpen = false, -- 104
-		playViewport = {x = 0, y = 0, width = 960, height = 540}, -- 105
-		playDirty = true, -- 106
-		playRuntimeNodes = {}, -- 107
-		playRuntimeLabels = {}, -- 108
-		assetImportBuffer = ____exports.makeBuffer(importedAssetRoot .. "/new.png", 256), -- 109
-		scriptPathBuffer = ____exports.makeBuffer("", 256), -- 110
-		scriptContentBuffer = ____exports.makeBuffer("", 8192), -- 111
-		selectedAsset = "", -- 112
-		assets = {}, -- 113
-		viewportPanX = 0, -- 114
-		viewportPanY = 0, -- 115
-		draggingViewport = false -- 116
-	} -- 116
-	____exports.refreshImportedAssets(state) -- 118
-	return state -- 119
-end -- 77
-function ____exports.iconFor(kind) -- 129
-	if kind == "Sprite" then -- 129
-		return "▣" -- 130
-	end -- 130
-	if kind == "Label" then -- 130
-		return "T" -- 131
-	end -- 131
-	if kind == "Camera" then -- 131
-		return "◉" -- 132
-	end -- 132
-	return "○" -- 133
-end -- 129
+local localeMatch = string.match(App.locale, "^zh") -- 32
+____exports.zh = localeMatch ~= nil -- 33
+importedAssetRoot = "Imported" -- 36
+importedAssetRootEntry = importedAssetRoot .. "/" -- 37
+function ____exports.makeBuffer(text, size) -- 73
+	local buffer = Buffer(size) -- 74
+	buffer.text = text -- 75
+	return buffer -- 76
+end -- 73
+function ____exports.createEditorState() -- 79
+	Content:addSearchPath(____exports.workspaceRoot()) -- 80
+	Content:mkdir(____exports.workspacePath(importedAssetRoot)) -- 81
+	local state = { -- 82
+		nextId = 0, -- 83
+		selectedId = "root", -- 84
+		mode = "2D", -- 85
+		zoom = 100, -- 86
+		showGrid = true, -- 87
+		snapEnabled = false, -- 88
+		viewportTool = "Select", -- 89
+		leftWidth = 280, -- 90
+		rightWidth = 340, -- 91
+		bottomHeight = 132, -- 92
+		gameWidth = 960, -- 93
+		gameHeight = 540, -- 94
+		gameScript = "Script/Main.lua", -- 95
+		gameScriptBuffer = ____exports.makeBuffer("Script/Main.lua", 256), -- 96
+		status = ____exports.zh and "Dora Visual Editor 已加载" or "Dora Visual Editor loaded", -- 97
+		console = {____exports.zh and "真实 Dora Viewport 已启用。" or "Real Dora viewport enabled."}, -- 98
+		nodes = {}, -- 99
+		order = {}, -- 100
+		treeExpanded = {root = true}, -- 101
+		preview = {x = 0, y = 0, width = 640, height = 360}, -- 102
+		previewDirty = true, -- 103
+		runtimeNodes = {}, -- 104
+		runtimeLabels = {}, -- 105
+		isPlaying = false, -- 106
+		gameWindowOpen = false, -- 107
+		playViewport = {x = 0, y = 0, width = 960, height = 540}, -- 108
+		playDirty = true, -- 109
+		playRuntimeNodes = {}, -- 110
+		playRuntimeLabels = {}, -- 111
+		assetImportBuffer = ____exports.makeBuffer(importedAssetRoot .. "/new.png", 256), -- 112
+		scriptPathBuffer = ____exports.makeBuffer("", 256), -- 113
+		scriptContentBuffer = ____exports.makeBuffer("", 8192), -- 114
+		selectedAsset = "", -- 115
+		assets = {}, -- 116
+		viewportPanX = 0, -- 117
+		viewportPanY = 0, -- 118
+		draggingViewport = false -- 119
+	} -- 119
+	____exports.refreshImportedAssets(state) -- 121
+	return state -- 122
+end -- 79
+function ____exports.iconFor(kind) -- 132
+	return nodeKindIcon(kind) -- 133
+end -- 132
 function ____exports.lowerExt(path) -- 136
 	local ext = Path:getExt(path or "") or "" -- 137
 	return string.lower(ext) -- 138
@@ -317,7 +319,7 @@ function ____exports.addNode(state, kind, name, parentId) -- 305
 	local resolvedParentId = "root" -- 306
 	if kind == "Root" then -- 306
 		resolvedParentId = "" -- 308
-	elseif parentId ~= nil and parentId ~= "" then -- 308
+	elseif parentId ~= nil and parentId ~= "" and state.nodes[parentId] ~= nil and canNodeKindHaveChildren(state.nodes[parentId].kind) then -- 308
 		resolvedParentId = parentId -- 310
 	end -- 310
 	local id = kind == "Root" and "root" or newNodeId(state, kind) -- 312
@@ -353,85 +355,89 @@ function ____exports.addNode(state, kind, name, parentId) -- 305
 	if id ~= "root" and parent ~= nil then -- 340
 		local ____parent_children_3 = parent.children -- 340
 		____parent_children_3[#____parent_children_3 + 1] = id -- 342
-	end -- 342
-	return node -- 344
+		state.treeExpanded[resolvedParentId] = true -- 343
+	end -- 343
+	if state.treeExpanded[id] == nil then -- 343
+		state.treeExpanded[id] = true -- 345
+	end -- 345
+	return node -- 346
 end -- 305
-local function sceneNodeKind(value) -- 347
-	if value == "Root" or value == "Node" or value == "Sprite" or value == "Label" or value == "Camera" then -- 347
-		return value -- 349
-	end -- 349
-	return "Node" -- 351
-end -- 347
-local function stringValue(value, fallback) -- 354
-	return type(value) == "string" and value or fallback -- 355
-end -- 354
-local function numberValue(value, fallback) -- 358
-	if type(value) ~= "number" and type(value) ~= "string" then -- 358
-		return fallback -- 359
-	end -- 359
-	local parsed = tonumber(value) -- 360
-	return parsed ~= nil and parsed or fallback -- 361
-end -- 358
-local function booleanValue(value, fallback) -- 364
-	local ____temp_4 -- 365
-	if type(value) == "boolean" then -- 365
-		____temp_4 = value -- 365
-	else -- 365
-		____temp_4 = fallback -- 365
-	end -- 365
-	return ____temp_4 -- 365
-end -- 364
-local function updateNextIdFromNodeId(state, id) -- 368
-	local digits = string.match(id, "%-(%d+)$") -- 369
-	if digits ~= nil then -- 369
-		local value = tonumber(digits) -- 371
-		if value ~= nil and value > state.nextId then -- 371
-			state.nextId = value -- 372
-		end -- 372
-	end -- 372
-end -- 368
-function ____exports.loadSceneFromFile(state, file) -- 376
-	if not Content:exist(file) then -- 376
-		return false -- 377
-	end -- 377
-	local decoded = json.decode(Content:load(file)) -- 378
-	local data = decoded -- 379
-	if data == nil then -- 379
-		return false -- 380
-	end -- 380
-	local rawNodes = data.nodes -- 381
-	if rawNodes == nil then -- 381
-		return false -- 382
-	end -- 382
-	state.gameWidth = math.max( -- 383
-		160, -- 383
+local function sceneNodeKind(value) -- 349
+	return normalizeNodeKind(value) -- 350
+end -- 349
+local function stringValue(value, fallback) -- 353
+	return type(value) == "string" and value or fallback -- 354
+end -- 353
+local function numberValue(value, fallback) -- 357
+	if type(value) ~= "number" and type(value) ~= "string" then -- 357
+		return fallback -- 358
+	end -- 358
+	local parsed = tonumber(value) -- 359
+	return parsed ~= nil and parsed or fallback -- 360
+end -- 357
+local function booleanValue(value, fallback) -- 363
+	local ____temp_4 -- 364
+	if type(value) == "boolean" then -- 364
+		____temp_4 = value -- 364
+	else -- 364
+		____temp_4 = fallback -- 364
+	end -- 364
+	return ____temp_4 -- 364
+end -- 363
+local function updateNextIdFromNodeId(state, id) -- 367
+	local digits = string.match(id, "%-(%d+)$") -- 368
+	if digits ~= nil then -- 368
+		local value = tonumber(digits) -- 370
+		if value ~= nil and value > state.nextId then -- 370
+			state.nextId = value -- 371
+		end -- 371
+	end -- 371
+end -- 367
+function ____exports.loadSceneFromFile(state, file) -- 375
+	if not Content:exist(file) then -- 375
+		return false -- 376
+	end -- 376
+	local decoded = json.decode(Content:load(file)) -- 377
+	local data = decoded -- 378
+	if data == nil then -- 378
+		return false -- 379
+	end -- 379
+	local rawNodes = data.nodes -- 380
+	if rawNodes == nil then -- 380
+		return false -- 381
+	end -- 381
+	state.gameWidth = math.max( -- 382
+		160, -- 382
+		math.min( -- 382
+			8192, -- 382
+			numberValue(data.gameWidth, state.gameWidth or 960) -- 382
+		) -- 382
+	) -- 382
+	state.gameHeight = math.max( -- 383
+		120, -- 383
 		math.min( -- 383
 			8192, -- 383
-			numberValue(data.gameWidth, state.gameWidth or 960) -- 383
+			numberValue(data.gameHeight, state.gameHeight or 540) -- 383
 		) -- 383
 	) -- 383
-	state.gameHeight = math.max( -- 384
-		120, -- 384
-		math.min( -- 384
-			8192, -- 384
-			numberValue(data.gameHeight, state.gameHeight or 540) -- 384
-		) -- 384
-	) -- 384
-	state.gameScript = stringValue(data.gameScript, state.gameScript or "Script/Main.lua") -- 385
-	state.gameScriptBuffer.text = state.gameScript -- 386
-	state.nodes = {} -- 388
-	state.order = {} -- 389
-	state.runtimeNodes = {} -- 390
-	state.runtimeLabels = {} -- 391
-	state.playRuntimeNodes = {} -- 392
-	state.playRuntimeLabels = {} -- 393
-	state.nextId = 0 -- 394
-	for ____, raw in ipairs(rawNodes) do -- 396
-		local kind = sceneNodeKind(raw.kind) -- 397
-		local id = stringValue( -- 398
-			raw.id, -- 398
-			kind == "Root" and "root" or (string.lower(kind) .. "-") .. tostring(state.nextId + 1) -- 398
-		) -- 398
+	state.gameScript = stringValue(data.gameScript, state.gameScript or "Script/Main.lua") -- 384
+	state.gameScriptBuffer.text = state.gameScript -- 385
+	state.nodes = {} -- 387
+	state.order = {} -- 388
+	state.runtimeNodes = {} -- 389
+	state.runtimeLabels = {} -- 390
+	state.playRuntimeNodes = {} -- 391
+	state.playRuntimeLabels = {} -- 392
+	state.nextId = 0 -- 393
+	for ____, raw in ipairs(rawNodes) do -- 395
+		local kind = sceneNodeKind(raw.kind) -- 396
+		local id = stringValue( -- 397
+			raw.id, -- 397
+			kind == "Root" and "root" or (string.lower(kind) .. "-") .. (tostring(state.nextId + 1) or "") -- 397
+		) -- 397
+		if state.nodes[id] ~= nil then -- 397
+			id = kind == "Root" and "root" or (string.lower(kind) .. "-") .. (tostring(state.nextId + 1) or "") -- 398
+		end -- 398
 		local name = stringValue(raw.name, kind == "Root" and "MainScene" or kind) -- 399
 		local texture = stringValue(raw.texture, "") -- 400
 		local text = stringValue(raw.text, kind == "Label" and "Label" or "") -- 401
@@ -478,206 +484,97 @@ function ____exports.loadSceneFromFile(state, file) -- 376
 	if state.nodes.root == nil then -- 433
 		____exports.addNode(state, "Root", "MainScene") -- 437
 	end -- 437
-	for ____, id in ipairs(state.order) do -- 439
-		do -- 439
-			if id == "root" then -- 439
-				goto __continue86 -- 440
-			end -- 440
-			local node = state.nodes[id] -- 441
-			if node == nil then -- 441
-				goto __continue86 -- 442
-			end -- 442
-			if node.parentId == nil or state.nodes[node.parentId] == nil then -- 442
-				node.parentId = "root" -- 444
-			end -- 444
-			local ____state_nodes_node_parentId_children_7 = state.nodes[node.parentId].children -- 444
-			____state_nodes_node_parentId_children_7[#____state_nodes_node_parentId_children_7 + 1] = id -- 446
-		end -- 446
-		::__continue86:: -- 446
-	end -- 446
-	state.selectedId = state.nodes.root ~= nil and "root" or (state.order[1] or "root") -- 448
-	state.previewDirty = true -- 449
-	state.playDirty = true -- 450
-	state.status = ____exports.zh and "已加载场景" or "Scene loaded" -- 451
-	____exports.pushConsole(state, state.status) -- 452
-	return true -- 453
-end -- 376
-local function removeFromOrder(state, id) -- 456
-	do -- 456
-		local i = #state.order -- 457
-		while i >= 1 do -- 457
-			if state.order[i] == id then -- 457
-				table.remove(state.order, i) -- 459
-			end -- 459
-			i = i - 1 -- 457
-		end -- 457
-	end -- 457
+	normalizeSceneGraph(state) -- 439
+	state.selectedId = state.nodes.root ~= nil and "root" or (state.order[1] or "root") -- 440
+	state.previewDirty = true -- 441
+	state.playDirty = true -- 442
+	state.status = ____exports.zh and "已加载场景" or "Scene loaded" -- 443
+	____exports.pushConsole(state, state.status) -- 444
+	return true -- 445
+end -- 375
+local function removeFromOrder(state, id) -- 448
+	do -- 448
+		local i = #state.order -- 449
+		while i >= 1 do -- 449
+			if state.order[i] == id then -- 449
+				table.remove(state.order, i) -- 451
+			end -- 451
+			i = i - 1 -- 449
+		end -- 449
+	end -- 449
+end -- 448
+function ____exports.deleteNode(state, id) -- 456
+	if id == "root" then -- 456
+		state.status = ____exports.zh and "根节点不能删除" or "Root cannot be deleted" -- 458
+		return -- 459
+	end -- 459
+	local node = state.nodes[id] -- 461
+	if node == nil then -- 461
+		return -- 462
+	end -- 462
+	do -- 462
+		local i = #node.children -- 463
+		while i >= 1 do -- 463
+			____exports.deleteNode(state, node.children[i]) -- 464
+			i = i - 1 -- 463
+		end -- 463
+	end -- 463
+	local parent = node.parentId ~= nil and state.nodes[node.parentId] or nil -- 466
+	if parent ~= nil then -- 466
+		do -- 466
+			local i = #parent.children -- 468
+			while i >= 1 do -- 468
+				if parent.children[i] == id then -- 468
+					table.remove(parent.children, i) -- 469
+				end -- 469
+				i = i - 1 -- 468
+			end -- 468
+		end -- 468
+	end -- 468
+	__TS__Delete(state.nodes, id) -- 472
+	__TS__Delete(state.treeExpanded, id) -- 473
+	removeFromOrder(state, id) -- 474
+	state.selectedId = "root" -- 475
+	state.draggingNodeId = nil -- 476
+	state.previewDirty = true -- 477
+	state.playDirty = true -- 478
+	state.status = ____exports.zh and "已删除节点" or "Node deleted" -- 479
+	____exports.pushConsole(state, state.status) -- 480
 end -- 456
-function ____exports.deleteNode(state, id) -- 464
-	if id == "root" then -- 464
-		state.status = ____exports.zh and "根节点不能删除" or "Root cannot be deleted" -- 466
-		return -- 467
-	end -- 467
-	local node = state.nodes[id] -- 469
-	if node == nil then -- 469
-		return -- 470
-	end -- 470
-	do -- 470
-		local i = #node.children -- 471
-		while i >= 1 do -- 471
-			____exports.deleteNode(state, node.children[i]) -- 472
-			i = i - 1 -- 471
-		end -- 471
-	end -- 471
-	local parent = node.parentId ~= nil and state.nodes[node.parentId] or nil -- 474
-	if parent ~= nil then -- 474
-		do -- 474
-			local i = #parent.children -- 476
-			while i >= 1 do -- 476
-				if parent.children[i] == id then -- 476
-					table.remove(parent.children, i) -- 477
-				end -- 477
-				i = i - 1 -- 476
-			end -- 476
-		end -- 476
-	end -- 476
-	__TS__Delete(state.nodes, id) -- 480
-	removeFromOrder(state, id) -- 481
-	state.selectedId = "root" -- 482
-	state.draggingNodeId = nil -- 483
-	state.previewDirty = true -- 484
-	state.playDirty = true -- 485
-	state.status = ____exports.zh and "已删除节点" or "Node deleted" -- 486
-	____exports.pushConsole(state, state.status) -- 487
-end -- 464
-local function worldPositionOf(state, id) -- 490
-	local x = 0 -- 491
-	local y = 0 -- 492
-	local visited = {} -- 493
-	local cursor = state.nodes[id] -- 494
-	while cursor ~= nil do -- 494
-		if visited[cursor.id] then -- 494
-			break -- 496
-		end -- 496
-		visited[cursor.id] = true -- 497
-		x = x + cursor.x -- 498
-		y = y + cursor.y -- 499
-		if cursor.parentId == nil or cursor.parentId == cursor.id then -- 499
-			break -- 500
-		end -- 500
-		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil -- 501
-	end -- 501
-	return {x, y} -- 503
-end -- 490
-function ____exports.reparentNode(state, id, newParentId) -- 506
-	if id == "root" then -- 506
-		return false -- 507
-	end -- 507
-	local node = state.nodes[id] -- 508
-	local newParent = state.nodes[newParentId] -- 509
-	if node == nil or newParent == nil or node.parentId == newParentId then -- 509
-		return false -- 510
-	end -- 510
-	local worldX, worldY = table.unpack( -- 511
-		worldPositionOf(state, id), -- 511
-		1, -- 511
-		2 -- 511
-	) -- 511
-	local visited = {} -- 512
-	local cursor = newParent -- 513
-	while cursor ~= nil do -- 513
-		if cursor.id == id then -- 513
-			return false -- 515
-		end -- 515
-		if visited[cursor.id] then -- 515
-			return false -- 516
-		end -- 516
-		visited[cursor.id] = true -- 517
-		if cursor.parentId == nil or cursor.parentId == cursor.id then -- 517
-			break -- 518
-		end -- 518
-		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil -- 519
-	end -- 519
-	local oldParent = node.parentId ~= nil and state.nodes[node.parentId] or nil -- 521
-	if oldParent ~= nil then -- 521
-		do -- 521
-			local i = #oldParent.children -- 523
-			while i >= 1 do -- 523
-				if oldParent.children[i] == id then -- 523
-					table.remove(oldParent.children, i) -- 524
-				end -- 524
-				i = i - 1 -- 523
-			end -- 523
-		end -- 523
-	end -- 523
-	node.parentId = newParentId -- 527
-	local parentWorldX, parentWorldY = table.unpack( -- 528
-		worldPositionOf(state, newParentId), -- 528
-		1, -- 528
-		2 -- 528
-	) -- 528
-	node.x = worldX - parentWorldX -- 529
-	node.y = worldY - parentWorldY -- 530
-	local ____newParent_children_8 = newParent.children -- 530
-	____newParent_children_8[#____newParent_children_8 + 1] = id -- 531
-	state.previewDirty = true -- 532
-	state.playDirty = true -- 533
-	state.status = (____exports.zh and "已移动节点到：" or "Moved node under: ") .. newParent.name -- 534
-	____exports.pushConsole(state, state.status) -- 535
-	return true -- 536
-end -- 506
-function ____exports.resolveAddParentId(state) -- 539
-	local parentId = state.selectedId or "root" -- 540
-	if state.nodes[parentId] == nil then -- 540
-		parentId = "root" -- 541
-	end -- 541
-	local selected = state.nodes[parentId] -- 542
-	if selected ~= nil and selected.kind == "Camera" then -- 542
-		parentId = selected.parentId or "root" -- 544
-	end -- 544
-	if state.nodes[parentId] == nil then -- 544
-		return "root" -- 546
-	end -- 546
-	return parentId -- 547
-end -- 539
-function ____exports.nodePath(state, id) -- 550
-	local parts = {} -- 551
-	local visited = {} -- 552
-	local cursor = state.nodes[id] -- 553
-	while cursor ~= nil do -- 553
-		if visited[cursor.id] then -- 553
-			break -- 555
-		end -- 555
-		visited[cursor.id] = true -- 556
-		parts[#parts + 1] = cursor.name -- 557
-		if cursor.parentId == nil or cursor.parentId == cursor.id then -- 557
-			break -- 558
-		end -- 558
-		cursor = cursor.parentId ~= nil and state.nodes[cursor.parentId] or nil -- 559
-	end -- 559
-	local path = "" -- 561
-	do -- 561
-		local i = #parts -- 562
-		while i >= 1 do -- 562
-			path = path .. (path == "" and "" or " / ") .. parts[i] -- 563
-			i = i - 1 -- 562
-		end -- 562
-	end -- 562
-	return path == "" and "Root" or path -- 565
-end -- 550
-function ____exports.addChildNode(state, kind) -- 568
-	local parentId = ____exports.resolveAddParentId(state) -- 569
-	local node = ____exports.addNode( -- 570
-		state, -- 570
-		kind, -- 570
-		kind .. (tostring(state.nextId + 1) or ""), -- 570
-		parentId -- 570
-	) -- 570
-	state.selectedId = node.id -- 571
-	state.previewDirty = true -- 572
-	state.playDirty = true -- 573
-	local parent = state.nodes[parentId] -- 574
-	state.status = ((____exports.zh and "已添加 " or "Added ") .. node.name) .. (parent ~= nil and (____exports.zh and " 到 " or " under ") .. parent.name or "") -- 575
-	____exports.pushConsole(state, state.status) -- 576
-end -- 568
-return ____exports -- 568
+function ____exports.reparentNode(state, id, newParentId) -- 483
+	local node = state.nodes[id] -- 484
+	local newParent = state.nodes[newParentId] -- 485
+	if node == nil or newParent == nil then -- 485
+		return false -- 486
+	end -- 486
+	if not reparentSceneNode(state, id, newParentId) then -- 486
+		return false -- 487
+	end -- 487
+	state.previewDirty = true -- 488
+	state.playDirty = true -- 489
+	state.status = (____exports.zh and "已移动节点到：" or "Moved node under: ") .. newParent.name -- 490
+	____exports.pushConsole(state, state.status) -- 491
+	return true -- 492
+end -- 483
+function ____exports.resolveAddParentId(state) -- 495
+	return resolveGraphAddParentId(state) -- 496
+end -- 495
+function ____exports.nodePath(state, id) -- 499
+	return graphNodePath(state, id) -- 500
+end -- 499
+function ____exports.addChildNode(state, kind) -- 503
+	local parentId = ____exports.resolveAddParentId(state) -- 504
+	local node = ____exports.addNode( -- 505
+		state, -- 505
+		kind, -- 505
+		defaultNodeName(kind, state.nextId + 1), -- 505
+		parentId -- 505
+	) -- 505
+	state.selectedId = node.id -- 506
+	state.previewDirty = true -- 507
+	state.playDirty = true -- 508
+	local parent = state.nodes[parentId] -- 509
+	state.status = ((____exports.zh and "已添加 " or "Added ") .. node.name) .. (parent ~= nil and (____exports.zh and " 到 " or " under ") .. parent.name or "") -- 510
+	____exports.pushConsole(state, state.status) -- 511
+end -- 503
+return ____exports -- 503

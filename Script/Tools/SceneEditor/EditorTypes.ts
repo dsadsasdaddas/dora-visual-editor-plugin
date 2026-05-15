@@ -55,6 +55,7 @@ export interface EditorState {
 	console: string[];
 	nodes: Record<string, SceneNodeData>;
 	order: string[];
+	treeExpanded: Record<string, boolean>;
 	preview: ViewportState;
 	previewDirty: boolean;
 	previewRoot?: Node.Type;
